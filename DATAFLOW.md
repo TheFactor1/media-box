@@ -99,8 +99,28 @@ Config: `/var/lib/hub/hub.toml` (addon manifest URLs, meta addon, preset); data:
 - greenboot required checks: `kodi.service` active 30 s after boot, `jellyfin` healthy on `:8096/health` (Hub), resolver answering on `:8097/health`. Any failure → `bootc rollback` and reboot. Toast on next home screen.
 - `/var` backup: nightly `tar` of `/var/lib/*` minus `*/cache` and `*/metadata` to `/var/backups/mediabox`, keep 7.
 
-## Security
-- LAN-reachable: the hub (:8097, no auth yet; see Ports), Kodi web server, the wizard. Jellyfin only in the "real files" tier.
+## Security and privacy (Matt's rule, 2026-10-27: both at max)
+**Hub**
+- **Every call needs a pairing token** except `GET /health` and the setup page while unpaired. The token is 32 random bytes, generated on first start, stored 0600, shown on the TV (QR + 6 words) and entered by Player once; sent as `Authorization: Bearer`. Rotating it from the TV invalidates every box.
+- **Setup locks itself:** `/setup` answers only while unconfigured or for 10 minutes after "Set up again" is pressed on the TV; the page is served with a one-time nonce in the QR, no password field, no account.
+- **Secrets at rest are encrypted:** the AIOStreams URL (it embeds a config token) and any debrid key the setup page handles are stored encrypted with a key held in a separate 0600 file, so a copied database is useless without the box. Never logged; logs show hosts only, never paths or query strings.
+- **Bind to LAN only**: refuses to start on a public IP unless `allow_public = true`; CORS limited to the setup page's own origin; 10 req/s per client on `/setup` and `/play`; request bodies capped at 64 KB.
+- **No telemetry, no third-party calls the user didn't configure.** Outbound traffic is only to the user's addon URLs and the meta addon; TMDB cast is off unless the user adds a key. `/health` reports addon reachability without sending anything about the user.
+- **The hub never proxies streams** (it 302s), so it never sees what is watched beyond its own library and resume tables, which stay on the box and are in the nightly local backup only.
+- **Updates**: the hub image is pinned by digest in the quadlet and compose file; bootc bound images are signed (cosign, Phase 5).
+
+**Player (Android)**
+- Hub token kept in Android Keystore-backed storage, never in plain SharedPreferences; cleartext HTTP allowed only to the paired hub's host (network security config), nothing else cleartext.
+- No analytics, no crash reporting that leaves the device; the "Report a problem" bundle is a local file the user shares by choice.
+- Phone companion stays LAN-only with its existing pairing.
+
+**Box (Fedora)**
+- nftables default-deny inbound except hub :8097, Kodi :8080 and the wizard :80 on the LAN interface; SSH off by default; secure boot where the hardware allows; `/var/lib/hub` and `/var/lib/mediabox` 0700.
+- Tailscale for remote access (device-to-device, no port forwarding); a Cloudflare tunnel only for the phone pages, never for video.
+
+**Privacy posture for users:** the box talks to the user's own providers and addons only; the project runs no server, collects nothing, and has no accounts. Said plainly on the status screen's "Privacy" card.
+
+- LAN-reachable: the hub (:8097, token required), Kodi web server, the wizard. Jellyfin only in the "real files" tier.
 - The wizard runs only while unpaired or after "Set up again" on the TV; the pairing code is shown on the TV, so physical access to the TV is the credential.
 - Provider keys never touch the box; they live in the user's AIOStreams. The box stores only the AIOStreams URL (which may embed a config token: `/var/lib/resolver`, 0600).
 - SSH: off by default; the wizard has an "Advanced → enable SSH with this public key" card.
