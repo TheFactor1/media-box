@@ -670,17 +670,47 @@ button.sv{cursor:pointer}
 .wl-panel .btn{align-self:flex-start;pointer-events:none}
 [data-home="wall"] .bd::after{background:color-mix(in srgb,var(--bg) 40%,transparent)}
 /* Programme */
-.pg-l{position:absolute;left:0;top:0;bottom:0;width:45%;display:flex;flex-direction:column;background:var(--bg)}
-.pg-list{flex:1;min-height:0;overflow:hidden;position:relative;padding:14px 28px;display:flex;flex-direction:column;gap:3px}
-.pg-i{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:3px 0;border:0;background:none;text-align:left;cursor:pointer;color:var(--fg);opacity:.36;transition:opacity .3s ease}
-.pg-n{font-family:var(--f-display);font-weight:var(--title-w);letter-spacing:var(--title-track);text-transform:var(--title-case);font-size:calc(var(--title-size) * .6);line-height:1.05}
+.pg-l{position:absolute;left:0;top:92px;bottom:0;width:46%;display:flex;flex-direction:column}
+.pg-list{flex:1;min-height:0;overflow:hidden;position:relative;padding:4px 28px 18px;display:flex;flex-direction:column;gap:11px}
+.pg-i{display:flex;flex-direction:column;align-items:flex-start;gap:6px;max-width:100%;padding:0;border:0;background:none;text-align:left;cursor:pointer;color:var(--fg);opacity:.38;transition:opacity .3s ease}
+.pg-n{max-width:100%;font-family:var(--f-display);font-weight:var(--title-w);letter-spacing:var(--title-track);text-transform:var(--title-case);font-size:calc(var(--title-size) * .55);line-height:1.08;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pg-i.on{opacity:1}
-.pg-i.on .pg-n{font-size:calc(var(--title-size) * .95)}
-.pg-c{display:none;font-family:var(--f-mono,var(--f-body));font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.pg-i.on .pg-n{font-size:calc(var(--title-size) * 1.1);white-space:normal;text-wrap:balance}
+.pg-c{display:none;max-width:100%;font-family:var(--f-mono,var(--f-body));font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pg-i.on .pg-c{display:block}
-.pg-btns{position:absolute;left:calc(45% + 28px);bottom:28px;display:flex;gap:8px}
-[data-home="programme"] .bd{left:45%;width:auto;right:0}
-[data-home="programme"] .bd::after{background:linear-gradient(90deg,var(--bg),transparent 30%),linear-gradient(0deg,color-mix(in srgb,var(--bg) 70%,transparent),transparent 40%)}
+.pg-btns{position:absolute;right:28px;bottom:24px;display:flex;gap:8px}
+[data-home="programme"] .bd{left:0;right:0} /* full width; the fade below keeps the list on darkness without a visible seam */
+[data-home="programme"] .bd::after{background:linear-gradient(90deg,var(--bg) 0,var(--bg) 28%,color-mix(in srgb,var(--bg) 75%,transparent) 46%,transparent 74%),linear-gradient(180deg,color-mix(in srgb,var(--bg) 80%,transparent),transparent 26%),linear-gradient(0deg,color-mix(in srgb,var(--bg) 55%,transparent),transparent 34%)}
+:root[data-home="programme"] .legend{display:none}
+.pg-top{position:absolute;left:28px;top:12px;z-index:2;display:flex;align-items:baseline;gap:10px}
+.pg-mark{font-family:var(--f-display);font-weight:var(--title-w);font-size:12px;letter-spacing:var(--title-track);color:var(--fg)}
+.pg-att{font:9px "Geist Mono",ui-monospace,monospace;letter-spacing:.18em;color:var(--warn)}
+.alt-programme .pf-bar{position:absolute;left:28px;right:28px;top:30px;z-index:2;padding:0;gap:6px}
+.pf-cols{display:flex;align-items:baseline;gap:28px}
+.pf-tab{position:relative;padding:4px 0;border:0;background:none;color:var(--fg);opacity:.55;font:500 15px/1.2 "Instrument Sans",system-ui,sans-serif;cursor:pointer;transition:opacity .2s ease}
+.pf-tab.sel,.pf-tab.on{opacity:1}
+.pf-tab.sel::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:2px;border-radius:2px;background:var(--mblue,var(--accent));box-shadow:0 0 8px var(--mblue,var(--accent))}
+.pf-filt{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:4px 0;border:0;background:none;color:var(--fg);opacity:.55;font:400 9.5px "Geist Mono",ui-monospace,monospace;letter-spacing:.18em;cursor:pointer;transition:opacity .2s ease}
+.pf-filt.on{opacity:1}
+.pf-filt svg{width:10px;height:10px}
+.pf-whisper{display:flex;align-items:center;gap:10px}
+.pf-w,.pf-x{padding:2px 0;border:0;background:none;color:var(--muted);font:400 9px "Geist Mono",ui-monospace,monospace;letter-spacing:.16em;cursor:pointer}
+.pf-w b{font-weight:400;color:var(--fg)}
+.pf-x{display:inline-grid;place-items:center;width:16px;height:16px;padding:0;border:1px solid var(--faint);border-radius:999px;font-size:10px;letter-spacing:0}
+.pf-w.on,.pf-x.on{color:var(--fg);text-decoration:underline;text-underline-offset:3px}
+.pf-x.on{text-decoration:none;border-color:var(--fg)}
+.pf-w b.tick{display:inline-block;animation:inD .3s cubic-bezier(.2,.7,.2,1)}
+/* filter panel: glass on the right third, the list stays visible and updates behind it */
+.ov.pf-side{place-items:stretch end;background:linear-gradient(90deg,transparent 50%,color-mix(in srgb,var(--bg) 45%,transparent));backdrop-filter:none;-webkit-backdrop-filter:none}
+.pf-side .pf-ov{width:300px;margin:0;padding:16px 22px 14px;gap:4px;border:0;border-radius:0;background:color-mix(in srgb,var(--bg) 55%,transparent);backdrop-filter:blur(18px) saturate(105%);-webkit-backdrop-filter:blur(18px) saturate(105%);box-shadow:inset 1px 0 0 var(--faint)}
+.pf-side .pf-ov h3{display:flex;align-items:baseline;justify-content:space-between;font-size:20px}
+.pf-ovn{font:400 9px "Geist Mono",ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.pf-ov .pf-lab{margin:6px 0 1px}
+.pf-ov .pf-chip{padding:3px 8px;font-size:10px}
+.pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.pf-line{display:flex;flex-wrap:wrap;gap:5px}
+.pf-grid .pf-chip{justify-content:space-between}
+.pf-hint{margin-top:auto!important;font:400 8.5px "Geist Mono",ui-monospace,monospace!important;letter-spacing:.16em;text-transform:uppercase}
 [data-home="programme"] .bd{transition:opacity .9s ease}
 /* Tonight */
 .tn{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:0 28px}
@@ -874,20 +904,14 @@ button.sv{cursor:pointer}
 /* ---------- Programme filter bar ---------- */
 .pf-bar{flex:none;padding:12px 0 0;display:flex;flex-direction:column;gap:4px}
 .pf-row{position:relative;display:flex;align-items:center;gap:6px;overflow:hidden;padding:5px 28px 7px;white-space:nowrap}
-.pg-l .pf-row{-webkit-mask:linear-gradient(90deg,#000 88%,transparent);mask:linear-gradient(90deg,#000 88%,transparent)} /* fade hints there is more to the right */
-.pf-pill{position:relative;flex:none;display:inline-flex;align-items:baseline;gap:6px;padding:6px 12px;border:1px solid var(--faint);border-radius:999px;background:none;color:var(--muted);font-family:var(--f-display);font-weight:var(--title-w);font-size:13px;letter-spacing:var(--title-track);cursor:pointer;transition:color .2s ease,border-color .2s ease}
-.pf-pill i,.pf-chip i{font-style:normal;font-family:var(--f-mono,var(--f-body));font-size:8px;letter-spacing:.1em;opacity:.75}
-.pf-pill.sel{color:var(--fg);border-color:var(--muted)}
-.pf-pill.sel::after{content:"";position:absolute;left:14px;right:14px;bottom:-5px;height:2px;border-radius:2px;background:var(--mblue,var(--accent));box-shadow:0 0 8px var(--mblue,var(--accent))}
-.pf-pill.on,.pf-chip.on,.pf-count.on{color:var(--fg)}
 .pf-lab{flex:none;margin-left:8px;font-family:var(--f-mono,var(--f-body));font-size:7.5px;letter-spacing:.2em;color:var(--muted);opacity:.75}
-.pf-chip,.pf-count{flex:none;display:inline-flex;align-items:baseline;gap:5px;padding:4px 9px;border:1px solid var(--faint);border-radius:999px;background:none;color:var(--muted);font-size:10.5px;cursor:pointer;transition:color .2s ease,background-color .2s ease}
-.pf-count{font-family:var(--f-mono,var(--f-body));font-size:8.5px;letter-spacing:.14em;color:var(--fg)}
+.pf-chip i{font-style:normal;font-family:var(--f-mono,var(--f-body));font-size:8px;letter-spacing:.1em;opacity:.75}
+.pf-chip.on{color:var(--fg)}
+.pf-chip{flex:none;display:inline-flex;align-items:baseline;gap:5px;padding:4px 9px;border:1px solid var(--faint);border-radius:999px;background:none;color:var(--muted);font-size:10.5px;cursor:pointer;transition:color .2s ease,background-color .2s ease}
 .pf-chip.act{background:color-mix(in srgb,var(--fg) 14%,transparent);color:var(--fg);border-color:var(--muted)}
 .pf-chip.act::before{content:"\2713";font-size:9px}
 .pf-chip.zero{opacity:.35}
 .pf-clear{border-style:dashed}
-.pf-count.tick{animation:inD .3s cubic-bezier(.2,.7,.2,1)}
 .pg-i.pf-enter{animation:inL .35s cubic-bezier(.2,.7,.2,1) both}
 .pg-i.pf-leave{animation:pfOut .2s ease forwards;pointer-events:none}
 @keyframes pfOut{to{opacity:0}}
@@ -1319,7 +1343,7 @@ const blob=$('#blob');let blobT;
 function placeBlob(dir,settled){
   clearTimeout(blobT);
   if(!['mercury','nocturne','pulse'].includes(document.documentElement.dataset.look))return;
-  if(!cur||!cur.offsetParent||cur.matches('.pg-i,.mq-card,.ob-card,.sp,.rl-f,.dk-card,.dk-end,.tf-dial')||(screen==='home'&&lay==='store')){blob.classList.remove('show');return} // these layouts mark focus themselves
+  if(!cur||!cur.offsetParent||cur.matches('.pf-tab,.pf-filt,.pf-w,.pf-x,.pg-i,.mq-card,.ob-card,.sp,.rl-f,.dk-card,.dk-end,.tf-dial')||(screen==='home'&&lay==='store')){blob.classList.remove('show');return} // these layouts mark focus themselves
   const t=cur.querySelector('.art')||cur,r=t.getBoundingClientRect(),sr=stage.getBoundingClientRect(),k=sr.width/800;
   const card=cur.classList.contains('card'),g=card?1.03:1,pad=card?3:2;
   const w=t.offsetWidth*g+pad*2,h=t.offsetHeight*g+pad*2;
@@ -1423,7 +1447,7 @@ function activate(el){
   else if(a==='pfc'){pf.c=+el.dataset.v;progLast=null;pfApply()}
   else if(a==='pfchip'){const k=el.dataset.k,v=k==='g'?el.dataset.v:+el.dataset.v;if(k==='s')pf.s=pf.s===v?-1:v;else pf[k]=pf[k].includes(v)?pf[k].filter(x=>x!==v):[...pf[k],v];pfApply()}
   else if(a==='pfclear'){pf={c:pf.c,g:[],l:[],f:[],s:-1};pfApply()}
-  else if(a==='pfmore')openOv(`<div class="ov-box pf-ov"><h3>Filter</h3><div class="pf-body">${pfBars()}</div><p>OK toggles · Back closes</p></div>`);
+  else if(a==='pfmore')openOv(`<div class="ov-box pf-ov">${pfChips()}</div>`,'pf-side');
   else if(a==='everything'){stack.push({s:'home',id:titleId,k:titleK,f:el.dataset.id,lay});lay='rows';show('home')}
   else if(a==='pick')stPick(el);
   else if(a==='holdok'){if(el.classList.contains('flip'))el.classList.remove('flip');else play(el.dataset.t)}
@@ -1532,7 +1556,7 @@ function renderAlt(dir){
     A.querySelector('.wl-grid').scrollTop=A.querySelector('.start').offsetTop-14;
   }else if(lay==='programme'){
     progLast=null;const ids=pfList();if(ids[0])setBd(ids[0]);
-    A.innerHTML=`<div class="pg-l"><div class="pf-bar">${pfBars()}</div><div class="pg-list vscroll">${ids.map((id,i)=>pgItem(id,!i)).join('')||'<p class="pf-empty">Nothing matches. Clear a chip.</p>'}</div></div>
+    A.innerHTML=`<div class="pg-top"><span class="pg-mark">mediabox</span>${ATTN?'<span class="pg-att">ATTENTION</span>':''}</div><div class="pf-bar">${pfTabs()}</div><div class="pg-l"><div class="pg-list vscroll">${ids.map((id,i)=>pgItem(id,!i)).join('')||'<p class="pf-empty">Nothing matches. Clear a chip.</p>'}</div></div>
       <div class="pg-btns"><button class="f btn pri" data-id="pg-play" data-act="pgplay">Play</button><button class="f btn" data-id="pg-info" data-act="pginfo">Details</button></div>`;
   }else if(lay==='tonight'){
     setBd(null);
@@ -1674,13 +1698,13 @@ function altKey(d){
     renderAlt(d);focus(byId('mq',S));return true;
   }
   if(lay==='programme'){
-    const ref=cur.closest('.pf-ref'),col=cur.closest('.pf-cols');
+    const ref=cur.closest('.pf-whisper'),col=cur.closest('.pf-cols');
     if(ref||col){
       if(d==='l'||d==='r'){const L=[...cur.parentElement.querySelectorAll('.f')],nx=L[L.indexOf(cur)+(d==='r'?1:-1)];if(nx)focus(nx);return true}
-      if(d==='u'){if(ref)focus(byId(pfCol,S)||S.querySelector('.pf-pill.sel'));return true}
-      focus(col?byId(pfRef,S)||S.querySelector('.pf-count'):pgBack());return true;
+      if(d==='u'){if(ref)focus(byId(pfCol,S)||S.querySelector('.pf-tab.sel'));return true}
+      focus(col?S.querySelector('.pf-w')||pgBack():pgBack());return true;
     }
-    if(d==='u'&&cur.classList.contains('pg-i')&&cur===S.querySelector('.pg-list .pg-i:not(.pf-leave)')){focus(byId(pfRef,S)||S.querySelector('.pf-count'));return true}
+    if(d==='u'&&cur.classList.contains('pg-i')&&cur===S.querySelector('.pg-list .pg-i:not(.pf-leave)')){focus(S.querySelector('.pf-w')||byId(pfCol,S)||S.querySelector('.pf-tab.sel'));return true}
     if(d==='l'&&cur.closest('.pg-btns')){focus(pgBack());return true}
     if(d==='r'&&cur.classList.contains('pg-i')){focus(byId('pg-play',S));return true}
   }
@@ -1783,10 +1807,18 @@ function pfChip(k,v,label){
   const n=pfList(st).length;
   return `<button class="f pf-chip${on?' act':''}${n?'':' zero'}" data-id="pf-${k}-${v}" data-act="pfchip" data-k="${k}" data-v="${v}">${label}<i>${n}</i></button>`;
 }
-function pfBars(){
-  const any=pf.g.length||pf.l.length||pf.f.length||pf.s>=0;
-  return `<div class="pf-row pf-cols">${PCOLS.map((c,i)=>`<button class="f pf-pill${i===pf.c?' sel':''}" data-id="pf-c-${i}" data-act="pfc" data-v="${i}">${c.n}<i>${pfList({...pf,c:i}).length}</i></button>`).join('')}</div>
-    <div class="pf-row pf-ref"><button class="f pf-count" data-id="pf-count" data-act="pfmore">${pfList().length} TITLE${pfList().length===1?'':'S'} ⋯</button><span class="pf-lab">GENRE</span>${GENRES.map(g=>pfChip('g',g,g)).join('')}<span class="pf-lab">LENGTH</span>${LEN.map((x,i)=>pfChip('l',i,x[0])).join('')}<span class="pf-lab">FORMAT</span>${FMT.map((x,i)=>pfChip('f',i,x[0])).join('')}<span class="pf-lab">SORT</span>${SORTS.map((x,i)=>pfChip('s',i,x[0])).join('')}${any?'<button class="f pf-chip pf-clear" data-id="pf-clear" data-act="pfclear">Clear ×</button>':''}</div>`;
+const ATTN=true; // Status has a debrid problem in this prototype
+const FUNNEL='<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M1 2h10L7.2 6.6V10L4.8 11V6.6Z" fill="currentColor"/></svg>';
+function pfTabs(){
+  const on=[...pf.g,...pf.l.map(i=>LEN[i][0]),...pf.f.map(i=>FMT[i][0]),...(pf.s>=0?[SORTS[pf.s][0]]:[])],n=pfList().length;
+  return `<div class="pf-cols">${PCOLS.map((c,i)=>`<button class="f pf-tab${i===pf.c?' sel':''}" data-id="pf-c-${i}" data-act="pfc" data-v="${i}">${c.n}</button>`).join('')}<button class="f pf-filt" data-id="pf-filter" data-act="pfmore">${FUNNEL}FILTER</button></div>`
+    +(on.length?`<div class="pf-whisper"><button class="f pf-w" data-id="pf-w" data-act="pfmore">${esc(on.join(' · ').toUpperCase())} · <b>${n} TITLE${n===1?'':'S'}</b></button><button class="f pf-x" data-id="pf-x" data-act="pfclear" aria-label="Clear filters">×</button></div>`:'');
+}
+function pfChips(){
+  const any=pf.g.length||pf.l.length||pf.f.length||pf.s>=0,n=pfList().length;
+  return `<h3>Filter <span class="pf-ovn">${n} title${n===1?'':'s'}</span></h3><p class="pf-lab">GENRE</p><div class="pf-grid">${GENRES.map(g=>pfChip('g',g,g)).join('')}</div>
+    <p class="pf-lab">LENGTH</p><div class="pf-line">${LEN.map((x,i)=>pfChip('l',i,x[0])).join('')}</div><p class="pf-lab">FORMAT</p><div class="pf-line">${FMT.map((x,i)=>pfChip('f',i,x[0])).join('')}</div>
+    <p class="pf-lab">SORT</p><div class="pf-line">${SORTS.map((x,i)=>pfChip('s',i,x[0])).join('')}</div>${any?'<div class="pf-line"><button class="f pf-chip pf-clear" data-id="pf-clear" data-act="pfclear">Clear all ×</button></div>':''}<p class="pf-hint">OK toggles · Back closes</p>`;
 }
 const pgItem=(id,start)=>`<button class="f pg-i${start?' start':''}" data-id="pg-${id}" data-t="${id}" data-k="${esc(PCOLS[pf.c].k)}" data-act="open"><span class="pg-n">${esc(T[id].n)}</span><span class="pg-c">${facts(T[id],pf.c===1?1:undefined)}</span></button>`;
 function pgFlip(ids){
@@ -1807,14 +1839,14 @@ function pfApply(){
   try{localStorage.setItem('mb-pf',JSON.stringify(pf))}catch(_){}
   const S=$('#s-alt'),fid=cur&&cur.dataset.id,inOv=ovOpen&&$('#ov .pf-ov'),ids=pfList();
   const bar=S.querySelector('.pf-bar');
-  if(bar){const sl=[...bar.querySelectorAll('.pf-row')].map(r=>r.scrollLeft);bar.innerHTML=pfBars();bar.querySelectorAll('.pf-row').forEach((r,i)=>r.scrollLeft=sl[i])}
-  if(inOv)$('#ov .pf-body').innerHTML=pfBars();
+  if(bar)bar.innerHTML=pfTabs();
+  if(inOv)$('#ov .pf-ov').innerHTML=pfChips();
   pgFlip(ids);
-  S.querySelectorAll('.pf-count').forEach(n=>n.classList.add('tick')); // the count sits at the head of the list and ticks when it changes
+  S.querySelectorAll('.pf-w b').forEach(n=>n.classList.add('tick')); // the count in the whisper line ticks when it changes
   setBd(ids[0]||null);
-  const sc=inOv?$('#ov'):S;focus(byId(fid,sc)||sc.querySelector('.pf-count'));
+  const sc=inOv?$('#ov'):S;focus(byId(fid,sc)||(inOv?sc.querySelector('.pf-chip'):pgBack()));
 }
-const pgBack=()=>{const S=$('#s-alt');return progLast&&progLast.isConnected?progLast:S.querySelector('.pg-list .pg-i:not(.pf-leave)')||S.querySelector('.pf-count')};
+const pgBack=()=>{const S=$('#s-alt');return progLast&&progLast.isConnected?progLast:S.querySelector('.pg-list .pg-i:not(.pf-leave)')||S.querySelector('.pf-filt')};
 
 // scale the 800x450 stage to the frame
 const tv=$('#tv');
