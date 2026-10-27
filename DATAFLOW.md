@@ -13,7 +13,7 @@ Companion to [PLAN.md](PLAN.md). Hub mode unless stated. Everything runs on the 
 | Bazarr | 6767 | no | |
 | Decypharr | 8282 | no | qBittorrent-compatible API for the arrs + WebDAV |
 | NzbDAV | 3000 | no | SABnzbd-compatible API for the arrs + WebDAV |
-| Kodi JSON-RPC | 8080 | no | Requests plugin and wizard progress panel |
+| Kodi web server (Chorus + JSON-RPC) | 8080 | yes | Phone remote/keyboard; random per-box password seeded at first boot, shown as a QR on the status screen |
 | Tailscale | — | opt-in | `tailscale serve` for Jellyfin when enabled |
 
 ## Filesystem

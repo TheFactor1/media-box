@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Seeded once by /usr/libexec/mediabox/kodi-seed. Ids and values from xbmc/xbmc branch Piers,
+     system/settings/settings.xml; version 4 = CSettingsManager::Version. Unlisted settings keep defaults. -->
+<settings version="4">
+    <!-- ALSA device names are "ALSA:" + the ALSA PCM name (AESinkALSA.cpp). Unverified: assumes the
+         Intel reference box's first HDMI port (card PCH, device 0); the wizard's sound step must confirm it. -->
+    <setting id="audiooutput.audiodevice">ALSA:hdmi:CARD=PCH,DEV=0</setting>
+    <setting id="audiooutput.passthroughdevice">ALSA:hdmi:CARD=PCH,DEV=0</setting>
+    <setting id="audiooutput.passthrough">true</setting>
+    <setting id="audiooutput.ac3passthrough">true</setting>
+    <setting id="audiooutput.eac3passthrough">true</setting>
+    <setting id="audiooutput.dtspassthrough">true</setting>
+    <setting id="audiooutput.dtshdpassthrough">true</setting>
+    <setting id="audiooutput.truehdpassthrough">true</setting>
+    <!-- 1 = ADJUST_REFRESHRATE_ALWAYS -->
+    <setting id="videoplayer.adjustrefreshrate">1</setting>
+    <!-- The only HDR switch WinSystemGbm reads; 10-bit output on GBM has no setting, it follows the video. -->
+    <setting id="winsystem.ishdrdisplay">true</setting>
+    <!-- Kodi won't start the web server with authentication on (the default) and an empty password;
+         kodi-seed puts a per-box random one here. Username stays the default "kodi". -->
+    <setting id="services.webserver">true</setting>
+    <setting id="services.webserverport">8080</setting>
+    <setting id="services.webserverpassword">@WEBSERVER_PASSWORD@</setting>
+    <!-- Kodi ships no picture screensaver (only black and dim). -->
+    <setting id="screensaver.mode">screensaver.xbmc.builtin.dim</setting>
+</settings>

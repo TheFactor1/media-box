@@ -1,0 +1,15 @@
+#!/usr/bin/bash
+# Runs as user media from kodi.service ExecStartPre. Seeds Kodi's userdata on first
+# start only, so later boots never overwrite the user's settings.
+set -euo pipefail
+
+dest="$HOME/.kodi/userdata"
+[[ -e $dest ]] && exit 0
+
+mkdir -p "$HOME/.kodi"
+# Build in a temp dir and rename, so an interrupted copy can't leave a half-seeded
+# userdata that blocks seeding forever.
+tmp=$(mktemp -d "$HOME/.kodi/userdata.XXXXXX")
+cp -r /usr/share/mediabox/kodi-defaults/. "$tmp"
+sed -i "s/@WEBSERVER_PASSWORD@/$(systemd-id128 new)/" "$tmp/guisettings.xml"
+mv "$tmp" "$dest"

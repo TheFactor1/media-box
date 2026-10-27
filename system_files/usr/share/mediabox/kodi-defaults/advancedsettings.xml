@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<advancedsettings version="1.0">
+    <!-- The Plymouth theme is the only splash; Kodi's own would flash its logo before home. -->
+    <splash>false</splash>
+    <!-- /media/library looks like local disk but is FUSE over the network; 1 = buffer all filesystems. -->
+    <cache>
+        <buffermode>1</buffermode>
+    </cache>
+</advancedsettings>

@@ -17,7 +17,9 @@ StandardError=journal
 # Creates /var/lib/media owned by media; also Kodi's $HOME.
 StateDirectory=media
 Environment=HOME=/var/lib/media
-ExecStart=/usr/bin/kodi --windowing=gbm
+ExecStartPre=/usr/libexec/mediabox/kodi-seed
+# Without this Kodi tries PulseAudio, then PipeWire, before ALSA (PlatformLinux.cpp).
+ExecStart=/usr/bin/kodi --windowing=gbm --audio-backend=alsa
 Restart=on-abort
 RestartSec=2
 
