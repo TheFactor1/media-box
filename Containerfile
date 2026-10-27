@@ -4,8 +4,9 @@ FROM scratch AS ctx
 COPY build_files /build_files
 COPY system_files /system_files
 
-# ublue base-main: Fedora bootc + RPM Fusion + codecs + Intel media driver.
-FROM ghcr.io/ublue-os/base-main:latest
+# Plain Fedora bootc + RPM Fusion. (ublue base-main uses negativo17, whose
+# ffmpeg conflicts with the RPM Fusion ffmpeg that Kodi is built against.)
+FROM quay.io/fedora/fedora-bootc:44
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/var/cache \

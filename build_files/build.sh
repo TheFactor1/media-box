@@ -3,9 +3,16 @@ set -ouex pipefail
 
 cp -r /ctx/system_files/. /
 
-# kodi-gbm: if RPM Fusion doesn't ship the GBM windowing binary, this fails
-# loudly, which is the answer to Phase 0 spike 2 (then we build Kodi ourselves).
-dnf5 install -y kodi kodi-gbm libcec rclone fuse3 skopeo
+rel=$(rpm -E %fedora)
+dnf5 install -y \
+  "https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-${rel}.noarch.rpm" \
+  "https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-${rel}.noarch.rpm"
+
+# RPM Fusion's single kodi binary is built with x11, wayland and gbm backends;
+# `kodi --windowing=gbm` picks GBM at runtime (spike 2: yes).
+dnf5 install -y kodi libcec rclone fuse3 skopeo podman \
+  intel-media-driver libva-intel-media-driver mesa-dri-drivers mesa-va-drivers-freeworld \
+  plymouth plymouth-system-theme alsa-utils
 
 # Player runs as an unprivileged user with a logind session on tty1.
 useradd -u 1000 -M -d /var/lib/media -s /usr/sbin/nologin -G audio,video,render,input media
