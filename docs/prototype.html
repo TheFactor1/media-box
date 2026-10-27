@@ -711,6 +711,82 @@ button.sv{cursor:pointer}
 .pp-tx .pg-c{display:block}
 .pp-i.on .art{transform:scale(1.02)}
 
+/* ---------- Unusual layouts ---------- */
+.u-ch{position:absolute;left:28px;top:20px;z-index:3}
+/* Orbit */
+.ob-ring{position:absolute;inset:0;transform-origin:400px 150px}
+.ob-i{position:absolute;left:0;top:0;width:70px;transition:transform .55s cubic-bezier(.3,.7,.2,1),opacity .55s ease}
+.ob-i .art{box-shadow:0 10px 24px color-mix(in srgb,var(--bg) 70%,transparent)}
+.ob-ring.out{animation:obOut .28s ease-in forwards}
+.ob-ring.in{animation:obIn .45s cubic-bezier(.2,.7,.2,1)}
+@keyframes obOut{to{transform:scale(.1);opacity:0}}
+@keyframes obIn{from{transform:scale(.1);opacity:0}}
+.ob-card{position:absolute;left:22%;right:22%;bottom:16px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 20px;border:0;text-align:center;cursor:pointer;color:var(--fg);z-index:60}
+.ob-card .ttl{font-size:calc(var(--title-size) * .85)}
+/* Spines */
+.sp-cam{position:absolute;left:0;right:0;top:0;transition:transform .55s cubic-bezier(.3,.7,.2,1)}
+.sp-shelf{position:relative;height:280px;margin-bottom:34px;display:flex;align-items:flex-end;gap:3px;padding:0 28px;border-bottom:6px solid color-mix(in srgb,var(--fg) 14%,transparent);opacity:.35;transition:opacity .4s ease}
+.sp-shelf.cur{opacity:1}
+.sp-shelf .alt-h{position:absolute;left:28px;bottom:-24px}
+.sp{flex:none;height:130px;padding:0;border:0;border-radius:2px 2px 0 0;cursor:pointer;overflow:hidden;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(90deg,hsl(var(--h1) 38% 20%),hsl(var(--h1) 44% 34%) 45%,hsl(var(--h2) 34% 15%));box-shadow:inset 1px 0 0 color-mix(in srgb,var(--fg) 14%,transparent);transition:transform .3s cubic-bezier(.2,.7,.2,1)}
+.sp span{writing-mode:vertical-rl;transform:rotate(180deg);font-family:var(--f-display);font-weight:var(--title-w);font-size:10px;color:var(--fg);white-space:nowrap}
+.sp.on{transform:translateY(-24px)}
+.sp-pull{position:absolute;bottom:166px;width:320px;display:flex;gap:10px;align-items:flex-end;pointer-events:none;animation:inD .4s cubic-bezier(.2,.7,.2,1)}
+.sp-pull .art{width:70px;flex:none}
+.sp-pull .ttl{font-size:calc(var(--title-size) * .55)}
+.sp-pull>span:last-child{display:flex;flex-direction:column;gap:4px;padding-bottom:4px}
+/* Reel */
+.rl-strip{position:absolute;left:28px;top:0;bottom:0;width:150px;overflow:hidden;background:color-mix(in srgb,var(--fg) 5%,var(--bg))}
+.rl-strip.whip{animation:whip .4s cubic-bezier(.2,.7,.2,1)}
+@keyframes whip{from{transform:translateY(-70px);opacity:0}}
+.rl-film{position:absolute;left:0;right:0;top:0;padding:0 22px;display:flex;flex-direction:column;gap:10px;transition:transform .45s cubic-bezier(.3,.7,.2,1)}
+.rl-film::before,.rl-film::after{content:"";position:absolute;top:-400px;bottom:-400px;width:7px;background:repeating-linear-gradient(180deg,color-mix(in srgb,var(--fg) 60%,transparent) 0 6px,transparent 6px 14px);opacity:.45}
+.rl-film::before{left:7px}
+.rl-film::after{right:7px}
+.rl-f{display:block;width:100%;padding:0;border:0;background:none;cursor:pointer;opacity:.4;transition:opacity .3s ease}
+.rl-f .art{aspect-ratio:16/10;border-radius:2px}
+.rl-f .art::after{display:none}
+.rl-f.on{opacity:1}
+.rl-f.on .art{box-shadow:0 0 0 1.5px var(--fg)}
+.rl-beam{position:absolute;left:178px;top:0;bottom:0;width:130px;pointer-events:none;z-index:1;background:linear-gradient(90deg,color-mix(in srgb,var(--fg) 24%,transparent),transparent);clip-path:polygon(0 44%,100% 0,100% 100%,0 56%);opacity:.55;animation:flick2 2.6s steps(1) infinite}
+@keyframes flick2{30%{opacity:.4}31%{opacity:.6}70%{opacity:.48}71%{opacity:.55}}
+.rl-card{position:absolute;right:28px;bottom:24px;width:46%;display:flex;flex-direction:column;gap:7px;padding:16px 20px}
+.alt-reel .u-ch{left:calc(33% + 24px)}
+[data-home="reel"] .bd{left:33%}
+/* Deck */
+.dk-stack{position:absolute;left:50%;top:44px;width:180px;margin-left:-90px}
+.dk-back{position:absolute;inset:0;border-radius:14px;background:color-mix(in srgb,var(--fg) 9%,var(--bg));box-shadow:0 10px 30px color-mix(in srgb,var(--bg) 70%,transparent)}
+.dk-back:nth-child(1){transform:rotate(-7deg) translate(-8px,6px)}
+.dk-back:nth-child(2){transform:rotate(5deg) translate(8px,4px)}
+.dk-card,.dk-end{position:relative;display:flex;flex-direction:column;width:180px;padding:0;border:0;border-radius:14px;overflow:hidden;cursor:pointer;color:var(--fg);text-align:left;background:var(--sheet);box-shadow:0 20px 40px color-mix(in srgb,var(--bg) 70%,transparent)}
+.dk-card .art{aspect-ratio:3/4;border-radius:0}
+.dk-card .art::after{display:none}
+.dk-tx{padding:9px 12px 12px;display:flex;flex-direction:column;gap:4px}
+.dk-tx .ttl{font-size:calc(var(--title-size) * .55)}
+.dk-end{height:300px;justify-content:center;align-items:center;text-align:center;padding:20px;gap:10px;font-size:12px;color:var(--muted)}
+.dk-card.on,.dk-end.on{box-shadow:0 0 0 1.5px var(--fg),0 20px 40px color-mix(in srgb,var(--bg) 70%,transparent)}
+.dk-card.fly-r{animation:flyR .35s cubic-bezier(.5,0,.75,0) forwards}
+.dk-card.fly-l{animation:flyL .35s cubic-bezier(.5,0,.75,0) forwards}
+.dk-card.deal,.dk-end.deal{animation:deal .3s cubic-bezier(.2,.7,.2,1)}
+@keyframes flyR{to{transform:translate(400px,130px) rotate(22deg) scale(.35);opacity:0}}
+@keyframes flyL{to{transform:translate(-440px,40px) rotate(-24deg);opacity:0}}
+@keyframes deal{from{transform:translateY(18px) scale(.94);opacity:.4}}
+.dk-pile{position:absolute;right:28px;bottom:24px;width:70px;height:92px;border-radius:10px;border:1px solid var(--faint);background:color-mix(in srgb,var(--fg) 6%,transparent);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--fg);cursor:pointer}
+.dk-pile b{font-family:var(--f-display);font-weight:var(--title-w);font-size:26px}
+.dk-pile.bump{animation:pop .4s cubic-bezier(.3,1.5,.5,1)}
+.dk-hint{position:absolute;left:28px;bottom:24px;max-width:27%;line-height:1.7}
+/* Timeframe */
+.tf{position:absolute;inset:0;display:flex;flex-direction:column}
+.tf-dial{display:flex;flex-direction:column;align-items:center;gap:16px;margin:34px auto 0;padding:10px 20px;border:0;background:none;color:var(--fg);cursor:pointer;border-radius:var(--radius-l)}
+.tf-opts{display:flex;gap:30px;font-family:var(--f-mono,var(--f-body));font-size:13px;letter-spacing:.12em;color:var(--muted)}
+.tf-opts span{display:inline-block;transition:transform .3s ease,color .3s ease;white-space:nowrap}
+.tf-opts .sel{color:var(--fg);transform:scale(1.7)}
+.tf-row{margin-top:26px;align-items:flex-end;min-height:220px}
+.tf-c .tf-m{display:block;margin-top:6px;font-family:var(--f-mono,var(--f-body));font-size:9px;letter-spacing:.14em;color:var(--muted)}
+.tf-c.on .tf-m{color:var(--fg)}
+.tf-none{margin:40px 28px;color:var(--muted)}
+
 /* ---------- Motion (all looks; Calm turns it into short fades) ---------- */
 @keyframes up{from{opacity:0;transform:translateY(10px)}}
 @keyframes rise{from{opacity:0;transform:translateY(24px)}}
@@ -819,7 +895,7 @@ button.sv{cursor:pointer}
       <button id="mo-calm" data-mo="calm" aria-pressed="false">Calm</button>
     </div>
     <label class="seg" id="types" hidden><span class="seg-l">Type</span><select id="type-sel"><option value="bricolage">Bricolage Grotesque</option><option value="syne">Syne</option><option value="serif">Instrument Serif</option><option value="unbounded">Unbounded</option><option value="shoulders">Big Shoulders</option><option value="anybody">Anybody Wide</option><option value="michroma">Michroma</option><option value="gloock">Gloock</option><option value="cormorant">Cormorant Garamond</option><option value="bodoni">Bodoni Moda</option><option value="dela">Dela Gothic One</option><option value="zilla">Zilla Slab</option><option value="familjen">Familjen Grotesk</option><option value="chakra">Chakra Petch</option></select></label>
-    <label class="seg"><span class="seg-l">Layout</span><select id="lay-sel"><option value="rows">Rows</option><option value="marquee">Marquee</option><option value="wall">Wall</option><option value="programme">Programme</option><option value="tonight">Tonight</option><option value="pages">Pages</option></select></label>
+    <label class="seg"><span class="seg-l">Layout</span><select id="lay-sel"><optgroup label="Layouts"><option value="rows">Rows</option><option value="marquee">Marquee</option><option value="wall">Wall</option><option value="programme">Programme</option><option value="tonight">Tonight</option><option value="pages">Pages</option></optgroup><optgroup label="Unusual"><option value="orbit">Orbit</option><option value="spines">Spines</option><option value="reel">Reel</option><option value="deck">Deck</option><option value="timeframe">Timeframe</option></optgroup></select></label>
     <div class="seg"><button id="go-idle">Go idle</button></div>
   </header>
 
@@ -1133,7 +1209,7 @@ const blob=$('#blob');let blobT;
 function placeBlob(dir,settled){
   clearTimeout(blobT);
   if(!['mercury','nocturne','pulse'].includes(document.documentElement.dataset.look))return;
-  if(!cur||!cur.offsetParent||cur.matches('.pg-i,.mq-card')){blob.classList.remove('show');return} // these layouts mark focus themselves
+  if(!cur||!cur.offsetParent||cur.matches('.pg-i,.mq-card,.ob-card,.sp,.rl-f,.dk-card,.dk-end,.tf-dial')){blob.classList.remove('show');return} // these layouts mark focus themselves
   const t=cur.querySelector('.art')||cur,r=t.getBoundingClientRect(),sr=stage.getBoundingClientRect(),k=sr.width/800;
   const card=cur.classList.contains('card'),g=card?1.03:1,pad=card?3:2;
   const w=t.offsetWidth*g+pad*2,h=t.offsetHeight*g+pad*2;
@@ -1235,6 +1311,7 @@ function activate(el){
   else if(a==='pgplay')play((progLast||el).dataset.t||COLS[alt.col].ids[0]);
   else if(a==='pginfo'){const t=(progLast&&progLast.dataset.t)||COLS[alt.col].ids[0];titleK=COLS[alt.col].k;go('title',t)}
   else if(a==='everything'){stack.push({s:'home',id:titleId,k:titleK,f:el.dataset.id,lay});lay='rows';show('home')}
+  else if(a==='pile')openOv(`<div class="ov-box"><h3>Tonight</h3>${kept.length?kept.map(id=>`<button class="f vr" data-id="k-${id}" data-act="tplay" data-t="${id}">${esc(T[id].n)}<small>${facts(T[id])} · OK to play</small></button>`).join(''):'<p>Nothing kept yet. Press → on a card to keep it for tonight.</p><button class="f btn" data-id="k-close" data-act="close">Close</button>'}</div>`);
   else if(a==='tab'){alt.col=+el.dataset.i;alt.idx=0;renderAlt();focus(byId('tab-'+alt.col,scr()))}
 }
 
@@ -1353,9 +1430,65 @@ function renderAlt(dir){
     const n=COLS.length,pc=COLS[alt.page],its=pc.ids.slice(0,4),pad=x=>String(x).padStart(2,'0');
     A.innerHTML=`<div class="pp${anim}"><header class="pp-h"><span class="ttl">${pc.n}</span><span class="alt-h">P. ${pad(alt.page+1)} / ${pad(n)}</span></header>
       <div class="pp-grid">${its.map((id,i)=>`<button class="f pp-i${i?'':' big start'}" data-id="pp-${id}" data-t="${id}" data-k="${esc(pc.k)}" data-act="open">${art(T[id])}<span class="pp-tx"><span class="ttl">${esc(T[id].n)}</span><span class="pg-c">${facts(T[id],alt.page)}</span>${i?'':`<span class="syn">${esc(T[id].s)}</span>`}</span></button>`).join('')}</div></div>`;
+  }else if(lay==='orbit'){
+    const id=ids[alt.idx];
+    A.innerHTML=`<p class="u-ch alt-h${dir==='u'||dir==='d'?anim:''}">${c.n}<b>${alt.col+1} / ${COLS.length}</b></p>
+      <div class="ob-ring${dir==='u'||dir==='d'?' in':''}">${ids.map(x=>`<span class="ob-i">${art(T[x])}</span>`).join('')}</div>
+      <button class="f ob-card glass start" data-id="ob" data-t="${id}" data-k="${esc(c.k)}" data-act="open"><span class="credits"></span><span class="ttl"></span><span class="alt-h">← → turn · ↑ ↓ collection · OK details</span></button>`;
+    obUpdate();
+  }else if(lay==='spines'){
+    setBd(null);
+    A.innerHTML=`<div class="sp-cam">${COLS.map((x,ci)=>`<div class="sp-shelf" data-c="${ci}">${x.ids.map((id,i)=>`<button class="f sp${ci===alt.col&&i===alt.idx?' start':''}" data-id="sp-${ci}-${id}" data-c="${ci}" data-i="${i}" data-t="${id}" data-k="${esc(x.k)}" data-act="open" aria-label="${esc(T[id].n)}" style="--h1:${T[id].h1};--h2:${T[id].h2};width:${Math.round(14+mins(id)/8)}px"><span>${esc(T[id].n)}</span></button>`).join('')}<span class="alt-h">${x.n}</span></div>`).join('')}</div>`;
+  }else if(lay==='reel'){
+    A.innerHTML=`<p class="u-ch alt-h">${c.n}<b>${alt.col+1} / ${COLS.length}</b></p><div class="rl-strip${dir?' whip':''}"><div class="rl-film">${ids.map((id,i)=>`<button class="f rl-f${i===alt.idx?' start':''}" data-id="rl-${id}" data-i="${i}" data-t="${id}" data-k="${esc(c.k)}" data-act="open" aria-label="${esc(T[id].n)}">${art(T[id])}</button>`).join('')}</div></div>
+      <div class="rl-beam"></div><div class="rl-card glass"><span class="credits"></span><span class="ttl"></span><span class="syn"></span><span class="alt-h">↑ ↓ advance · ← → collection · OK details</span></div>`;
+  }else if(lay==='deck'){
+    setBd(null);
+    const id=ids[alt.idx],t=T[id];
+    A.innerHTML=`<p class="u-ch alt-h">${c.n}<b>${Math.min(alt.idx+1,ids.length)} / ${ids.length}</b></p>
+      <div class="dk-stack"><span class="dk-back"></span><span class="dk-back"></span>${id?`<button class="f dk-card start deal" data-id="dk" data-t="${id}" data-k="${esc(c.k)}" data-act="pile">${art(t)}<span class="dk-tx"><span class="credits">${lchips(t,sub(id,alt.col))}</span><span class="ttl">${esc(t.n)}</span></span></button>`
+        :`<button class="f dk-end start deal" data-id="dk" data-act="pile"><span class="ttl">That's the whole hand.</span><span>↓ deals the next collection. OK shows tonight's pile.</span></button>`}</div>
+      <button class="f dk-pile" data-id="dk-pile" data-act="pile"><b>${kept.length}</b><span class="alt-h">Tonight</span></button>
+      <p class="dk-hint alt-h">→ keep for tonight · ← skip · ↑ details · ↓ next collection · OK your pile</p>`;
+  }else if(lay==='timeframe'){
+    setBd(null);
+    if(alt.tf==null)alt.tf=3;
+    const lim=TF[alt.tf]||1e9,all=[...new Set(COLS.flatMap(x=>x.ids))],top=Math.max(...all.map(mins));
+    const fits=all.filter(id=>mins(id)<=lim).sort((a,b)=>mins(b)-mins(a)),fit=fits.length>8?[...new Set([0,1,2,3,4,5,6,7].map(i=>fits[Math.round(i*(fits.length-1)/7)]))]:fits; // spread across the range so sizes show the fit
+    A.innerHTML=`<div class="tf"><button class="f tf-dial start" data-id="tf-dial"><span class="alt-h">How much time do you have?</span><span class="tf-opts">${TFL.map((l,i)=>`<span class="${i===alt.tf?'sel':''}">${l}</span>`).join('')}</span></button>
+      ${fit.length?`<div class="track tf-row">${fit.map(id=>`<button class="f card tf-c" style="width:${Math.round(58+50*mins(id)/Math.min(lim,top))}px" data-id="tf-${id}" data-t="${id}" data-act="tplay" aria-label="${esc(T[id].n)}">${art(T[id])}<span class="tf-m">${hm(mins(id))}</span></button>`).join('')}</div>`:`<p class="tf-none">Nothing fits in ${TFL[alt.tf].toLowerCase()}. Turn the dial up.</p>`}</div>`;
   }
 }
+// minutes a title needs tonight: what's left if you've started it, else its runtime; series count one episode
+const mins=id=>{const s=PROG[id]||T[id].r,h=/(\d+) h/.exec(s),m=/(\d+) min/.exec(s);return /season/.test(s)?48:(h?h[1]*60:0)+(m?+m[1]:0)};
+const hm=m=>`${m>=60?Math.floor(m/60)+' H ':''}${m%60?m%60+' MIN':''}`.trim();
+const TF=[30,45,60,90,120,150,0],TFL=['30 MIN','45','1 H','1 H 30','2 H','2 H 30','ANY'];
+let kept=[],busy=false;
+function obUpdate(){
+  const S=$('#s-alt'),c=COLS[alt.col],ids=c.ids,n=ids.length;
+  S.querySelectorAll('.ob-i').forEach((el,i)=>{
+    const r=(i-alt.idx+n)%n;let x=400,y=150,sc=1.9,z=50,o=1;
+    if(r){const a=r/n*2*Math.PI,k=(Math.cos(a)+1)/2;x=400+330*Math.sin(a);y=150+100*Math.cos(a);sc=.6+.5*k;z=Math.round(10+k*30);o=.4+.6*k}
+    el.style.transform=`translate(${x-35}px,${y-52}px) scale(${sc})`;el.style.zIndex=z;el.style.opacity=o;
+  });
+  const id=ids[alt.idx],t=T[id],b=S.querySelector('.ob-card');setBd(id);
+  b.dataset.t=id;b.querySelector('.ttl').textContent=t.n;b.querySelector('.credits').innerHTML=lchips(t,sub(id,alt.col));
+}
+function deal(){renderAlt();focus($('#s-alt .start'))}
 function altFocus(){
+  if(lay==='spines'&&cur.classList.contains('sp')){
+    alt.col=+cur.dataset.c;alt.idx=+cur.dataset.i;
+    const sh=cur.parentElement,S=$('#s-alt');
+    S.querySelectorAll('.sp-shelf').forEach(x=>x.classList.toggle('cur',x===sh));
+    S.querySelector('.sp-cam').style.transform=`translateY(${50-sh.offsetTop}px)`;
+    S.querySelector('.sp-pull')?.remove();const t=T[cur.dataset.t];
+    sh.insertAdjacentHTML('beforeend',`<span class="sp-pull" style="left:${cur.offsetLeft+cur.offsetWidth/2-35}px">${art(t)}<span><span class="credits">${lchips(t,sub(t.id,alt.col))}</span><span class="ttl">${esc(t.n)}</span></span></span>`);
+  }
+  if(lay==='reel'&&cur.classList.contains('rl-f')){
+    alt.idx=+cur.dataset.i;const S=$('#s-alt'),t=T[cur.dataset.t],k=S.querySelector('.rl-card');setBd(t.id);
+    S.querySelector('.rl-film').style.transform=`translateY(${225-cur.offsetTop-cur.offsetHeight/2}px)`;
+    k.querySelector('.credits').innerHTML=lchips(t,sub(t.id,alt.col));k.querySelector('.ttl').textContent=t.n;k.querySelector('.syn').textContent=t.s;
+  }
   if(lay==='programme'&&cur.classList.contains('pg-i')){progLast=cur;setBd(cur.dataset.t)}
   if(lay==='wall'){
     if(cur.dataset.c){alt.col=+cur.dataset.c;$('#s-alt').querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('sel',i===alt.col))}
@@ -1367,7 +1500,38 @@ function altFocus(){
   }
 }
 function altKey(d){
-  const S=$('#s-alt'),n=COLS.length;
+  const S=$('#s-alt'),n=COLS.length,m=COLS[alt.col].ids.length;
+  if(busy)return true;
+  if(lay==='orbit'){
+    if(d==='l'||d==='r'){alt.idx=(alt.idx+(d==='r'?1:-1)+m)%m;obUpdate();return true}
+    if(calm()){alt.col=(alt.col+(d==='d'?1:-1)+n)%n;alt.idx=0;deal();return true}
+    busy=true;S.querySelector('.ob-ring').classList.add('out');
+    setTimeout(()=>{busy=false;alt.col=(alt.col+(d==='d'?1:-1)+n)%n;alt.idx=0;renderAlt(d);focus(byId('ob',S))},280);return true;
+  }
+  if(lay==='spines'){
+    if(d==='l'||d==='r'){const i=Math.max(0,Math.min(m-1,alt.idx+(d==='r'?1:-1)));focus(byId(`sp-${alt.col}-${COLS[alt.col].ids[i]}`,S));return true}
+    const c=Math.max(0,Math.min(n-1,alt.col+(d==='d'?1:-1))),ids=COLS[c].ids;focus(byId(`sp-${c}-${ids[Math.min(alt.idx,ids.length-1)]}`,S));return true;
+  }
+  if(lay==='reel'){
+    if(d==='u'||d==='d'){const i=Math.max(0,Math.min(m-1,alt.idx+(d==='d'?1:-1)));focus(byId('rl-'+COLS[alt.col].ids[i],S));return true}
+    alt.col=(alt.col+(d==='r'?1:-1)+n)%n;alt.idx=0;renderAlt(d);focus(S.querySelector('.start'));return true;
+  }
+  if(lay==='deck'){
+    const id=COLS[alt.col].ids[alt.idx],card=S.querySelector('.dk-card');
+    if(d==='u'){if(id){titleK=COLS[alt.col].k;go('title',id)}return true}
+    if(d==='d'){alt.col=(alt.col+1)%n;alt.idx=0;deal();return true}
+    if(!card)return true;
+    if(d==='r'&&!kept.includes(id))kept.push(id);
+    if(calm()){alt.idx++;deal();return true}
+    busy=true;card.classList.remove('deal');card.classList.add(d==='r'?'fly-r':'fly-l');
+    if(d==='r'){const p=S.querySelector('.dk-pile');p.querySelector('b').textContent=kept.length;p.classList.remove('bump');void p.offsetWidth;p.classList.add('bump')}
+    setTimeout(()=>{busy=false;alt.idx++;deal()},350);return true;
+  }
+  if(lay==='timeframe'&&cur&&cur.classList.contains('tf-dial')){
+    if(d==='l'||d==='r'){alt.tf=Math.max(0,Math.min(TF.length-1,alt.tf+(d==='r'?1:-1)));renderAlt();focus(byId('tf-dial',S));return true}
+    if(d==='d'){const c=S.querySelector('.tf-c');if(c)focus(c);return true}
+    return true;
+  }
   if(cur&&cur.classList.contains('tab')&&(d==='l'||d==='r')){alt.col=(alt.col+(d==='r'?1:-1)+n)%n;alt.idx=0;renderAlt();focus(byId('tab-'+alt.col,S));return true}
   if(lay==='wall'&&d==='d'&&cur&&cur.classList.contains('tab')){focus(S.querySelector('.start'));return true}
   if(lay==='marquee'){
