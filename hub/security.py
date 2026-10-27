@@ -28,9 +28,15 @@ def secret_file(path):
 
 def write_secret(path, data):
     tmp = path + '.tmp'
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, 'O_BINARY', 0), 0o600)
+    try:  # a leftover (or planted) tmp keeps its own mode under O_CREAT, so start from nothing and O_EXCL
+        os.unlink(tmp)
+    except FileNotFoundError:
+        pass
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_BINARY', 0), 0o600)
     with os.fdopen(fd, 'wb') as f:
         f.write(data)
+        f.flush()
+        os.fsync(f.fileno())  # a crash must not leave an empty key: the settings would be unreadable
     os.replace(tmp, path)
     return data
 
@@ -85,6 +91,17 @@ class Bucket:
             return ok
 
 
+def route_source():
+    """This host's source address on the default route. A UDP connect only picks a route; no packet is sent."""
+    # shortcut: sees the default-route interface only; a public address on another interface still needs getifaddrs
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        try:
+            s.connect(('192.0.2.1', 1))
+            return s.getsockname()[0]
+        except OSError:
+            return None
+
+
 def public_addresses(bind):
     """The globally routable IPv4 addresses `bind` would listen on (0.0.0.0 means every address of this host)."""
     host = socket.gethostname() if bind in ('', '0.0.0.0') else bind
@@ -92,4 +109,6 @@ def public_addresses(bind):
         addrs = {a[4][0] for a in socket.getaddrinfo(host, None, socket.AF_INET)}
     except OSError:  # an unresolvable bind fails at listen time anyway
         addrs = set()
+    if bind in ('', '0.0.0.0'):  # the hostname often resolves to 127.0.1.1 only, so also ask the default route
+        addrs |= {route_source()} - {None}
     return sorted(a for a in addrs if ipaddress.ip_address(a).is_global)

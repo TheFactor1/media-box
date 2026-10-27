@@ -8,7 +8,7 @@ Companion to [PLAN.md](PLAN.md). Hub mode unless stated. Everything runs on the 
 | Wizard (web app, incl. phone search + Keep this) | 80 | yes | Pairing code needed while unpaired |
 | Jellyfin | 8096 | yes | |
 | Hub | 8097 | yes | Player calls it over the LAN with the pairing token; setup page and pairing approval live here too |
-| Hub discovery | 8098/udp | yes | `MEDIABOX?` → `MEDIABOX 1 <port> <name>`; nothing about the user |
+| Hub discovery | 8098/udp | yes | `MEDIABOX?` padded with spaces to 64 bytes → `MEDIABOX 1 <port> <name>` (reply never longer than the request, so no amplification); nothing about the user |
 | AIOStreams (on the box) | 3000 | yes, LAN | Only so "Adjust sources" opens its configure page from a phone; otherwise loopback would do |
 | Kodi web server (Chorus + JSON-RPC) | 8080 | yes | Phone remote/keyboard; random per-box password seeded at first boot, shown as a QR on the status screen |
 | AIOStreams | — | outbound only | The user's instance: LAN (EliteMini), tailnet, or a hosted URL |
@@ -27,7 +27,7 @@ Companion to [PLAN.md](PLAN.md). Hub mode unless stated. Everything runs on the 
 /media/downloads/                 later "real files" tier
 /var/backups/mediabox/            nightly tar of /var/lib/* except caches, 7 kept
 ```
-A `.strm` holds one line: `http://127.0.0.1:8097/play/tt1234567` (plus `/1/3` for S01E03). Kodi opens it directly (Jellyfin for Kodi direct paths), so playback never goes through Jellyfin. In Player mode the box has no library files; Browse works, Keep this needs a hub.
+A `.strm` holds one line in Kodi's header form so the token travels with it: `http://127.0.0.1:8097/play/tt1234567|Authorization=Bearer%20<token>` (plus `/1/3` for S01E03). Kodi opens it directly (Jellyfin for Kodi direct paths), so playback never goes through Jellyfin. In Player mode the box has no library files; Browse works, Keep this needs a hub.
 
 All containers run as uid 1000 (`media`) so Kodi, the resolver and Jellyfin agree on ownership.
 

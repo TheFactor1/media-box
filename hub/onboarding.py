@@ -28,7 +28,10 @@ def key_looks_valid(provider, key):
 
 
 def start_beacon(bind, port, http_port, name):
-    """Answer the datagram `MEDIABOX?` from a LAN address with `MEDIABOX 1 <port> <name>`; ignore everything else."""
+    """Answer the datagram `MEDIABOX?` from a LAN address with `MEDIABOX 1 <port> <name>`; ignore everything else.
+
+    The request must be padded (spaces) to at least the reply's length, 64 bytes is always enough, so a spoofed
+    source can't use the beacon as an amplifier."""
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(('' if bind in ('', '0.0.0.0') else bind, port))  # '' also receives broadcasts
     reply = f'MEDIABOX 1 {http_port} {re.sub(r"[^ -~]", "", name)[:40]}'.encode()
@@ -41,7 +44,7 @@ def start_beacon(bind, port, http_port, name):
                 continue
             except OSError:  # socket closed
                 return
-            if data.strip() == b'MEDIABOX?' and not ipaddress.ip_address(addr[0]).is_global:
+            if data.strip() == b'MEDIABOX?' and len(data) >= len(reply) and not ipaddress.ip_address(addr[0]).is_global:
                 try:
                     sock.sendto(reply, addr)
                 except OSError:
@@ -67,10 +70,10 @@ def api(base, method, path, body=None):
     host = urllib.parse.urlsplit(base).hostname
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
-            envelope = json.load(r)
+            envelope = json.loads(r.read(4 * 2**20))  # capped: truncated JSON fails as ValueError
     except urllib.error.HTTPError as e:
         try:
-            envelope = json.load(e)
+            envelope = json.loads(e.read(2**20))
         except ValueError:
             raise ProvisionError(f'AIOStreams at {host} answered HTTP {e.code}') from None
     except (OSError, ValueError) as e:

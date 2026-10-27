@@ -15,11 +15,12 @@ import threading
 import time
 import unittest
 import urllib.error
+import urllib.parse
 import urllib.request
 from unittest import mock
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from hub import hub, security
+from hub import hub, ranking, security
 
 YEAR = time.localtime().tm_year
 
@@ -84,7 +85,9 @@ class FakeAddon(BaseHTTPRequestHandler):
         self.reply({'success': True, 'detail': 'created', 'error': None, 'data': {'uuid': 'u-1', 'encryptedPassword': 'enc-1'}}, 201)
 
     def reply(self, body, status=200):
-        data = json.dumps(body).encode()
+        self.reply_raw(json.dumps(body).encode(), status)
+
+    def reply_raw(self, data, status=200):
         self.send_response(status)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(data)))
@@ -93,6 +96,14 @@ class FakeAddon(BaseHTTPRequestHandler):
 
     def do_GET(self):
         p = self.path.removeprefix(AIO_PREFIX)
+        if p.startswith('/redirect?to='):  # a hostile addon bouncing the hub somewhere else
+            self.send_response(302)
+            self.send_header('Location', urllib.parse.unquote(p.split('=', 1)[1]))
+            self.send_header('Content-Length', '0')
+            self.end_headers()
+            return
+        if p == '/deep':
+            return self.reply_raw(b'[' * 200000)
         if p == '/api/v1/templates':
             return self.reply({'success': True, 'error': None, 'data': [
                 {'metadata': {'id': 'other'}, 'config': {}},
@@ -249,8 +260,11 @@ class HubTest(Fixture):
             s.settimeout(2)
             beacon = ('127.0.0.1', self.server.beacon.getsockname()[1])
             s.sendto(b'HELLO', beacon)
-            s.sendto(b'MEDIABOX?', beacon)  # only this one is answered
-            self.assertEqual(s.recvfrom(128)[0], f'MEDIABOX 1 {self.server.server_port} Media box'.encode())
+            s.sendto(b'MEDIABOX?', beacon)  # unpadded: shorter than the reply, so not answered (no amplification)
+            s.sendto(b'MEDIABOX?'.ljust(64), beacon)  # only this one is answered
+            reply = s.recvfrom(128)[0]
+            self.assertEqual(reply, f'MEDIABOX 1 {self.server.server_port} Media box'.encode())
+            self.assertLessEqual(len(reply), 64)
             s.settimeout(0.3)
             with self.assertRaises(socket.timeout):
                 s.recvfrom(128)
@@ -264,6 +278,9 @@ class HubTest(Fixture):
         conn.request('GET', '/setup?n=' + nonce)
         page = conn.getresponse()
         self.assertEqual((page.status, page.getheader('Content-Type')), (200, 'text/html; charset=utf-8'))
+        csp = page.getheader('Content-Security-Policy')
+        self.assertIn("script-src 'sha256-", csp)
+        self.assertNotIn("'unsafe-inline'; style", csp)
         self.assertIn(b'Your debrid', page.read())
         conn.close()
         self.assertEqual(self.raw('GET', '/setup?n=wrong')[0], 403)
@@ -317,7 +334,12 @@ class SecurityTest(Fixture):
         self.assertEqual(self.raw('GET', '/library', headers={'Authorization': 'Bearer wrong'})[0], 401)
         self.assertEqual(self.raw('GET', '/library', headers=self.auth())[0], 200)
         status, body, resp = self.raw('GET', '/health', headers={'Origin': 'http://evil.example'})
-        self.assertEqual((status, resp.getheader('Access-Control-Allow-Origin')), (200, 'null'))
+        self.assertEqual((status, resp.getheader('Access-Control-Allow-Origin')), (200, None))
+        # Origin: null (sandboxed iframe, data: page) must not be granted either
+        nul = self.raw('OPTIONS', '/pair/request', headers={'Origin': 'null'})[2]
+        self.assertIsNone(nul.getheader('Access-Control-Allow-Origin'))
+        self.assertEqual(self.raw('HEAD', '/health')[0], 200)  # HEAD is public wherever GET is
+        self.assertEqual(self.raw('POST', '/keep', b'', {**self.auth(), 'Content-Length': '-1'})[0], 413)  # not "read to EOF"
         self.assertNotIn('127.0.0.1:', json.dumps(body))  # hosts only, no URLs or ports
         self.assertEqual(self.raw('POST', '/keep', b'x' * (65 * 1024), self.auth())[0], 413)
 
@@ -379,6 +401,70 @@ class SecurityTest(Fixture):
                 server.server_close()
                 server.beacon.close()
 
+
+    def test_7_stream_url_must_be_http_without_crlf(self):
+        ctx = ranking.context(None, 'movie')
+        raw = [('a', {'url': 'http://cdn/x\r\nSet-Cookie: a=b'}), ('a', {'url': 'javascript:alert(1)'}),
+               ('a', {'url': 'file:///etc/passwd'}), ('a', {'url': 'https://cdn/ok?a=1'})]
+        self.assertEqual([x['url'] for x in ranking.select(raw, ctx, {})[0]], ['https://cdn/ok?a=1', None, None, None])
+
+    def test_8_ssrf_guard(self):
+        addon = f'http://127.0.0.1:{self.addon.server_port}'
+        for url in ['http://169.254.169.254/latest/meta-data/', f'http://127.0.0.1:{self.server.server_port}/pair',
+                    f'http://localhost:{self.server.server_port}/manifest.json', 'ftp://127.0.0.1/x', 'http://0.0.0.0:3000/m']:
+            with self.assertRaises(hub.AddonError, msg=url):
+                hub.fetch(url)
+        to = urllib.parse.quote(f'http://127.0.0.1:{self.server.server_port}/health', safe='')
+        with self.assertRaises(hub.AddonError):  # a redirect back into the hub is refused too
+            hub.fetch(f'{addon}/redirect?to={to}')
+        self.assertIn('id', hub.fetch(f'{addon}/redirect?to=' + urllib.parse.quote(f'{addon}/manifest.json', safe='')))
+        with self.assertRaises(hub.AddonError):  # 200000-deep JSON is an addon error, not a crash
+            hub.fetch(f'{addon}/deep')
+        with mock.patch('hub.hub.MAX_ADDON', 100), self.assertRaises(hub.AddonError):
+            hub.fetch(f'{addon}/manifest.json')
+
+    def test_9_resume_future_clock_cannot_pin(self):
+        self.call('PUT', '/resume/tt42', {'positionMs': 5, 'durationMs': 10, 'updatedAt': 99999999999999})
+        self.assertLessEqual(self.get('/resume/tt42')['updatedAt'], hub.now_ms())
+        self.call('PUT', '/resume/tt42', {'positionMs': 7, 'durationMs': 10})
+        self.assertEqual(self.get('/resume/tt42')['positionMs'], 7)
+        self.assertEqual(self.call('PUT', '/resume/tt42', {'positionMs': 2**64, 'durationMs': 10})[0], 400)
+
+    def test_a_log_line_has_no_control_chars(self):
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            conn = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=30)
+            conn._validate_path = lambda url: None  # let the hostile path through the client's own check
+            conn.putrequest('GET', '/x\x1b[2J\x7fevil', skip_accept_encoding=True)
+            conn.endheaders()
+            conn.getresponse().read()
+            conn.close()
+            for _ in range(100):
+                if 'evil' in out.getvalue():
+                    break
+                time.sleep(0.01)
+        self.assertIn('/x?[2J?evil', out.getvalue())
+        self.assertNotIn('\x1b', out.getvalue())
+
+    def test_b_health_rate_limited(self):
+        self.hub.limits['health'] = security.Bucket(1, 5)
+        self.assertEqual([self.raw('GET', '/health')[0] for _ in range(6)], [200] * 5 + [429])
+
+    def test_c_secret_write_and_public_route(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, 'key')
+            with open(path + '.tmp', 'wb') as f:  # leftover from a crash, or planted with a wide mode
+                f.write(b'old')
+            if os.name == 'posix':
+                os.chmod(path + '.tmp', 0o666)
+            security.write_secret(path, b'k' * 32)
+            self.assertFalse(os.path.exists(path + '.tmp'))
+            with open(path, 'rb') as f:
+                self.assertEqual(f.read(), b'k' * 32)
+            if os.name == 'posix':
+                self.assertEqual(os.stat(path).st_mode & 0o777, 0o600)
+        with mock.patch('socket.getaddrinfo', return_value=[(2, 1, 6, '', ('127.0.1.1', 0))]), \
+                mock.patch('hub.security.route_source', return_value='8.8.4.4'):
+            self.assertEqual(security.public_addresses('0.0.0.0'), ['8.8.4.4'])  # hostname said loopback; the route says public
 
 
 class SetupTest(Fixture):

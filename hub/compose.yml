@@ -9,7 +9,7 @@ services:
       dockerfile: Containerfile
     container_name: hub
     restart: unless-stopped
-    ports:
-      - "8097:8097"
+    # Host network: the UDP beacon, per-device rate limits and the setup QR all need the real LAN address.
+    network_mode: host
     volumes:
       - ./data:/var/lib/hub

@@ -194,7 +194,9 @@ def select(raw, ctx, p):
         hints = s.get('behaviorHints') if isinstance(s.get('behaviorHints'), dict) else {}
         proxy = hints.get('proxyHeaders') if isinstance(hints.get('proxyHeaders'), dict) else {}
         b = badges(s, ctx) | {'match': match}
-        out.append({'url': s.get('url') if isinstance(s.get('url'), str) else None,
+        url = s.get('url') if isinstance(s.get('url'), str) else ''
+        # http(s), printable ASCII only: the URL goes into a 302 Location, so CR/LF would split the response.
+        out.append({'url': url if re.fullmatch(r'https?://[!-~]+', url, re.I) else None,
                     'headers': proxy.get('request') if isinstance(proxy.get('request'), dict) else {},
                     'badges': b, 'source': {'addon': addon, 'name': s.get('name')}, 'cut': b['cut'],
                     'description': s.get('description') or s.get('title')})

@@ -20,7 +20,7 @@ port = 8097
 # The hub refuses to start if bind would listen on a public IP. Only for a deliberate exposure:
 # allow_public = true
 
-# LAN discovery: a UDP `MEDIABOX?` to this port (or broadcast) is answered with
+# LAN discovery: a UDP `MEDIABOX?`, space-padded to 64 bytes, to this port (or broadcast) is answered with
 # `MEDIABOX 1 <port> <name>`. Nothing about the user is in the reply.
 name = "Media box"
 discovery_port = 8098

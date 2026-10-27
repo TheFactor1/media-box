@@ -9,6 +9,7 @@ import json
 import os
 import re
 import secrets
+import socket
 import sqlite3
 import sys
 import time
@@ -23,11 +24,16 @@ from . import onboarding, ranking, security
 CINEMETA = 'https://v3-cinemeta.strem.io/manifest.json'
 with open(os.path.join(os.path.dirname(__file__), 'setup.html'), 'rb') as _f:
     SETUP_HTML = _f.read()
+# CSP allows exactly the page's own inline script, not 'unsafe-inline'.
+SETUP_SCRIPT = "'sha256-%s'" % security.base64.b64encode(security.hashlib.sha256(
+    re.search(rb'<script>(.*?)</script>', SETUP_HTML, re.S)[1]).digest()).decode()
 STREAM_TTL = 600         # contract: stream cache per title 10 min
 MANIFEST_TTL = 3600
 META_TTL = 86400
 PAIR_WINDOW = 600     # pairing words, setup page and TV pairing requests each last 10 min
 MAX_BODY = 64 * 1024
+MAX_ADDON = 8 * 2**20    # an addon answer over 8 MB is refused, so a hostile addon can't exhaust memory
+OWN_PORTS = set()        # this process's hub ports: an addon URL (or its redirect) must never point back at the hub
 DONE = 0.92              # contract: "continue" = resume point under 92 %
 IMDB = re.compile(r'tt\d+')
 
@@ -53,12 +59,41 @@ def lst(x):
     return x if isinstance(x, list) else []
 
 
+def check_url(url):
+    """http(s) only; never link-local (cloud metadata), multicast, 0.0.0.0, or the hub's own port on a non-public address."""
+    # shortcut: checked before connecting, so DNS rebinding between this lookup and urllib's can slip past; pin the IP if that matters
+    p = urllib.parse.urlsplit(url)
+    if p.scheme not in ('http', 'https') or not p.hostname:
+        raise AddonError(f'{host(url)}: only http and https addon links')
+    port = p.port or (443 if p.scheme == 'https' else 80)
+    for *_, sa in socket.getaddrinfo(p.hostname, port, proto=socket.IPPROTO_TCP):
+        ip = ipaddress.ip_address(sa[0].split('%')[0])
+        ip = getattr(ip, 'ipv4_mapped', None) or ip
+        if ip.is_link_local or ip.is_multicast or ip.is_unspecified or (port in OWN_PORTS and not ip.is_global):
+            raise AddonError(f'{host(url)}: refused, that address is the hub itself or link-local')
+
+
+class CheckedRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        check_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+OPENER = urllib.request.build_opener(CheckedRedirect)
+
+
 def fetch(url, timeout=10):
     try:
+        check_url(url)
         req = urllib.request.Request(url, headers={'User-Agent': 'mediabox-hub/1', 'Accept': 'application/json'})
-        with urllib.request.urlopen(req, timeout=timeout) as r:
-            data = json.load(r)
-    except (OSError, ValueError) as e:  # URLError/HTTPError/timeouts are OSError, bad JSON is ValueError
+        with OPENER.open(req, timeout=timeout) as r:
+            buf, end = bytearray(), time.monotonic() + 3 * timeout  # `timeout` is per read; this caps a slow drip
+            while chunk := r.read(65536):
+                buf += chunk
+                if len(buf) > MAX_ADDON or time.monotonic() > end:
+                    raise AddonError(f'{host(url)}: answer too large or too slow')
+            data = json.loads(buf)
+    except (OSError, ValueError, RecursionError) as e:  # network errors are OSError, bad JSON ValueError, too-deep JSON RecursionError
         # Only the host and error type: addon URLs can embed config tokens.
         raise AddonError(f'{host(url)}: {type(e).__name__} {getattr(e, "code", "")}'.strip()) from None
     if not isinstance(data, dict):
@@ -148,7 +183,7 @@ class Hub:
         public = security.public_addresses(self.bind)
         if public and cfg.get('allow_public') is not True:
             sys.exit(f'refusing to listen on public address {", ".join(public)}; set allow_public = true in hub.toml if you mean it')
-        os.makedirs(data_dir, exist_ok=True)
+        os.makedirs(data_dir, mode=0o700, exist_ok=True)
         self.db = os.path.join(data_dir, 'hub.sqlite')
         self.sql('CREATE TABLE IF NOT EXISTS library(id TEXT PRIMARY KEY, type TEXT, item TEXT, videos TEXT, kept_at INTEGER)')
         self.sql('CREATE TABLE IF NOT EXISTS resume(id TEXT, s INTEGER, e INTEGER, position_ms INTEGER,'
@@ -184,7 +219,7 @@ class Hub:
                     for c in new or [{'addon': CINEMETA, 'type': t, 'id': 'top'} for t in ('movie', 'series')]]
         self.meta_cache = {}
         self.cache = {}  # shortcut: in memory, lost on restart and never pruned; fine for one household, move to sqlite if it grows
-        self.limits = {'play': security.Bucket(10, 10), 'setup': security.Bucket(10, 10),
+        self.limits = {'play': security.Bucket(10, 10), 'setup': security.Bucket(10, 10), 'health': security.Bucket(1, 5),
                        'pair': security.Bucket(5 / 60, 5), 'pair/request': security.Bucket(3 / 60, 3)}
         self.pair_words, self.pair_until, self.pair_requests = None, 0, {}
         self.setup_nonce, self.setup_until = None, 0
@@ -266,7 +301,9 @@ class Hub:
 
     def pair_request(self, body, authorized=False):
         now = time.time()
-        self.pair_requests = {k: v for k, v in self.pair_requests.items() if now - v['created'] < 2 * PAIR_WINDOW}
+        for k, v in list(self.pair_requests.items()):  # in place: rebuilding the dict could drop another thread's request
+            if now - v['created'] >= 2 * PAIR_WINDOW:
+                self.pair_requests.pop(k, None)
         name = re.sub(r'[^ -~]', '', str(body.get('name') if isinstance(body, dict) else '') or 'TV')[:40]
         rid, code = secrets.token_urlsafe(16), f'{secrets.randbelow(10**6):06d}'
         self.pair_requests[rid] = {'name': name, 'code': code, 'created': now, 'approved': False}
@@ -280,7 +317,7 @@ class Hub:
     def pending_requests(self):
         now = time.time()
         return [{'requestId': k, 'name': v['name'], 'code': v['code'], 'ageS': int(now - v['created'])}
-                for k, v in self.pair_requests.items() if not v['approved'] and now - v['created'] < PAIR_WINDOW]
+                for k, v in list(self.pair_requests.items()) if not v['approved'] and now - v['created'] < PAIR_WINDOW]
 
     def approve(self, body):
         req = self.pair_requests.get(str(body.get('requestId')) if isinstance(body, dict) else '')
@@ -300,7 +337,8 @@ class Hub:
             raise HttpError(410, 'that pairing request expired; start again')
         if not req['approved']:
             return 202, {'status': 'pending'}, {}
-        del self.pair_requests[rid]  # the token is handed out once
+        if self.pair_requests.pop(rid, None) is None:  # the token is handed out once, even to two racing polls
+            raise HttpError(404, 'no such pairing request')
         return 200, {'token': self.token}, {}
 
     def rotate(self):
@@ -468,12 +506,13 @@ class Hub:
         return self.annotate([json.loads(self.sql('SELECT item FROM library WHERE id = ?', (id_,))[0][0])])[0]
 
     def put_resume(self, key, body):
-        ok = lambda v: isinstance(v, int) and not isinstance(v, bool) and v >= 0
+        ok = lambda v: isinstance(v, int) and not isinstance(v, bool) and 0 <= v < 2**63
         if not isinstance(body, dict) or not ok(body.get('positionMs')) or not ok(body.get('durationMs')):
             raise HttpError(400, 'body must be {"positionMs": int, "durationMs": int}')
         updated = body.get('updatedAt', now_ms())  # optional so a front end that was offline can't overwrite newer progress
         if not ok(updated):
             raise HttpError(400, 'updatedAt must be epoch ms')
+        updated = min(updated, now_ms())  # a clock in the future must not pin this point against every later write
         self.sql('INSERT INTO resume VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id, s, e) DO UPDATE SET'
                  ' position_ms = excluded.position_ms, duration_ms = excluded.duration_ms, updated_at = excluded.updated_at'
                  ' WHERE excluded.updated_at >= resume.updated_at', (*key, body['positionMs'], body['durationMs'], updated))
@@ -587,6 +626,7 @@ def imdb(id_):
 class Handler(BaseHTTPRequestHandler):
     hub: Hub
     protocol_version = 'HTTP/1.1'
+    timeout = 30  # idle or slow-sending connections are dropped instead of holding a thread forever
 
     def do_GET(self): self.route('GET')
     def do_HEAD(self): self.route('HEAD')  # Kodi probes .strm targets with HEAD before playing
@@ -606,17 +646,17 @@ class Handler(BaseHTTPRequestHandler):
         headers, err = {}, ''
         try:
             length = int(self.headers.get('Content-Length') or 0)
-            if length > MAX_BODY:
+            if not 0 <= length <= MAX_BODY:  # -1 would read to EOF, unbounded
                 self.close_connection = True  # the unread body would otherwise be parsed as the next request
                 raise HttpError(413, 'request body over 64 KB')
             # Read the body before routing so an early 4xx can't leave it in the keep-alive stream.
             self.raw = self.rfile.read(length)
             parts = [urllib.parse.unquote(p) for p in u.path.split('/') if p]
             qs = {k: v[-1] for k, v in urllib.parse.parse_qs(u.query).items()}
-            mp = [method, *parts]
+            mp = ['GET' if method == 'HEAD' else method, *parts]
             # /pair counts only word guesses and TV requests, not reading the words or opening a window.
             limit = self.hub.limits.get('pair' if mp == ['POST', 'pair'] else 'pair/request' if mp == ['POST', 'pair', 'request']
-                                        else parts[0] if parts and parts[0] in ('play', 'setup') else '')
+                                        else parts[0] if parts and parts[0] in ('play', 'setup', 'health') else '')
             if limit and not limit.take(self.client_address[0]):
                 raise HttpError(429, 'too many requests; slow down')
             # Open to the LAN: health and pairing. Setup checks its nonce, /pair and approvals check token or nonce inside.
@@ -626,7 +666,7 @@ class Handler(BaseHTTPRequestHandler):
             if not public and not self.hub.authorized(self.headers.get('Authorization')):
                 headers = {'WWW-Authenticate': 'Bearer'}
                 raise HttpError(401, 'pair this device first: send Authorization: Bearer <token>')
-            status, body, headers = self.dispatch('GET' if method == 'HEAD' else method, parts, qs)
+            status, body, headers = self.dispatch(mp[0], parts, qs)
         except HttpError as e:
             status, body = e.status, {'reason': e.reason}
         except AddonError as e:
@@ -637,8 +677,10 @@ class Handler(BaseHTTPRequestHandler):
         data = body if isinstance(body, bytes) else b'' if body is None and status != 200 else json.dumps(body).encode()
         self.send_response(status)
         # CORS only for pages the hub serves itself (the setup page); every other web origin gets "null".
+        # Never "null": sandboxed iframes and data: pages send Origin: null and would then be allowed to read.
         origin = self.headers.get('Origin')
-        self.send_header('Access-Control-Allow-Origin', origin if origin == f'http://{self.headers.get("Host")}' else 'null')
+        if origin and origin == f'http://{self.headers.get("Host")}':
+            self.send_header('Access-Control-Allow-Origin', origin)
         self.send_header('Vary', 'Origin')
         if method == 'OPTIONS':
             self.send_header('Access-Control-Allow-Methods', 'GET, HEAD, POST, PUT, DELETE, OPTIONS')
@@ -652,7 +694,7 @@ class Handler(BaseHTTPRequestHandler):
         if method != 'HEAD':
             self.wfile.write(data)
         # Path only, never the query, headers, addon URLs (see fetch) or stream URLs.
-        print(f'{self.client_address[0]} {method} {u.path} {status} {(time.monotonic() - t0) * 1000:.0f}ms{err}', flush=True)
+        print(f'{self.client_address[0]} {method} {re.sub(r"[^!-~]", "?", u.path)} {status} {(time.monotonic() - t0) * 1000:.0f}ms{err}', flush=True)
 
     def dispatch(self, method, parts, qs):
         hub = self.hub
@@ -701,7 +743,7 @@ class Handler(BaseHTTPRequestHandler):
                 hub.require_setup(qs.get('n'))
                 return 200, SETUP_HTML, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store',
                                          'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY', 'Content-Security-Policy':
-                                         "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; "
+                                         "default-src 'none'; script-src " + SETUP_SCRIPT + "; style-src 'unsafe-inline'; "
                                          "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"}
             case ['GET', 'setup', 'info']:
                 hub.require_setup(qs.get('n'))
@@ -774,6 +816,7 @@ def make_server(config_path, data_dir):
     handler = type('BoundHandler', (Handler,), {'hub': hub})
     server = ThreadingHTTPServer((hub.bind, hub.port), handler)
     hub.port = server.server_port
+    OWN_PORTS.add(hub.port)
     server.beacon = onboarding.start_beacon(hub.bind, hub.discovery_port, hub.port, hub.name)
     return server
 
