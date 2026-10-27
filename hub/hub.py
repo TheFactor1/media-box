@@ -15,9 +15,12 @@ import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
+from . import ranking
+
 CINEMETA = 'https://v3-cinemeta.strem.io/manifest.json'
 STREAM_TTL = 600         # contract: stream cache per title 10 min
 MANIFEST_TTL = 3600
+META_TTL = 86400
 DONE = 0.92              # contract: "continue" = resume point under 92 %
 IMDB = re.compile(r'tt\d+')
 
@@ -100,69 +103,14 @@ class Addon:
         return fetch(url + '.json')
 
 
-# ---- stream badges and ranking ----
-
-def first(text, table):
-    return next((label for label, rx in table if re.search(rx, text)), None)
-
-
-def every(text, table):
-    return [label for label, rx in table if re.search(rx, text)]
-
-
-RES = [('2160p', r'2160p|\b4k\b|\buhd\b'), ('1080p', r'1080p'), ('720p', r'720p'), ('480p', r'480p')]
-HDR = [('DV', r'\bdv\b|dolby.?vision|\bdovi\b'), ('HDR10+', r'hdr10\+|hdr10plus'),
-       ('HDR10', r'hdr10(?!\+|plus)|\bhdr\b'), ('HLG', r'\bhlg\b')]
-AUDIO = [('TrueHD', r'truehd'), ('Atmos', r'atmos'), ('DTS-HD', r'dts-?hd'), ('DTS:X', r'dts[:. -]?x\b'),
-         ('DD+', r'dd\+|\bddp|e-?ac-?3'), ('AAC', r'\baac\b')]
-SOURCE = [('remux', r'remux'), ('web-dl', r'web-?dl|web-?rip|\bweb\b'), ('bluray', r'blu-?ray|bdrip|brrip')]
-LOSSLESS = {'TrueHD', 'DTS-HD', 'DTS:X'}
-
-
-def badges(stream):
-    hints = stream.get('behaviorHints') if isinstance(stream.get('behaviorHints'), dict) else {}
-    text = ' '.join(str(stream.get(k) or '') for k in ('name', 'title', 'description')) + ' ' + str(hints.get('filename') or '')
-    text = text.casefold()
-    size = re.search(r'(\d+(?:[.,]\d+)?)\s*(gb|gib|mb|mib)\b', text)
-    gb = round(float(size[1].replace(',', '.')) / (1 if size[2].startswith('g') else 1024), 2) if size else None
-    if not gb and isinstance(hints.get('videoSize'), int):
-        gb = round(hints['videoSize'] / 2**30, 2)
-    # Cached markers: AIOStreams uses ⚡/⏳, Torrentio-style addons use [RD+] / [RD download].
-    cached = False if re.search(r'uncached|⏳|download\]', text) else True if re.search(r'⚡|\+\]|\bcached\b|\binstant\b', text) else None
-    return {'res': first(text, RES), 'hdr': every(text, HDR), 'audio': every(text, AUDIO),
-            'source': first(text, SOURCE), 'sizeGb': gb, 'cached': cached}
-
-
-PRESETS = {
-    'best': lambda b: (b['source'] == 'remux', b['res'] == '2160p', bool(b['hdr']), bool(LOSSLESS & set(b['audio']))),
-    'balanced': lambda b: (b['res'] == '2160p' and b['source'] == 'web-dl',),
-    'saver': lambda b: (b['res'] == '1080p',),
-}
-
-
-def rank(raw, preset):
-    """raw: [(addon host, stream dict)] in addon order. Python's sort is stable (also with reverse), so ties keep it."""
-    out = []
-    for addon, s in raw:
-        hints = s.get('behaviorHints') if isinstance(s.get('behaviorHints'), dict) else {}
-        proxy = hints.get('proxyHeaders') if isinstance(hints.get('proxyHeaders'), dict) else {}
-        out.append({'url': s.get('url') if isinstance(s.get('url'), str) else None,
-                    'headers': proxy.get('request') if isinstance(proxy.get('request'), dict) else {},
-                    'badges': badges(s), 'source': {'addon': addon, 'name': s.get('name')},
-                    'description': s.get('description') or s.get('title')})
-    cached = {True: 1, None: 0, False: -1}
-    return sorted(out, key=lambda x: (x['url'] is not None, cached[x['badges']['cached']], *PRESETS[preset](x['badges'])), reverse=True)
-
-
 # ---- metadata ----
 
 def to_item(meta):
     if not isinstance(meta, dict):
         raise AddonError('meta response has no meta object')
     year = re.search(r'\d{4}', str(meta.get('year') or meta.get('releaseInfo') or ''))
-    runtime = re.search(r'\d+', str(meta.get('runtime') or ''))  # shortcut: reads "148 min" only, not "2h 28min"; parse h/m if an addon sends that
     return {'id': meta.get('id'), 'type': meta.get('type'), 'title': meta.get('name'),
-            'year': int(year[0]) if year else None, 'runtimeMin': int(runtime[0]) if runtime else None,
+            'year': int(year[0]) if year else None, 'runtimeMin': ranking.minutes(meta.get('runtime')),
             'genres': lst(meta.get('genres') or meta.get('genre')), 'poster': meta.get('poster'),
             'backdrop': meta.get('background'), 'logo': meta.get('logo'), 'overview': meta.get('description'),
             'badges': None, 'inLibrary': False, 'keptAt': None, 'resume': None, 'nextEpisode': None}
@@ -190,9 +138,13 @@ class Hub:
             with open(config_path, 'rb') as f:
                 cfg = tomllib.load(f)
         self.port, self.bind = int(cfg.get('port', 8097)), cfg.get('bind', '0.0.0.0')
-        self.preset = cfg.get('preset', 'balanced')
-        if self.preset not in PRESETS:
-            sys.exit(f'hub.toml: preset must be one of {", ".join(PRESETS)}')
+        try:
+            self.presets = ranking.preset_table(cfg.get('presets'))
+        except ValueError as e:
+            sys.exit(f'hub.toml: {e}')
+        self.preset = ranking.ALIASES.get(cfg.get('preset'), cfg.get('preset', 'standard'))
+        if self.preset not in self.presets:
+            sys.exit(f'hub.toml: preset must be one of {", ".join(self.presets)}')
         self.meta_addons = [Addon(u) for u in cfg.get('meta_addons', [CINEMETA])]
         self.stream_addons = [Addon(u) for u in cfg.get('stream_addons', [])]
         known = {a.url: a for a in self.meta_addons + self.stream_addons}
@@ -202,6 +154,7 @@ class Hub:
         self.new_recent_only = new is None
         self.new = [(known.setdefault(c['addon'], Addon(c['addon'])), c['type'], c['id'])
                     for c in new or [{'addon': CINEMETA, 'type': t, 'id': 'top'} for t in ('movie', 'series')]]
+        self.meta_cache = {}
         self.cache = {}  # shortcut: in memory, lost on restart and never pruned; fine for one household, move to sqlite if it grows
         os.makedirs(data_dir, exist_ok=True)
         self.db = os.path.join(data_dir, 'hub.sqlite')
@@ -220,11 +173,17 @@ class Hub:
     # -- addons --
 
     def meta(self, type_, id_):
+        hit = self.meta_cache.get((type_, id_))
+        if hit and time.time() - hit[0] < META_TTL:
+            return hit[1]
         errors = []
         for a in self.meta_addons:
             try:
                 if a.supports('meta', type_, id_):
-                    return a.get('meta', type_, id_).get('meta')
+                    meta = a.get('meta', type_, id_).get('meta')
+                    if isinstance(meta, dict):
+                        self.meta_cache[(type_, id_)] = (time.time(), meta)
+                    return meta
             except AddonError as e:
                 errors.append(str(e))
         raise AddonError('; '.join(errors) or f'no meta addon serves {type_} {id_}')
@@ -248,10 +207,47 @@ class Hub:
             self.cache[(type_, vid)] = (time.time(), raw)
         return raw
 
-    def pick(self, type_, vid, preset):
-        best = next((s for s in rank(self.streams(type_, vid), preset) if s['url']), None)
+    def preset_for(self, qs):
+        """The named preset (default from hub.toml) with the request's ?max_mbps= / ?max_res= / ?cut= on top."""
+        name = qs.get('preset', self.preset)
+        name = ranking.ALIASES.get(name, name)
+        if name not in self.presets:
+            raise HttpError(400, f'preset must be one of {", ".join(self.presets)}')
+        p = dict(self.presets[name])
+        if 'max_mbps' in qs:
+            try:
+                p['max_mbps'] = float(qs['max_mbps'])
+            except ValueError:
+                p['max_mbps'] = 0
+            if not p['max_mbps'] > 0:
+                raise HttpError(400, 'max_mbps must be a positive number')
+        if 'max_res' in qs:
+            if qs['max_res'] not in ranking.RES_ORDER:
+                raise HttpError(400, f'max_res must be one of {", ".join(ranking.RES_ORDER)}')
+            p['max_res'] = qs['max_res']
+        if 'cut' in qs:
+            if qs['cut'] not in ranking.CUT_NAMES:
+                raise HttpError(400, f'cut must be one of {", ".join(sorted(ranking.CUT_NAMES))}')
+            p['cut'] = qs['cut']
+        return p
+
+    def ranked(self, type_, id_, s, e, p, meta=None):
+        if meta is None:
+            try:
+                meta = self.meta(type_, id_)
+            except AddonError:  # match against the kept copy rather than refuse to play
+                row = self.sql('SELECT item FROM library WHERE id = ?', (id_,))
+                item = json.loads(row[0][0]) if row else {}
+                meta = {'name': item.get('title'), 'year': item.get('year'), 'runtime': item.get('runtimeMin')}
+        vid = f'{id_}:{s}:{e}' if (s, e) != (0, 0) else id_
+        return ranking.select(self.streams(type_, vid), ranking.context(meta, type_, s, e), p)
+
+    def pick(self, type_, id_, s, e, p, meta=None):
+        streams, relaxed = self.ranked(type_, id_, s, e, p, meta)
+        best = next((x for x in streams if x['url']), None)
         if not best:
             raise HttpError(404, 'no playable stream')
+        best['source']['relaxed'] = relaxed
         return best
 
     def health(self):
@@ -316,9 +312,9 @@ class Hub:
             meta = self.meta(type_, id_)
             item, eps = to_item(meta), episodes(meta)
             item.update(id=id_, type=type_)
-            vid = f'{id_}:{eps[0][0]}:{eps[0][1]}' if type_ == 'series' and eps else id_
+            s, e = eps[0][:2] if type_ == 'series' and eps else (0, 0)
             try:
-                b = self.pick(type_, vid, self.preset)['badges']
+                b = self.pick(type_, id_, s, e, self.presets[self.preset], meta)['badges']
                 item['badges'] = {k: b[k] for k in ('res', 'hdr', 'audio')}
             except (AddonError, HttpError):
                 pass  # keep works without stream addons; badges stay null
@@ -507,13 +503,9 @@ class Handler(BaseHTTPRequestHandler):
             case ['POST', 'keep']:
                 return ok(hub.keep(self.body()))
             case ['GET', 'play', id_, *se]:
-                s, e = episode(se)
-                preset = qs.get('preset', hub.preset)
-                if preset not in PRESETS:
-                    raise HttpError(400, 'preset must be best, balanced or saver')
-                best = hub.pick('series' if se else 'movie', f'{imdb(id_)}:{s}:{e}' if se else imdb(id_), preset)
+                best = hub.pick('series' if se else 'movie', imdb(id_), *episode(se), hub.preset_for(qs))
                 if qs.get('json') == '1':
-                    return ok({k: best[k] for k in ('url', 'headers', 'badges', 'source')})
+                    return ok({k: best[k] for k in ('url', 'headers', 'badges', 'source', 'cut')})
                 return 302, None, {'Location': best['url']}
             case ['GET', 'resume', id_, *se]:
                 return ok(hub.get_resume((id_, *episode(se))))
@@ -521,6 +513,8 @@ class Handler(BaseHTTPRequestHandler):
                 return ok(hub.put_resume((id_, *episode(se)), self.body()))
             case ['GET', 'browse', 'catalogs']:
                 return ok({'catalogs': hub.catalogs()})
+            case ['GET', 'presets']:
+                return ok({'default': hub.preset, 'presets': hub.presets, 'aliases': ranking.ALIASES})
             case ['GET', 'new']:
                 return ok({'items': hub.new_releases(skip(qs))})
             case ['GET', 'browse', 'catalog', type_, cid]:
@@ -536,10 +530,8 @@ class Handler(BaseHTTPRequestHandler):
                 vid = f'{id_}:{s}:{e}' if se else id_
                 if what == 'subtitles':
                     return ok({'subtitles': hub.subtitles(type_, vid)})
-                preset = qs.get('preset', hub.preset)
-                if preset not in PRESETS:
-                    raise HttpError(400, 'preset must be best, balanced or saver')
-                return ok({'streams': rank(hub.streams(type_, vid), preset)})
+                streams, relaxed = hub.ranked(type_, id_, s, e, hub.preset_for(qs))
+                return ok({'streams': streams, 'relaxed': relaxed})
             case ['GET', 'search']:
                 return ok({'items': hub.search(qs.get('q', ''))})
         raise HttpError(404, 'no such call')

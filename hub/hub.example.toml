@@ -6,9 +6,33 @@
 bind = "0.0.0.0"
 port = 8097
 
-# best = remux, 4K, HDR, TrueHD/DTS-HD; balanced = 4K web-dl; saver = 1080p.
-# Within a preset the stream addon's own order wins. Front ends can override per call with ?preset=.
-preset = "balanced"
+# Presets are named by the connection: slow, standard, fast, max (GET /presets lists them with their numbers).
+# Front ends pick one per call with ?preset=, and can cap it with ?max_mbps= ?max_res= ?cut= (a box on Wi-Fi
+# measures its link and sends ?max_mbps=). Old names best/balanced/saver still work for now (= max/standard/slow).
+preset = "standard"
+
+# Each table below is the built-in default; set only the keys you want to change. Keys: prefer
+# ("highest_bitrate" | "addon_order"), min_res, max_res ("480p" | "720p" | "1080p" | "2160p"), max_mbps, max_gb,
+# require_cached, cut (theatrical, directors, extended, unrated, imax, remastered, criterion, final).
+# Mbps = size / runtime. If nothing fits, the hub gives up require_cached, then min_res, then max_mbps,
+# and says which in source.relaxed.
+# [presets.slow]
+# max_res = "1080p"
+# max_mbps = 8
+# prefer = "highest_bitrate"
+# cut = "theatrical"
+# [presets.standard]
+# max_mbps = 20
+# prefer = "highest_bitrate"
+# cut = "theatrical"
+# [presets.fast]
+# max_mbps = 45
+# prefer = "highest_bitrate"
+# cut = "theatrical"
+# [presets.max]
+# prefer = "highest_bitrate"
+# require_cached = true
+# cut = "theatrical"
 
 # Catalog and metadata addons (Stremio manifest URLs), asked in this order.
 meta_addons = ["https://v3-cinemeta.strem.io/manifest.json"]
