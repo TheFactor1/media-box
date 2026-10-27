@@ -3,17 +3,22 @@
 (-I drops the working directory from sys.path, so `python -I -m unittest hub.test_hub` cannot import
 any local package; discover -t . puts the project root back.) Without -I: python -m unittest hub.test_hub
 """
+import contextlib
 import http.client
+import io
 import json
+import os
+import sqlite3
 import tempfile
 import threading
 import time
 import unittest
 import urllib.error
 import urllib.request
+from unittest import mock
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from hub import hub
+from hub import hub, security
 
 YEAR = time.localtime().tm_year
 
@@ -118,9 +123,22 @@ class Fixture(unittest.TestCase):
         cls.server.server_close()
         cls.tmp.cleanup()
 
+    def auth(self):
+        with open(os.path.join(self.tmp.name, 'token'), 'rb') as f:  # re-read: a rotate replaces it
+            return {'Authorization': 'Bearer ' + security.b64(f.read())}
+
+    def raw(self, method, path, body=b'', headers=None):
+        """No token unless given; returns (status, json, response)."""
+        conn = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=30)
+        conn.request(method, path, body, headers or {})
+        resp = conn.getresponse()
+        data = resp.read()
+        conn.close()
+        return resp.status, json.loads(data or b'null'), resp
+
     def call(self, method, path, body=None):
         req = urllib.request.Request(self.base + path, method=method, data=json.dumps(body).encode() if body is not None else None,
-                                     headers={'Content-Type': 'application/json'})
+                                     headers={'Content-Type': 'application/json', **self.auth()})
         try:
             with urllib.request.urlopen(req, timeout=30) as r:
                 return r.status, json.load(r)
@@ -143,7 +161,7 @@ class HubTest(Fixture):
         self.assertEqual(item['nextEpisode'], {'s': 1, 'e': 1, 'title': 'One'})
         status, again = self.call('POST', '/keep', {'id': 'tt1', 'type': 'movie'})
         self.assertEqual((again['title'], again['year'], again['runtimeMin'], again['inLibrary']), ('Drama Club', YEAR, 101, True))
-        self.assertEqual(again['badges'], {'res': '2160p', 'hdr': ['DV', 'HDR10'], 'audio': ['Atmos', 'DD+']})  # standard pick
+        self.assertEqual(again['badges'], {'res': '2160p', 'hdr': ['HDR10'], 'audio': ['TrueHD', 'Atmos']})  # best copy (max)
         self.assertEqual(self.call('POST', '/keep', {'id': 'nope', 'type': 'movie'})[0], 400)
 
     def test_2_library(self):
@@ -164,7 +182,7 @@ class HubTest(Fixture):
         self.assertEqual(self.get('/presets')['presets']['standard']['max_mbps'], 20)
         self.assertEqual(self.get('/play/tt1?json=1')['headers'], {'Authorization': 'Bearer t'})
         conn = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=30)
-        conn.request('GET', '/play/tt9/1/2')
+        conn.request('GET', '/play/tt9/1/2', headers=self.auth())
         r = conn.getresponse()
         self.assertEqual((r.status, r.getheader('Location')), (302, 'http://cdn/tt9:1:2.json'))
         conn.close()
@@ -227,6 +245,76 @@ class ReleaseTest(Fixture):
         streams = self.get('/browse/streams/series/tt7/1/2?preset=slow&max_res=2160p&max_mbps=100')['streams']
         self.assertEqual(sorted(s['url'] for s in streams), ['http://cdn/episode', 'http://cdn/pack'])
         self.assertEqual(streams[0]['badges']['mbps'], 53.3)  # 20 GB over the episode's own 50 min
+
+
+
+class SecurityTest(Fixture):
+    """Token, pairing, limits, encrypted settings, logging, bind check."""
+
+    def test_1_token_required(self):
+        self.assertEqual(self.raw('GET', '/library')[0], 401)
+        self.assertEqual(self.raw('GET', '/library', headers={'Authorization': 'Bearer wrong'})[0], 401)
+        self.assertEqual(self.raw('GET', '/library', headers=self.auth())[0], 200)
+        status, body, resp = self.raw('GET', '/health', headers={'Origin': 'http://evil.example'})
+        self.assertEqual((status, resp.getheader('Access-Control-Allow-Origin')), (200, 'null'))
+        self.assertNotIn('127.0.0.1:', json.dumps(body))  # hosts only, no URLs or ports
+        self.assertEqual(self.raw('POST', '/keep', b'x' * (65 * 1024), self.auth())[0], 413)
+
+    def test_2_pair_round_trip_and_rotate(self):
+        status, body, _ = self.raw('GET', '/pair')
+        self.assertEqual((status, len(body['words'])), (200, 6))
+        status, paired, _ = self.raw('POST', '/pair', json.dumps({'words': ' '.join(body['words']).upper()}))
+        self.assertEqual((status, 'Bearer ' + paired['token']), (200, self.auth()['Authorization']))
+        self.assertEqual(self.raw('GET', '/pair')[0], 403)  # one use, then closed
+        old = self.auth()
+        self.assertEqual(self.raw('POST', '/pair/rotate', headers=old)[0], 200)
+        self.assertEqual(self.raw('GET', '/library', headers=old)[0], 401)
+        self.assertEqual(self.raw('GET', '/library', headers=self.auth())[0], 200)
+
+    def test_3_pair_rate_limit(self):
+        self.server.RequestHandlerClass.hub.limits['pair'] = security.Bucket(5 / 60, 5)  # fresh bucket for this client
+        self.assertEqual(self.raw('POST', '/pair/open', headers=self.auth())[0], 200)
+        bad = json.dumps({'words': 'abandon ' * 6})
+        self.assertEqual([self.raw('POST', '/pair', bad)[0] for _ in range(6)], [403] * 5 + [429])
+
+    def test_4_encrypted_settings(self):
+        key = os.urandom(32)
+        secret = b'https://aio.example/stremio/SECRET-TOKEN/manifest.json'
+        blob = security.encrypt(key, secret)
+        self.assertNotIn(b'SECRET-TOKEN', blob)
+        self.assertNotEqual(blob, security.encrypt(key, secret))  # fresh nonce each time
+        self.assertEqual(security.decrypt(key, blob), secret)
+        with self.assertRaises(ValueError):
+            security.decrypt(key, blob[:20] + bytes([blob[20] ^ 1]) + blob[21:])
+        with self.assertRaises(ValueError):
+            security.decrypt(os.urandom(32), blob)
+        con = sqlite3.connect(os.path.join(self.tmp.name, 'hub.sqlite'))
+        stored = con.execute("SELECT value FROM settings WHERE name = 'stream_addons'").fetchone()[0]
+        con.close()
+        self.assertNotIn(b'manifest.json', stored)  # imported from hub.toml, encrypted at rest
+        self.assertEqual(self.server.RequestHandlerClass.hub.stream_addons[0].host, '127.0.0.1')
+
+    def test_5_log_has_no_query(self):
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            self.get('/search?q=supersecret')
+            for _ in range(100):  # the line is printed just after the response is sent
+                if '/search' in out.getvalue():
+                    break
+                time.sleep(0.01)
+        self.assertIn('GET /search 200', out.getvalue())
+        self.assertNotIn('supersecret', out.getvalue())
+
+    def test_6_refuses_public_bind(self):
+        with tempfile.TemporaryDirectory() as d:
+            config = os.path.join(d, 'hub.toml')
+            with open(config, 'w') as f:
+                f.write('bind = "0.0.0.0"\nport = 0\n')
+            with mock.patch('hub.security.public_addresses', return_value=['203.0.113.7']):
+                with self.assertRaises(SystemExit):
+                    hub.make_server(config, d)
+                with open(config, 'a') as f:
+                    f.write('allow_public = true\n')
+                hub.make_server(config, d).server_close()
 
 
 if __name__ == '__main__':

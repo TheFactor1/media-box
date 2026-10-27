@@ -1,10 +1,15 @@
-# Hub config. Copy to /var/lib/hub/hub.toml (or point HUB_CONFIG at it); mode 0600, since
-# stream addon URLs (AIOStreams) usually embed a config token.
+# Hub config: non-secret settings only. Copy to /var/lib/hub/hub.toml (or point HUB_CONFIG at it).
+# Secrets live next to it in /var/lib/hub: `token` (pairing token) and `key` (encrypts the settings
+# table in hub.sqlite), both 0600. Back them up with the database or the settings are unreadable.
+# Every call except GET /health and pairing needs "Authorization: Bearer <token>"; a new device pairs
+# with POST /pair {words}, the six words the TV reads from GET /pair (on the box itself) while pairing is open.
 
 # 0.0.0.0 because Player on the Android box reaches the hub over the LAN. On a box where only
 # local Kodi talks to it, "127.0.0.1" keeps it off the network.
 bind = "0.0.0.0"
 port = 8097
+# The hub refuses to start if bind would listen on a public IP. Only for a deliberate exposure:
+# allow_public = true
 
 # Presets are named by the connection: slow, standard, fast, max (GET /presets lists them with their numbers).
 # Front ends pick one per call with ?preset=, and can cap it with ?max_mbps= ?max_res= ?cut= (a box on Wi-Fi
@@ -37,8 +42,10 @@ preset = "standard"
 # Catalog and metadata addons (Stremio manifest URLs), asked in this order.
 meta_addons = ["https://v3-cinemeta.strem.io/manifest.json"]
 
-# Stream addons, e.g. your AIOStreams manifest URL. None ship with the box.
-stream_addons = []
+# Stream addons (e.g. your AIOStreams manifest URL) embed config tokens, so they are not kept here.
+# shortcut: until the setup page exists, list them here once; the hub imports them into its encrypted
+# store on start and logs a reminder to delete this line. None ship with the box.
+# stream_addons = ["https://…/manifest.json"]
 
 # What GET /new shows. One table or a list of them:
 #   new_catalog = { addon = "https://…/manifest.json", type = "movie", id = "<catalog id>" }

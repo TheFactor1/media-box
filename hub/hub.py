@@ -3,9 +3,12 @@
 Contract: DATAFLOW.md, "Hub API". Python 3.12 standard library only.
 Run: HUB_CONFIG=/var/lib/hub/hub.toml HUB_DATA=/var/lib/hub python -m hub.hub
 """
+import hmac
+import ipaddress
 import json
 import os
 import re
+import secrets
 import sqlite3
 import sys
 import time
@@ -15,12 +18,14 @@ import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import ranking
+from . import ranking, security
 
 CINEMETA = 'https://v3-cinemeta.strem.io/manifest.json'
 STREAM_TTL = 600         # contract: stream cache per title 10 min
 MANIFEST_TTL = 3600
 META_TTL = 86400
+PAIR_WINDOW = 600     # pairing stays open 10 min
+MAX_BODY = 64 * 1024
 DONE = 0.92              # contract: "continue" = resume point under 92 %
 IMDB = re.compile(r'tt\d+')
 
@@ -138,6 +143,18 @@ class Hub:
             with open(config_path, 'rb') as f:
                 cfg = tomllib.load(f)
         self.port, self.bind = int(cfg.get('port', 8097)), cfg.get('bind', '0.0.0.0')
+        public = security.public_addresses(self.bind)
+        if public and cfg.get('allow_public') is not True:
+            sys.exit(f'refusing to listen on public address {", ".join(public)}; set allow_public = true in hub.toml if you mean it')
+        os.makedirs(data_dir, exist_ok=True)
+        self.db = os.path.join(data_dir, 'hub.sqlite')
+        self.sql('CREATE TABLE IF NOT EXISTS library(id TEXT PRIMARY KEY, type TEXT, item TEXT, videos TEXT, kept_at INTEGER)')
+        self.sql('CREATE TABLE IF NOT EXISTS resume(id TEXT, s INTEGER, e INTEGER, position_ms INTEGER,'
+                 ' duration_ms INTEGER, updated_at INTEGER, PRIMARY KEY(id, s, e))')
+        self.sql('CREATE TABLE IF NOT EXISTS settings(name TEXT PRIMARY KEY, value BLOB)')
+        self.key = security.secret_file(os.path.join(data_dir, 'key'))
+        self.token_path = os.path.join(data_dir, 'token')
+        self.token = security.b64(security.secret_file(self.token_path))
         try:
             self.presets = ranking.preset_table(cfg.get('presets'))
         except ValueError as e:
@@ -146,7 +163,12 @@ class Hub:
         if self.preset not in self.presets:
             sys.exit(f'hub.toml: preset must be one of {", ".join(self.presets)}')
         self.meta_addons = [Addon(u) for u in cfg.get('meta_addons', [CINEMETA])]
-        self.stream_addons = [Addon(u) for u in cfg.get('stream_addons', [])]
+        if cfg.get('stream_addons'):
+            if self.setting('stream_addons') is None:
+                self.set_setting('stream_addons', cfg['stream_addons'])
+                print(f'imported {len(cfg["stream_addons"])} stream addon(s) from hub.toml into the encrypted store', flush=True)
+            print('hub.toml still lists stream_addons (they embed tokens): delete that line; the hub keeps them encrypted', flush=True)
+        self.stream_addons = [Addon(u) for u in self.setting('stream_addons') or []]
         known = {a.url: a for a in self.meta_addons + self.stream_addons}
         new = cfg.get('new_catalog')
         new = [new] if isinstance(new, dict) else new
@@ -156,11 +178,45 @@ class Hub:
                     for c in new or [{'addon': CINEMETA, 'type': t, 'id': 'top'} for t in ('movie', 'series')]]
         self.meta_cache = {}
         self.cache = {}  # shortcut: in memory, lost on restart and never pruned; fine for one household, move to sqlite if it grows
-        os.makedirs(data_dir, exist_ok=True)
-        self.db = os.path.join(data_dir, 'hub.sqlite')
-        self.sql('CREATE TABLE IF NOT EXISTS library(id TEXT PRIMARY KEY, type TEXT, item TEXT, videos TEXT, kept_at INTEGER)')
-        self.sql('CREATE TABLE IF NOT EXISTS resume(id TEXT, s INTEGER, e INTEGER, position_ms INTEGER,'
-                 ' duration_ms INTEGER, updated_at INTEGER, PRIMARY KEY(id, s, e))')
+        self.limits = {'play': security.Bucket(10, 10), 'setup': security.Bucket(10, 10), 'pair': security.Bucket(5 / 60, 5)}
+        self.pair_words, self.pair_until = None, 0
+        if not self.setting('paired'):
+            self.open_pairing()
+
+    # -- settings, token, pairing --
+
+    def setting(self, name):
+        row = self.sql('SELECT value FROM settings WHERE name = ?', (name,))
+        return json.loads(security.decrypt(self.key, row[0][0])) if row else None
+
+    def set_setting(self, name, value):
+        self.sql('INSERT OR REPLACE INTO settings VALUES (?, ?)', (name, security.encrypt(self.key, json.dumps(value).encode())))
+
+    def authorized(self, header):
+        return hmac.compare_digest(str(header or '').encode(), f'Bearer {self.token}'.encode())
+
+    def open_pairing(self):
+        self.pair_words, self.pair_until = security.pairing_words(), time.time() + PAIR_WINDOW
+        print('pairing open for 10 minutes: read the words from GET /pair on the box itself', flush=True)
+
+    def pairing_open(self):
+        return self.pair_words is not None and time.time() < self.pair_until
+
+    def pair(self, body):
+        words = body.get('words') if isinstance(body, dict) else None
+        words = words.split() if isinstance(words, str) else words
+        if not self.pairing_open():
+            raise HttpError(403, 'pairing is closed; open it from the TV')
+        if not isinstance(words, list) or not hmac.compare_digest(' '.join(map(str, words)).casefold().encode(),
+                                                                   ' '.join(self.pair_words).encode()):
+            raise HttpError(403, 'those words do not match')
+        self.pair_words = None  # one use: the next box needs a fresh window
+        self.set_setting('paired', True)
+        return {'token': self.token}
+
+    def rotate(self):
+        self.token = security.b64(security.write_secret(self.token_path, secrets.token_bytes(32)))
+        return {'token': self.token}
 
     def sql(self, query, args=()):
         con = sqlite3.connect(self.db, timeout=10)
@@ -314,7 +370,8 @@ class Hub:
             item.update(id=id_, type=type_)
             s, e = eps[0][:2] if type_ == 'series' and eps else (0, 0)
             try:
-                b = self.pick(type_, id_, s, e, self.presets[self.preset], meta)['badges']
+                # Badges answer "what quality can I get", so they come from the max preset, not the play default.
+                b = self.pick(type_, id_, s, e, self.presets['max'], meta)['badges']
                 item['badges'] = {k: b[k] for k in ('res', 'hdr', 'audio')}
             except (AddonError, HttpError):
                 pass  # keep works without stream addons; badges stay null
@@ -459,10 +516,22 @@ class Handler(BaseHTTPRequestHandler):
         t0, u = time.monotonic(), urllib.parse.urlsplit(self.path)
         headers, err = {}, ''
         try:
+            length = int(self.headers.get('Content-Length') or 0)
+            if length > MAX_BODY:
+                self.close_connection = True  # the unread body would otherwise be parsed as the next request
+                raise HttpError(413, 'request body over 64 KB')
             # Read the body before routing so an early 4xx can't leave it in the keep-alive stream.
-            self.raw = self.rfile.read(int(self.headers.get('Content-Length') or 0))
+            self.raw = self.rfile.read(length)
             parts = [urllib.parse.unquote(p) for p in u.path.split('/') if p]
             qs = {k: v[-1] for k, v in urllib.parse.parse_qs(u.query).items()}
+            limit = self.hub.limits.get(parts[0] if parts else '')
+            # /pair counts only word guesses (POST /pair), not reading the words or opening a window.
+            if limit and (parts[0] != 'pair' or [method, *parts] == ['POST', 'pair']) and not limit.take(self.client_address[0]):
+                raise HttpError(429, 'too many requests; slow down')
+            public = method == 'OPTIONS' or [method, *parts] in (['GET', 'health'], ['GET', 'pair'], ['POST', 'pair'])
+            if not public and not self.hub.authorized(self.headers.get('Authorization')):
+                headers = {'WWW-Authenticate': 'Bearer'}
+                raise HttpError(401, 'pair this device first: send Authorization: Bearer <token>')
             status, body, headers = self.dispatch('GET' if method == 'HEAD' else method, parts, qs)
         except HttpError as e:
             status, body = e.status, {'reason': e.reason}
@@ -473,10 +542,13 @@ class Handler(BaseHTTPRequestHandler):
             status, body, err = 500, {'reason': type(e).__name__}, f' {type(e).__name__}@{tb.lineno}'
         data = b'' if body is None and status != 200 else json.dumps(body).encode()
         self.send_response(status)
-        self.send_header('Access-Control-Allow-Origin', '*')
+        # CORS only for pages the hub serves itself (the setup page); every other web origin gets "null".
+        origin = self.headers.get('Origin')
+        self.send_header('Access-Control-Allow-Origin', origin if origin == f'http://{self.headers.get("Host")}' else 'null')
+        self.send_header('Vary', 'Origin')
         if method == 'OPTIONS':
             self.send_header('Access-Control-Allow-Methods', 'GET, HEAD, POST, PUT, DELETE, OPTIONS')
-            self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+            self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         for k, v in headers.items():
             self.send_header(k, v)
         self.send_header('Content-Type', 'application/json')
@@ -484,7 +556,7 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         if method != 'HEAD':
             self.wfile.write(data)
-        # Our own paths carry no secrets; addon URLs are never logged (see fetch).
+        # Path only, never the query, headers, addon URLs (see fetch) or stream URLs.
         print(f'{self.client_address[0]} {method} {u.path} {status} {(time.monotonic() - t0) * 1000:.0f}ms{err}', flush=True)
 
     def dispatch(self, method, parts, qs):
@@ -495,6 +567,20 @@ class Handler(BaseHTTPRequestHandler):
                 return 204, None, {}
             case ['GET', 'health']:
                 return ok(hub.health())
+            case ['GET', 'pair']:
+                # The words are for the TV to show, so only the box itself or an already paired client may read them.
+                if not ipaddress.ip_address(self.client_address[0]).is_loopback and not hub.authorized(self.headers.get('Authorization')):
+                    raise HttpError(403, 'the pairing words are shown on the TV')
+                if not hub.pairing_open():
+                    raise HttpError(403, 'pairing is closed; open it from the TV')
+                return ok({'words': hub.pair_words, 'until': int(hub.pair_until * 1000)})
+            case ['POST', 'pair']:
+                return ok(hub.pair(self.body()))
+            case ['POST', 'pair', 'open']:
+                hub.open_pairing()
+                return ok({'until': int(hub.pair_until * 1000)})
+            case ['POST', 'pair', 'rotate']:
+                return ok(hub.rotate())
             case ['GET', 'library']:
                 return ok({'items': hub.library(qs.get('collection'))})
             case ['DELETE', 'library', id_]:
