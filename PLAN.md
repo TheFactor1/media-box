@@ -186,6 +186,8 @@ Everything above the OS is a Kodi layer, so it runs on the onn today, before any
 
 New order: **Phase 0-Lite → Phase 1-Lite (onn)** → the Fedora box phases below, which keep their numbering. The skin, Browse addon, resolver and wizard are built once and shared.
 
+**Done 2026-10-27:** the hub runs on the EliteMini (`docker compose`, port 8097) and talks to Matt's AIOStreams at aiostreams.mattshosted.com. `/browse/streams` for The Dark Knight returned cached TorBox streams with every badge parsed (2160p, DV/HDR10, DTS-HD/DD+, remux/bluray, size); `/play?preset=best` chose the 60 GB 2160p DV remux. Stream-side of spikes 5 and 8: yes.
+
 ### Phase 0-Lite — Spikes on the onn (days, not weeks)
 1. ADB: disable `launcherx` and friends on the onn's current Google TV build; confirm Settings is still reachable (from our launcher or a Kodi menu item) and the box survives a reboot and a Google update.
 2. Our launcher APK: HOME intent → start Kodi; boot lands in Kodi; Home button returns to Kodi; killing Kodi brings it back within 2 s.
