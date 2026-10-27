@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@500;600&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Hanken+Grotesk:wght@300;400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600&family=Instrument+Sans:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Syne:wght@700;800&family=Instrument+Serif:ital@0;1&family=Unbounded:wght@500;600&family=Big+Shoulders+Display:wght@700&family=Anybody:wdth,wght@125,700&family=Michroma&family=Gloock&family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Bodoni+Moda:opsz,wght@6..96,600&family=Dela+Gothic+One&family=Zilla+Slab:wght@600&family=Familjen+Grotesk:wght@700&family=Chakra+Petch:wght@600&family=Playfair+Display:wght@700&family=Special+Elite&family=Newsreader:opsz,wght@6..72,500&family=Archivo+Black&family=Cormorant:wght@600&family=VT323&family=Share+Tech+Mono&family=Sora:wght@600&family=Inter+Tight:wght@800&family=Manrope:wght@600&family=Space+Grotesk:wght@700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@500;600&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Hanken+Grotesk:wght@300;400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600&family=Instrument+Sans:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Syne:wght@700;800&family=Instrument+Serif:ital@0;1&family=Unbounded:wght@500;600&family=Big+Shoulders+Display:wght@700&family=Anybody:wdth,wght@125,700&family=Michroma&family=Gloock&family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Bodoni+Moda:opsz,wght@6..96,600&family=Dela+Gothic+One&family=Zilla+Slab:wght@600&family=Familjen+Grotesk:wght@700&family=Chakra+Petch:wght@600&family=Playfair+Display:wght@700&family=Special+Elite&family=Newsreader:opsz,wght@6..72,500&family=Archivo+Black&family=Cormorant:wght@600&family=VT323&family=Share+Tech+Mono&family=Sora:wght@600&family=Inter+Tight:wght@800&family=Manrope:wght@600&family=Space+Grotesk:wght@700&family=Anton&family=Caveat:wght@600&display=swap">
 <style>
 /* Layout: toolbar, then a 16:9 TV whose 800x450 stage is scaled to fit; each look re-tokens and re-arranges the same markup. */
 :root{
@@ -787,6 +787,90 @@ button.sv{cursor:pointer}
 .tf-c.on .tf-m{color:var(--fg)}
 .tf-none{margin:40px 28px;color:var(--muted)}
 
+/* ---------- Store: a 90s video rental shop; the place is the look ---------- */
+.alt-store{--st-wall:#394050;--st-bay:#2d3340;--st-shelf:#e9e1cc;--st-carpet:#1c1a22;--st-dot1:rgba(84,120,128,.35);--st-dot2:rgba(128,64,72,.3);
+  --st-sign:#1f3f8a;--st-yellow:#f2c230;--st-cream:#f6efd9;--st-ink:#1d1b24;--st-note:#fff6c2;--st-light:rgba(232,240,255,.42);--st-shadow:rgba(0,0,0,.45);
+  --st-crt:#0d1a12;--st-crt-fg:#9cff8a;--st-bezel:#c9c2b0;--st-wood:#5a3f2c;--st-wood2:#3d2a1d;--st-edge:#8a6a4e;--st-white:#fff;
+  font-family:"Instrument Sans",system-ui,sans-serif;color:var(--st-cream);background:var(--st-wall);overflow:hidden}
+.st-wall{position:absolute;inset:0 0 80px;background:repeating-linear-gradient(90deg,transparent 0 118px,rgba(0,0,0,.12) 118px 120px),linear-gradient(180deg,#465063,var(--st-wall) 40%)}
+.st-carpet{position:absolute;left:0;right:0;bottom:0;height:80px;background:radial-gradient(circle at 25% 30%,var(--st-dot1) 2px,transparent 3px) 0 0/22px 18px,radial-gradient(circle at 70% 70%,var(--st-dot2) 2px,transparent 3px) 0 0/22px 18px,linear-gradient(180deg,#14131a,var(--st-carpet))}
+.st-light{position:absolute;left:0;right:0;top:0;height:150px;z-index:6;pointer-events:none;background:linear-gradient(180deg,var(--st-light),transparent)}
+.st-cam{position:absolute;inset:0}
+.st-world{position:absolute;left:0;top:20px;display:flex;align-items:flex-start;gap:70px;transition:transform .5s cubic-bezier(.3,.7,.2,1)}
+.bay{position:relative;display:flex;flex-direction:column;align-items:stretch;padding:0 12px 8px;background:var(--st-bay);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25),0 18px 30px var(--st-shadow);opacity:.8;transition:opacity .5s ease}
+.bay.cur{opacity:1}
+.sign{align-self:center;margin:2px 0 12px;padding:3px 16px 1px;background:var(--st-sign);border:3px solid var(--st-yellow);font-family:"Anton","Oswald",Impact,sans-serif;font-size:19px;letter-spacing:.06em;color:var(--st-yellow);transform-origin:50% -20px;position:relative;white-space:nowrap}
+.sign::before,.sign::after{content:"";position:absolute;top:-24px;width:1px;height:21px;background:var(--st-bezel)}
+.sign::before{left:12px}.sign::after{right:12px}
+.bay.cur .sign{animation:swing 1.2s cubic-bezier(.3,1.5,.5,1)}
+@keyframes swing{from{transform:rotate(-9deg)}}
+.lvl{height:96px;min-width:220px;display:flex;align-items:flex-end;gap:8px;padding:0 6px;border-bottom:7px solid var(--st-shelf);box-shadow:0 6px 8px -4px var(--st-shadow);margin-top:4px}
+.cs{position:relative;flex:none;width:58px;height:82px;padding:0;border:0;background:var(--st-ink);cursor:pointer;transition:transform .25s cubic-bezier(.2,.7,.2,1),box-shadow .25s ease}
+.cs .art{width:100%;height:100%;aspect-ratio:auto;border-radius:0}
+.cs .art::after{font-size:8.5px;left:4px;right:4px;bottom:16px}
+.cs::after{content:"";position:absolute;inset:0;pointer-events:none;border:1px solid rgba(255,255,255,.55);background:linear-gradient(115deg,rgba(255,255,255,.24),transparent 34%,transparent 72%,rgba(255,255,255,.08))}
+.cs.spine{width:14px;background:linear-gradient(90deg,hsl(var(--h1) 35% 22%),hsl(var(--h1) 42% 34%),hsl(var(--h2) 30% 16%));display:flex;align-items:center;justify-content:center;overflow:hidden}
+.cs.spine span{writing-mode:vertical-rl;transform:rotate(180deg);font-family:"Anton",Impact,sans-serif;font-size:8px;letter-spacing:.04em;color:var(--st-cream);white-space:nowrap}
+.cs.on{transform:translateY(-8px) scale(1.08);box-shadow:0 0 0 2px var(--st-cream),0 10px 18px var(--st-shadow);z-index:2}
+.cs.spine.on{transform:translateY(-14px)}
+.st-p{position:absolute;left:3px;bottom:3px;z-index:1;padding:1px 3px;background:var(--st-white);color:var(--st-ink);font:7px/1.2 "Geist Mono",ui-monospace,monospace;letter-spacing:.04em;font-style:normal}
+.st-new{position:absolute;top:-8px;right:-8px;z-index:2;width:28px;height:28px;display:grid;place-items:center;background:var(--st-yellow);color:var(--st-ink);font:8px "Anton",Impact,sans-serif;font-style:normal;
+  clip-path:polygon(50% 0,61% 22%,85% 10%,78% 36%,100% 50%,78% 64%,85% 90%,61% 78%,50% 100%,39% 78%,15% 90%,22% 64%,0 50%,22% 36%,15% 10%,39% 22%)}
+.st-tape{position:absolute;left:-5px;right:-5px;top:38%;z-index:2;transform:rotate(-9deg);background:color-mix(in srgb,var(--st-yellow) 85%,transparent);color:var(--st-ink);font:9px "Anton",Impact,sans-serif;letter-spacing:.08em;text-align:center;font-style:normal}
+.st-pick{position:absolute;left:-6px;top:-10px;z-index:2;transform:rotate(-8deg);background:var(--st-note);color:var(--st-ink);font:600 10px "Caveat",cursive;padding:0 4px;font-style:normal}
+.talker{align-self:center;width:96px;padding:5px 7px;background:var(--st-note);color:var(--st-ink);font:600 13px/1.1 "Caveat","Kalam",cursive;transform:rotate(-3deg);box-shadow:0 4px 8px var(--st-shadow)}
+.st-basket{position:absolute;right:20px;bottom:12px;z-index:7;display:flex;align-items:center;gap:6px;padding:4px 10px;background:var(--st-sign);border:2px solid var(--st-yellow);font:13px "Anton",Impact,sans-serif;letter-spacing:.06em;color:var(--st-yellow)}
+.st-basket b{font-weight:400;font-size:16px;color:var(--st-cream)}
+.st-basket.bump{animation:pop .4s cubic-bezier(.3,1.5,.5,1)}
+.st-hint{position:absolute;left:24px;bottom:12px;z-index:7;margin:0;font:9px "Geist Mono",ui-monospace,monospace;letter-spacing:.18em;text-transform:uppercase;color:var(--st-cream);opacity:.75}
+/* checkout */
+.st-co{position:relative;flex:none;width:400px;height:350px}
+.crt{position:absolute;left:30px;top:6px;width:230px;height:156px;padding:8px 10px;background:var(--st-crt);border:11px solid var(--st-bezel);border-radius:16px;box-shadow:inset 0 0 26px rgba(0,0,0,.85),0 12px 20px var(--st-shadow);color:var(--st-crt-fg);font:15px/1.15 "VT323",ui-monospace,monospace;overflow:hidden}
+.crt-i{display:block;width:100%;padding:0 4px;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crt-i.on{background:var(--st-crt-fg);color:var(--st-crt)}
+.cursor{animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.desk{position:absolute;left:0;right:0;bottom:0;height:150px;background:linear-gradient(180deg,var(--st-wood),var(--st-wood2));border-top:9px solid var(--st-edge);box-shadow:0 -6px 18px var(--st-shadow)}
+.slot{position:absolute;right:24px;top:22px;width:120px;padding:12px 0 4px;text-align:center;background:var(--st-ink);border:3px solid var(--st-yellow);font:12px "Anton",Impact,sans-serif;letter-spacing:.1em;color:var(--st-yellow)}
+.slot::before{content:"";position:absolute;left:14px;right:14px;top:5px;height:3px;background:#000}
+.note{position:absolute;right:26px;top:-58px;z-index:2;width:128px;padding:7px 9px;border:0;background:var(--st-note);color:var(--st-ink);font:600 14px/1.05 "Caveat",cursive;text-align:left;transform:rotate(4deg);box-shadow:0 6px 10px var(--st-shadow);cursor:pointer}
+.note::before{content:"";position:absolute;left:40%;top:-7px;width:36px;height:13px;background:rgba(255,255,255,.55);transform:rotate(-6deg)}
+.note.on{box-shadow:0 0 0 2px var(--st-yellow),0 6px 10px var(--st-shadow)}
+.mcard{position:absolute;left:24px;bottom:18px;width:168px;height:96px;padding:10px 12px;border-radius:8px;background:linear-gradient(135deg,var(--st-sign),#2f5bb8);color:var(--st-cream);font:9px/1.5 "Geist Mono",ui-monospace,monospace;letter-spacing:.08em;box-shadow:0 8px 14px var(--st-shadow)}
+.mcard b{display:block;font:15px "Anton",Impact,sans-serif;letter-spacing:.08em;color:var(--st-yellow);margin-bottom:6px}
+/* the case in your hands */
+.st-hold{position:absolute;inset:0;z-index:20;display:grid;place-items:center;background:rgba(10,10,14,.74)}
+.st-hold.lift .hc-wrap{animation:liftK .45s cubic-bezier(.2,.7,.2,1)}
+@keyframes liftK{from{transform:translateY(90px) scale(.3);opacity:.2}}
+.hc-wrap{display:flex;flex-direction:column;align-items:center;gap:10px}
+.hc{width:196px;height:278px;padding:0;border:0;background:none;perspective:900px;cursor:pointer}
+.hc-in{position:relative;display:block;width:100%;height:100%;transform-style:preserve-3d;transition:transform .55s cubic-bezier(.3,.7,.2,1)}
+.hc.flip .hc-in{transform:rotateY(180deg)}
+.hc-front,.hc-back{position:absolute;inset:0;-webkit-backface-visibility:hidden;backface-visibility:hidden;overflow:hidden;border:1px solid rgba(255,255,255,.65);box-shadow:0 30px 60px rgba(0,0,0,.6)}
+.hc-front .art{width:100%;height:100%;aspect-ratio:auto;border-radius:0}
+.hc-front .art::after{font-size:22px;left:14px;right:14px;bottom:30px}
+.hc-front::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.26),transparent 34%,transparent 72%,rgba(255,255,255,.1))}
+.hc-front .st-p{font-size:10px;left:10px;bottom:10px}
+.hc-front .st-new{width:46px;height:46px;font-size:12px;top:10px;right:10px}
+.hc-back{transform:rotateY(180deg);padding:14px;display:flex;flex-direction:column;gap:8px;text-align:left;background:var(--st-cream);color:var(--st-ink);font-size:10px;line-height:1.4}
+.hc-back .ttl{font-family:"Anton",Impact,sans-serif;font-weight:400;font-size:18px;letter-spacing:.02em;text-transform:uppercase;color:var(--st-ink)}
+.stills{display:flex;gap:4px}
+.stills i{flex:1;aspect-ratio:16/10;background:linear-gradient(160deg,hsl(var(--h1) 45% 45%),hsl(var(--h2) 40% 15%))}
+.stills i:nth-child(2){background:linear-gradient(20deg,hsl(var(--h2) 40% 40%),hsl(var(--h1) 45% 18%))}
+.hc-back .facts{font:8.5px/1.6 "Geist Mono",ui-monospace,monospace;letter-spacing:.06em;text-transform:uppercase;border-top:1px solid var(--st-ink);padding-top:6px;margin-top:auto}
+.hc.on .hc-in{filter:none}
+.st-rent{padding:6px 20px;border:2px solid var(--st-yellow);background:var(--st-sign);color:var(--st-yellow);font:16px "Anton",Impact,sans-serif;letter-spacing:.08em;cursor:pointer}
+.st-rent.on{background:var(--st-yellow);color:var(--st-sign)}
+.hc.to-basket{animation:toBasket .45s cubic-bezier(.5,0,.75,0) forwards}
+@keyframes toBasket{to{transform:translate(330px,200px) scale(.12);opacity:0}}
+.st-hold .alt-h{color:var(--st-cream)}
+/* ambient: the camera wanders down the aisle and the lights hum */
+.alt-store.drift .st-cam{animation:stDrift 70s linear infinite alternate}
+.alt-store.drift .st-light{animation:hum 5s ease-in-out infinite}
+@keyframes stDrift{to{transform:translateX(-520px)}}
+@keyframes hum{50%{opacity:.7}}
+.seg select:disabled{opacity:.4;cursor:not-allowed}
+
 /* ---------- Motion (all looks; Calm turns it into short fades) ---------- */
 @keyframes up{from{opacity:0;transform:translateY(10px)}}
 @keyframes rise{from{opacity:0;transform:translateY(24px)}}
@@ -895,7 +979,7 @@ button.sv{cursor:pointer}
       <button id="mo-calm" data-mo="calm" aria-pressed="false">Calm</button>
     </div>
     <label class="seg" id="types" hidden><span class="seg-l">Type</span><select id="type-sel"><option value="bricolage">Bricolage Grotesque</option><option value="syne">Syne</option><option value="serif">Instrument Serif</option><option value="unbounded">Unbounded</option><option value="shoulders">Big Shoulders</option><option value="anybody">Anybody Wide</option><option value="michroma">Michroma</option><option value="gloock">Gloock</option><option value="cormorant">Cormorant Garamond</option><option value="bodoni">Bodoni Moda</option><option value="dela">Dela Gothic One</option><option value="zilla">Zilla Slab</option><option value="familjen">Familjen Grotesk</option><option value="chakra">Chakra Petch</option></select></label>
-    <label class="seg"><span class="seg-l">Layout</span><select id="lay-sel"><optgroup label="Layouts"><option value="rows">Rows</option><option value="marquee">Marquee</option><option value="wall">Wall</option><option value="programme">Programme</option><option value="tonight">Tonight</option><option value="pages">Pages</option></optgroup><optgroup label="Unusual"><option value="orbit">Orbit</option><option value="spines">Spines</option><option value="reel">Reel</option><option value="deck">Deck</option><option value="timeframe">Timeframe</option></optgroup></select></label>
+    <label class="seg"><span class="seg-l">Layout</span><select id="lay-sel"><optgroup label="Layouts"><option value="rows">Rows</option><option value="marquee">Marquee</option><option value="wall">Wall</option><option value="programme">Programme</option><option value="tonight">Tonight</option><option value="pages">Pages</option></optgroup><optgroup label="Places"><option value="store">Store</option></optgroup><optgroup label="Unusual"><option value="orbit">Orbit</option><option value="spines">Spines</option><option value="reel">Reel</option><option value="deck">Deck</option><option value="timeframe">Timeframe</option></optgroup></select></label>
     <div class="seg"><button id="go-idle">Go idle</button></div>
   </header>
 
@@ -1167,6 +1251,8 @@ function show(s,id,fid){
   const altOn=s==='home'&&lay!=='rows';
   $('#s-home').hidden=s!=='home'||altOn;$('#s-alt').hidden=!altOn;
   document.documentElement.dataset.home=s==='home'?lay:'';
+  $('#look-sel').disabled=altOn&&lay==='store'; // the store is its own look
+  $('#types').hidden=document.documentElement.dataset.look!=='mercury'||(altOn&&lay==='store');
   if(altOn)renderAlt();
   if(s==='title')renderTitle();
   if(s==='browse'&&!browsed){browsed=true;const g=$('#grid');if(!calm()){g.classList.add('loading');setTimeout(()=>{g.classList.remove('loading');g.classList.add('in');setTimeout(()=>{g.classList.remove('in');placeBlob(null,true)},1200)},600)}}
@@ -1209,7 +1295,7 @@ const blob=$('#blob');let blobT;
 function placeBlob(dir,settled){
   clearTimeout(blobT);
   if(!['mercury','nocturne','pulse'].includes(document.documentElement.dataset.look))return;
-  if(!cur||!cur.offsetParent||cur.matches('.pg-i,.mq-card,.ob-card,.sp,.rl-f,.dk-card,.dk-end,.tf-dial')){blob.classList.remove('show');return} // these layouts mark focus themselves
+  if(!cur||!cur.offsetParent||cur.matches('.pg-i,.mq-card,.ob-card,.sp,.rl-f,.dk-card,.dk-end,.tf-dial')||(screen==='home'&&lay==='store')){blob.classList.remove('show');return} // these layouts mark focus themselves
   const t=cur.querySelector('.art')||cur,r=t.getBoundingClientRect(),sr=stage.getBoundingClientRect(),k=sr.width/800;
   const card=cur.classList.contains('card'),g=card?1.03:1,pad=card?3:2;
   const w=t.offsetWidth*g+pad*2,h=t.offsetHeight*g+pad*2;
@@ -1311,6 +1397,10 @@ function activate(el){
   else if(a==='pgplay')play((progLast||el).dataset.t||COLS[alt.col].ids[0]);
   else if(a==='pginfo'){const t=(progLast&&progLast.dataset.t)||COLS[alt.col].ids[0];titleK=COLS[alt.col].k;go('title',t)}
   else if(a==='everything'){stack.push({s:'home',id:titleId,k:titleK,f:el.dataset.id,lay});lay='rows';show('home')}
+  else if(a==='pick')stPick(el);
+  else if(a==='holdok'){if(el.classList.contains('flip'))el.classList.remove('flip');else play(el.dataset.t)}
+  else if(a==='rent')stRent();
+  else if(a==='none'){}
   else if(a==='pile')openOv(`<div class="ov-box"><h3>Tonight</h3>${kept.length?kept.map(id=>`<button class="f vr" data-id="k-${id}" data-act="tplay" data-t="${id}">${esc(T[id].n)}<small>${facts(T[id])} · OK to play</small></button>`).join(''):'<p>Nothing kept yet. Press → on a card to keep it for tonight.</p><button class="f btn" data-id="k-close" data-act="close">Close</button>'}</div>`);
   else if(a==='tab'){alt.col=+el.dataset.i;alt.idx=0;renderAlt();focus(byId('tab-'+alt.col,scr()))}
 }
@@ -1378,8 +1468,8 @@ function boot(){
 function endBoot(){bootT.forEach(clearTimeout);booting=false;$('#boot').hidden=true;$('#s-home').classList.remove('intro');placeBlob(null,true)}
 // ambient: 30 s without input on Home, or the toolbar button
 const amb=$('#amb');
-function enterAmb(){if(ambOn)return;ambOn=true;$('#amb-clock').textContent=$('#clock').textContent;amb.classList.remove('leaving');amb.classList.add('on')}
-function leaveAmb(){ambOn=false;lastInput=Date.now();amb.classList.add('leaving');amb.classList.remove('on')}
+function enterAmb(){if(ambOn)return;ambOn=true;if(screen==='home'&&lay==='store'){$('#s-alt').classList.add('drift');return}$('#amb-clock').textContent=$('#clock').textContent;amb.classList.remove('leaving');amb.classList.add('on')}
+function leaveAmb(){ambOn=false;$('#s-alt').classList.remove('drift');lastInput=Date.now();amb.classList.add('leaving');amb.classList.remove('on')}
 setInterval(()=>{if(!ambOn&&!booting&&screen==='home'&&!ovOpen&&Date.now()-lastInput>30000)enterAmb()},1000);
 $('#go-idle').onclick=e=>{if(screen!=='home')home();enterAmb();if(e.detail)$('#tv').focus({preventScroll:true})};
 function setMotion(v){
@@ -1450,6 +1540,13 @@ function renderAlt(dir){
         :`<button class="f dk-end start deal" data-id="dk" data-act="pile"><span class="ttl">That's the whole hand.</span><span>↓ deals the next collection. OK shows tonight's pile.</span></button>`}</div>
       <button class="f dk-pile" data-id="dk-pile" data-act="pile"><b>${kept.length}</b><span class="alt-h">Tonight</span></button>
       <p class="dk-hint alt-h">→ keep for tonight · ← skip · ↑ details · ↓ next collection · OK your pile</p>`;
+  }else if(lay==='store'){
+    setBd(null);held=null;
+    const b0=alt.b||0,s0=alt.s||0,i0=alt.i||0;
+    A.innerHTML=`<div class="st-wall"></div><div class="st-carpet"></div><div class="st-cam"><div class="st-world">${BAYS.map((B,b)=>`<section class="bay${b===b0?' cur':''}" data-b="${b}"><div class="sign">${B.sign}</div>${shelves(B).map((row,si)=>`<div class="lvl">${row.map((id,i)=>caseHtml(B,b,si,i,id,b===b0&&si===s0&&i===i0)).join('')}</div>`).join('')}</section>`).join('')}
+      <section class="st-co"><div class="crt">${crtHtml()}</div><div class="desk"><span class="slot">RETURNS</span><button class="f note" data-id="st-note" data-act="status">Debrid key stopped working. Fix it on your phone! — staff</button><div class="mcard"><b>MEMBER</b>J. RIVERA<br>No. 0447 1923<br>SINCE 1996</div></div></section></div></div>
+      <div class="st-light"></div><div class="st-basket"><span>BASKET</span><b>${basket.length}</b></div>
+      <p class="st-hint">← → walk · ↑ ↓ shelf · OK pick up · H entrance</p><div class="st-hold" hidden></div>`;
   }else if(lay==='timeframe'){
     setBd(null);
     if(alt.tf==null)alt.tf=3;
@@ -1476,6 +1573,15 @@ function obUpdate(){
 }
 function deal(){renderAlt();focus($('#s-alt .start'))}
 function altFocus(){
+  if(lay==='store'){
+    const S=$('#s-alt');
+    if(cur.classList.contains('cs')){
+      const b=+cur.dataset.b,moved=b!==(alt.b||0);alt.b=b;alt.s=+cur.dataset.s;alt.i=+cur.dataset.i;
+      if(moved)S.querySelectorAll('.bay').forEach(x=>x.classList.toggle('cur',+x.dataset.b===b));
+      stCam(moved?1.1:.5);
+    }else if(cur.closest('.st-co'))stCam(1.1);
+    return;
+  }
   if(lay==='spines'&&cur.classList.contains('sp')){
     alt.col=+cur.dataset.c;alt.idx=+cur.dataset.i;
     const sh=cur.parentElement,S=$('#s-alt');
@@ -1502,6 +1608,7 @@ function altFocus(){
 function altKey(d){
   const S=$('#s-alt'),n=COLS.length,m=COLS[alt.col].ids.length;
   if(busy)return true;
+  if(lay==='store')return stKey(d);
   if(lay==='orbit'){
     if(d==='l'||d==='r'){alt.idx=(alt.idx+(d==='r'?1:-1)+m)%m;obUpdate();return true}
     if(calm()){alt.col=(alt.col+(d==='d'?1:-1)+n)%n;alt.idx=0;deal();return true}
@@ -1551,15 +1658,72 @@ function altKey(d){
   return false;
 }
 function altBack(){
+  if(lay==='store'){if(held)return stPut();const S=$('#s-alt');return focus(byId(`cs-${alt.b||0}-${alt.s||0}-0`,S)||S.querySelector('.cs'))}
   if(lay==='programme'&&cur&&cur.closest('.pg-btns'))return focus(progLast||$('#s-alt .pg-i'));
   alt.idx=0;renderAlt();focus($('#s-alt .start'));
 }
 function setLayout(v){
   layPref=lay=v;$('#lay-sel').value=v;try{localStorage.setItem('mb-lay',v)}catch(_){}
-  if(v!=='rows'&&document.documentElement.dataset.look!=='mercury')setLook('mercury');
+  if(v!=='rows'&&v!=='store'&&document.documentElement.dataset.look!=='mercury')setLook('mercury');
   alt={col:0,idx:0,page:0};if(screen==='home'){stack=[];show('home')}
 }
 $('#lay-sel').onchange=e=>setLayout(e.target.value);
+
+// ---------- Store ----------
+const BAYS=[{sign:'NEW RELEASES',ids:RECENT,rows:3,tag:'new'},
+  {sign:'STAFF PICKS',ids:['glass-orchard','static-bloom','dust-choir'],rows:3,talk:['Quiet and strange. Lights off for this one. — Dana','Best sci-fi I saw all year. No contest. — Theo','Made me call my mum afterwards. — Priya']},
+  {sign:'RETURNS',ids:CONT.map(c=>c[0]),rows:2,tag:'resume'},{sign:'NEXT UP',ids:NEXT.map(c=>c[0]),rows:2},
+  {sign:'MOVIES',ids:MOVIES,rows:3,cat:1},{sign:'POPULAR',ids:POPULAR,rows:3,cat:1}];
+let basket=[],held=null,heldFrom=null;
+function shelves(B){const n=Math.ceil(B.ids.length/B.rows);return Array.from({length:B.rows},(_,r)=>B.ids.slice(r*n,r*n+n)).filter(r=>r.length)}
+function caseHtml(B,b,si,i,id,start){
+  const t=T[id],face=!B.cat||i%4===0,st=`--h1:${t.h1};--h2:${t.h2}`;
+  const stick=(B.tag==='new'?'<i class="st-new">NEW</i>':'')+(B.tag==='resume'?'<i class="st-tape">RESUME</i>':'')+(B.talk?'<i class="st-pick">staff pick</i>':'');
+  const c=`<button class="f cs${face?'':' spine'}${start?' start':''}" data-id="cs-${b}-${si}-${i}" data-b="${b}" data-s="${si}" data-i="${i}" data-t="${id}" data-act="pick" style="${st}" aria-label="${esc(t.n)}">${face?art(t)+stick+`<i class="st-p">${hm(mins(id))}</i>`:`<span>${esc(t.n)}</span>`}</button>`;
+  return c+(B.talk?`<span class="talker">${esc(B.talk[si])}</span>`:'');
+}
+function crtHtml(){return `<div>YOUR BASKET (${basket.length})</div>`+(basket.length?basket.map(id=>`<button class="f crt-i" data-id="crt-${id}" data-t="${id}" data-act="tplay">&gt; ${esc(T[id].n.toUpperCase())} ${hm(mins(id))}</button>`).join(''):`<button class="f crt-i" data-id="crt-none" data-act="none">&gt; EMPTY. RENT SOMETHING</button>`)+'<span class="cursor">█</span>'}
+function stCam(dur){
+  const S=$('#s-alt'),w=S.querySelector('.st-world');if(!w||!cur.closest('.st-world'))return;
+  const k=stage.getBoundingClientRect().width/800,r=cur.getBoundingClientRect(),wr=w.getBoundingClientRect();
+  w.style.transition=`transform ${dur}s cubic-bezier(.3,.7,.2,1)`;w.style.transform=`translateX(${400-((r.left+r.right)/2-wr.left)/k}px)`;
+}
+function stPick(el){
+  const t=T[el.dataset.t],h=$('#s-alt .st-hold'),B=BAYS[+el.dataset.b];heldFrom=el.dataset.id;held={id:t.id};
+  const stick=B&&B.tag==='new'?'<i class="st-new">NEW</i>':'';
+  h.innerHTML=`<div class="hc-wrap"><button class="f hc" data-id="hc" data-t="${t.id}" data-act="holdok" style="--h1:${t.h1};--h2:${t.h2}"><span class="hc-in"><span class="hc-front">${art(t)}${stick}<i class="st-p">${hm(mins(t.id))}</i></span>
+    <span class="hc-back"><span class="ttl">${esc(t.n)}</span><span>${esc(t.s)}</span><span class="stills"><i></i><i></i><i></i></span><span class="facts">${t.y} · ${t.g} · ${t.r}<br>Rated 12 · ${t.b.join(' · ')}</span></span></span></button>
+    <button class="f st-rent" data-id="st-rent" data-act="rent">RENT · KEEP THIS</button><p class="alt-h">← → turn over · OK play · ↓ rent · Back put it down</p></div>`;
+  h.hidden=false;h.classList.remove('lift');void h.offsetWidth;h.classList.add('lift');focus(byId('hc',h));
+}
+function stPut(){const S=$('#s-alt'),h=S.querySelector('.st-hold');if(!h)return;h.hidden=true;h.innerHTML='';held=null;focus(byId(heldFrom,S),true)}
+function stRent(){
+  const id=held.id,S=$('#s-alt');
+  if(!basket.includes(id))basket.push(id);
+  if(!owned(id)&&!reqOf(id)){reqs.push({id,t:0});renderHome()} // renting is "Keep this"
+  const done=()=>{stPut();const b=S.querySelector('.st-basket');b.querySelector('b').textContent=basket.length;b.classList.remove('bump');void b.offsetWidth;b.classList.add('bump');S.querySelector('.crt').innerHTML=crtHtml();toast('Added to your shelf.')};
+  if(calm())return done();
+  byId('hc',S).classList.add('to-basket');busy=true;setTimeout(()=>{busy=false;done()},450);
+}
+function stKey(d){
+  const S=$('#s-alt');
+  if(held){
+    const hc=byId('hc',S);
+    if(d==='l'||d==='r')hc.classList.toggle('flip');else if(d==='d')focus(byId('st-rent',S));else focus(hc);
+    return true;
+  }
+  const rows=b=>S.querySelectorAll(`.bay[data-b="${b}"] .lvl`),count=(b,s)=>rows(b)[s].querySelectorAll('.cs').length;
+  if(cur.closest('.st-co')){if(d==='l'){const b=BAYS.length-1,s=Math.min(alt.s||0,rows(b).length-1);focus(byId(`cs-${b}-${s}-${count(b,s)-1}`,S));return true}
+    const L=[...S.querySelectorAll('.crt-i,.note')],j=L.indexOf(cur);if(d!=='r')focus(L[Math.max(0,Math.min(L.length-1,j+(d==='d'?1:-1)))]);return true;
+  }
+  let b=alt.b||0,s=alt.s||0,i=alt.i||0;
+  if(d==='l'||d==='r'){
+    i+=d==='r'?1:-1;
+    if(i>=count(b,s)){if(b+1<BAYS.length){b++;s=Math.min(s,rows(b).length-1);i=0}else{focus(S.querySelector('.crt-i'));return true}}
+    if(i<0){if(b>0){b--;s=Math.min(s,rows(b).length-1);i=count(b,s)-1}else i=0}
+  }else{s=Math.max(0,Math.min(rows(b).length-1,s+(d==='d'?1:-1)));i=Math.min(i,count(b,s)-1)}
+  focus(byId(`cs-${b}-${s}-${i}`,S));return true;
+}
 
 // scale the 800x450 stage to the frame
 const tv=$('#tv');
