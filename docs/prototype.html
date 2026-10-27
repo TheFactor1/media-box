@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@500;600&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Hanken+Grotesk:wght@300;400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600&family=Instrument+Sans:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Syne:wght@700;800&family=Instrument+Serif:ital@0;1&family=Unbounded:wght@500;600&family=Big+Shoulders+Display:wght@700&family=Anybody:wdth,wght@125,700&family=Michroma&family=Gloock&family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Bodoni+Moda:opsz,wght@6..96,600&family=Dela+Gothic+One&family=Zilla+Slab:wght@600&family=Familjen+Grotesk:wght@700&family=Chakra+Petch:wght@600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@500;600&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Hanken+Grotesk:wght@300;400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600&family=Instrument+Sans:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Syne:wght@700;800&family=Instrument+Serif:ital@0;1&family=Unbounded:wght@500;600&family=Big+Shoulders+Display:wght@700&family=Anybody:wdth,wght@125,700&family=Michroma&family=Gloock&family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Bodoni+Moda:opsz,wght@6..96,600&family=Dela+Gothic+One&family=Zilla+Slab:wght@600&family=Familjen+Grotesk:wght@700&family=Chakra+Petch:wght@600&family=Playfair+Display:wght@700&family=Special+Elite&family=Newsreader:opsz,wght@6..72,500&family=Archivo+Black&family=Cormorant:wght@600&family=VT323&family=Share+Tech+Mono&family=Sora:wght@600&family=Inter+Tight:wght@800&family=Manrope:wght@600&family=Space+Grotesk:wght@700&display=swap">
 <style>
 /* Layout: toolbar, then a 16:9 TV whose 800x450 stage is scaled to fit; each look re-tokens and re-arranges the same markup. */
 :root{
@@ -58,6 +58,85 @@
   --gl-tint:rgba(24,26,30,.32);--gl-chrome:rgba(255,255,255,.64);--gl-edge:rgba(255,255,255,.07);--gl-drop:rgba(0,0,0,.5);
   --chrome:rgba(242,245,250,1);--chrome-glow:rgba(159,180,255,.34);--mblue:#9fb4ff;--ts:1;--btn-dim:rgba(255,255,255,.06);
 }
+/* ---------- Explorations: token sets (anything not set falls back to the bare :root values) ---------- */
+:root[data-look="noir"]{--page-bg:#000;--page-fg:#f2f2f2;--page-muted:#9a9a9a;--page-line:rgba(255,255,255,.18);
+  --bg:#050505;--fg:#f4f4f4;--muted:#a8a8a8;--faint:rgba(255,255,255,.14);--panel:transparent;--panel-line:transparent;--blur:0px;--sheet:#111;
+  --accent:#fff;--accent-fg:#000;--ring:#fff;--ring-w:2px;--ring-off:3px;--glow:7px 7px 0 #3a3a3a;--zoom:1.02;--bzoom:1;
+  --ok:#d0d0d0;--warn:#fff;--bad:#fff;--chip-bg:transparent;--chip-fg:#eee;--chip-line:rgba(255,255,255,.55);--art-fg:#fff;
+  --btn-bg:transparent;--btn-fg:#f4f4f4;--btn-line:rgba(255,255,255,.5);--btn-on-bg:#fff;--btn-on-fg:#000;
+  --f-display:"Playfair Display",Georgia,serif;--f-body:"DM Sans",system-ui,sans-serif;--title-w:700;--title-size:36px;--title-track:-.01em;--kick-color:#a8a8a8;
+  --radius:0px;--radius-l:0px;--btn-r:0px;--qr-bg:#fff;--qr-fg:#000}
+:root[data-look="paper"]{color-scheme:light;--page-bg:#ebe5d9;--page-fg:#1c1a17;--page-muted:#6b655b;--page-line:rgba(28,26,23,.2);
+  --bg:#f4efe6;--fg:#1c1a17;--muted:#5e584e;--faint:rgba(28,26,23,.14);--panel:transparent;--panel-line:transparent;--blur:0px;--panel-pad:8px 0 0;--sheet:#fbf8f2;
+  --accent:#1c1a17;--accent-fg:#f4efe6;--ring:transparent;--ring-w:0px;--glow:none;--zoom:1;--lift:-3px;
+  --ok:#3d6b4f;--warn:#b5651d;--bad:#a33a2a;--chip-bg:transparent;--chip-fg:#1c1a17;--chip-line:rgba(28,26,23,.35);--art-fg:#fbf8f2;
+  --pS1:24%;--pL1:50%;--pS2:18%;--pL2:26%;
+  --btn-bg:transparent;--btn-fg:#1c1a17;--btn-line:rgba(28,26,23,.4);--btn-on-bg:#1c1a17;--btn-on-fg:#f4efe6;
+  --f-display:"Newsreader",Georgia,serif;--f-body:"Instrument Sans",system-ui,sans-serif;--title-w:500;--title-size:36px;--title-track:-.02em;--kick-color:#a33a2a;
+  --radius:2px;--radius-l:0px;--btn-r:2px;--cap-display:block;--qr-bg:#fbf8f2;--qr-fg:#1c1a17}
+:root[data-look="brutal"]{--page-bg:#0a0a0a;--page-fg:#fff;--page-muted:#bdbdbd;--page-line:rgba(255,255,255,.4);
+  --bg:#111;--fg:#fff;--muted:#c4c4c4;--faint:rgba(255,255,255,.35);--panel:transparent;--panel-line:transparent;--blur:0px;--sheet:#111;
+  --accent:#ff3b2f;--accent-fg:#fff;--ring:#ff3b2f;--ring-w:3px;--ring-off:0px;--glow:none;--zoom:1;--bzoom:1;
+  --ok:#fff;--warn:#fff;--bad:#ff3b2f;--chip-bg:transparent;--chip-fg:#fff;--chip-line:#fff;--art-fg:#fff;
+  --pS1:8%;--pL1:42%;--pS2:4%;--pL2:12%;
+  --btn-bg:transparent;--btn-fg:#fff;--btn-line:#fff;--btn-on-bg:#ff3b2f;--btn-on-fg:#fff;
+  --f-display:"Archivo Black","Arial Black",sans-serif;--f-body:"Instrument Sans",system-ui,sans-serif;--title-w:400;--title-size:38px;--title-case:uppercase;--title-track:-.02em;--kick-color:#fff;
+  --radius:0px;--radius-l:0px;--btn-r:0px}
+:root[data-look="velvet"]{--page-bg:#1a060c;--page-fg:#f3e6d8;--page-muted:#b99a90;--page-line:rgba(217,180,90,.25);
+  --bg:#2a0c14;--fg:#f3e6d8;--muted:#cdb0a5;--faint:rgba(217,180,90,.2);--panel:transparent;--panel-line:transparent;--blur:0px;--sheet:#3a1220;
+  --accent:#d9b45a;--accent-fg:#2a0c14;--ring:#d9b45a;--ring-w:1px;--ring-off:3px;--glow:0 0 22px rgba(217,180,90,.45);--zoom:1.04;
+  --warn:#e8a04a;--bad:#e8a04a;--chip-bg:transparent;--chip-fg:#e8cf8f;--chip-line:rgba(217,180,90,.5);
+  --pS1:45%;--pL1:32%;--pS2:50%;--pL2:10%;
+  --btn-bg:transparent;--btn-fg:#f3e6d8;--btn-line:rgba(217,180,90,.5);--btn-on-bg:#d9b45a;--btn-on-fg:#2a0c14;
+  --f-display:"Cormorant",Garamond,Georgia,serif;--f-body:"DM Sans",system-ui,sans-serif;--title-w:600;--title-size:42px;--title-track:.01em;--kick-color:#d9b45a;
+  --radius:3px;--radius-l:4px;--btn-r:3px;--curtain-a:rgba(92,14,34,.96);--curtain-b:rgba(36,5,13,.96)}
+:root[data-look="phosphor"]{--page-bg:#030805;--page-fg:#9cff8a;--page-muted:#4f9a46;--page-line:rgba(156,255,138,.25);
+  --bg:#06100a;--fg:#9cff8a;--muted:#5fb855;--faint:rgba(156,255,138,.18);--panel:transparent;--panel-line:transparent;--blur:0px;--sheet:#0a1a10;
+  --accent:#9cff8a;--accent-fg:#06100a;--ring:#9cff8a;--ring-w:2px;--ring-off:2px;--glow:none;--zoom:1;--bzoom:1;
+  --ok:#9cff8a;--warn:#ffb347;--bad:#ffb347;--chip-bg:transparent;--chip-fg:#9cff8a;--chip-line:rgba(156,255,138,.5);--art-fg:#c8ffbe;
+  --btn-bg:transparent;--btn-fg:#9cff8a;--btn-line:rgba(156,255,138,.5);--btn-on-bg:#9cff8a;--btn-on-fg:#06100a;
+  --f-display:"Share Tech Mono",ui-monospace,monospace;--f-body:"Share Tech Mono",ui-monospace,monospace;--title-w:400;--title-size:34px;--title-case:uppercase;--title-track:.02em;--kick-color:#ffb347;
+  --radius:0px;--radius-l:0px;--btn-r:0px;--scan:rgba(0,0,0,.28);--qr-bg:#9cff8a;--qr-fg:#06100a}
+:root[data-look="frost"]{color-scheme:light;--page-bg:#e4ebf3;--page-fg:#1d2733;--page-muted:#5d6b7c;--page-line:rgba(29,39,51,.16);
+  --bg:#eef3f8;--fg:#1d2733;--muted:#536173;--faint:rgba(29,39,51,.12);--panel:rgba(255,255,255,.7);--panel-line:rgba(255,255,255,.95);--blur:18px;--panel-pad:16px 20px 18px;--sheet:rgba(255,255,255,.88);
+  --accent:#4d8dff;--accent-fg:#fff;--ring:transparent;--ring-w:0px;--glow:0 0 0 2px rgba(77,141,255,.55),0 10px 30px rgba(77,141,255,.35);--zoom:1.05;
+  --ok:#2f9e6b;--warn:#c77700;--bad:#c4453a;--chip-bg:rgba(255,255,255,.6);--chip-fg:#1d2733;--chip-line:rgba(29,39,51,.12);--art-fg:#fff;
+  --pS1:45%;--pL1:68%;--pS2:38%;--pL2:44%;
+  --btn-bg:rgba(255,255,255,.55);--btn-fg:#1d2733;--btn-line:rgba(255,255,255,.95);--btn-on-bg:#1d2733;--btn-on-fg:#fff;
+  --f-display:"Sora",system-ui,sans-serif;--f-body:"Instrument Sans",system-ui,sans-serif;--title-w:600;--title-size:34px;--title-track:-.03em;--kick-color:#4d8dff;
+  --radius:12px;--radius-l:18px;--btn-r:999px;--qr-bg:#fff;--qr-fg:#1d2733}
+:root[data-look="ember"]{--page-bg:#0c0705;--page-fg:#f6e7d8;--page-muted:#b2937c;--page-line:rgba(246,231,216,.16);
+  --bg:#120c0a;--fg:#f6e7d8;--muted:#c4a48c;--faint:rgba(246,231,216,.12);--panel:transparent;--panel-line:transparent;--blur:0px;--sheet:#1e1410;
+  --accent:#ff9a3c;--accent-fg:#1a0d05;--ring:rgba(255,170,90,.8);--ring-w:1px;--ring-off:0px;--glow:0 0 26px rgba(255,140,50,.55);--zoom:1.06;
+  --warn:#ffb347;--chip-bg:transparent;--chip-fg:#ffd2a6;--chip-line:rgba(255,170,90,.4);
+  --pS1:55%;--pL1:40%;--pS2:50%;--pL2:10%;
+  --btn-bg:rgba(255,255,255,.06);--btn-fg:#f6e7d8;--btn-line:rgba(255,170,90,.3);--btn-on-bg:#ff9a3c;--btn-on-fg:#1a0d05;
+  --f-display:"Fraunces",Georgia,serif;--f-body:"DM Sans",system-ui,sans-serif;--title-w:600;--title-size:38px;--title-track:-.02em;--kick-color:#ff9a3c;
+  --radius:8px;--radius-l:10px;--floor:rgba(255,120,40,.34)}
+:root[data-look="studio"]{color-scheme:light;--page-bg:#fff;--page-fg:#111;--page-muted:#666;--page-line:rgba(0,0,0,.15);
+  --bg:#fff;--fg:#111;--muted:#555;--faint:rgba(0,0,0,.12);--panel:transparent;--panel-line:transparent;--blur:0px;--sheet:#fff;
+  --accent:#e3000f;--accent-fg:#fff;--ring:transparent;--ring-w:0px;--glow:none;--zoom:1;--bzoom:1;
+  --ok:#111;--warn:#e3000f;--bad:#e3000f;--chip-bg:transparent;--chip-fg:#111;--chip-line:#111;--art-fg:#fff;
+  --pS1:30%;--pL1:46%;--pS2:25%;--pL2:20%;
+  --btn-bg:transparent;--btn-fg:#111;--btn-line:#111;--btn-on-bg:#111;--btn-on-fg:#fff;
+  --f-display:"Inter Tight","Helvetica Neue",sans-serif;--f-body:"Instrument Sans",system-ui,sans-serif;--title-w:800;--title-size:40px;--title-track:-.045em;--kick-color:#e3000f;
+  --radius:0px;--radius-l:0px;--btn-r:0px;--cap-display:block;--grid:rgba(227,0,15,.07);--qr-bg:#fff;--qr-fg:#111}
+:root[data-look="nocturne"]{--page-bg:#060a14;--page-fg:#e6ebf5;--page-muted:#8f9ab3;--page-line:rgba(200,212,235,.16);
+  --bg:#0a1020;--fg:#e6ebf5;--muted:#9aa6bf;--faint:rgba(200,212,235,.12);--panel:transparent;--panel-line:transparent;--blur:0px;--sheet:#111a30;
+  --accent:#c9d3e6;--accent-fg:#0a1020;--ring:transparent;--ring-w:0px;--glow:none;--zoom:1.03;
+  --warn:#e8b45a;--chip-bg:transparent;--chip-fg:#dfe5f0;--chip-line:rgba(201,211,230,.35);
+  --pS1:35%;--pL1:38%;--pS2:45%;--pL2:10%;
+  --btn-bg:rgba(255,255,255,.05);--btn-fg:#e6ebf5;--btn-line:rgba(201,211,230,.25);--btn-on-bg:#dfe5f0;--btn-on-fg:#0a1020;
+  --f-display:"Manrope",system-ui,sans-serif;--f-body:"Instrument Sans",system-ui,sans-serif;--title-w:600;--title-size:34px;--title-track:-.025em;--kick-color:#9aa6bf;
+  --radius:10px;--radius-l:14px;--chrome:#dfe5f0;--chrome-glow:rgba(201,211,230,.25);--star:rgba(230,236,250,.85)}
+:root[data-look="pulse"]{--page-bg:#07070c;--page-fg:#f1f0ff;--page-muted:#9895b8;--page-line:rgba(241,240,255,.14);
+  --bg:#0b0b12;--fg:#f1f0ff;--muted:#a9a6c8;--faint:rgba(241,240,255,.12);--panel:transparent;--panel-line:transparent;--blur:0px;--sheet:#151424;
+  --accent:#8b5cff;--accent-fg:#fff;--ring:transparent;--ring-w:0px;--glow:none;--zoom:1.04;
+  --warn:#ffb347;--chip-bg:transparent;--chip-fg:#f1f0ff;--chip-line:rgba(139,92,255,.6);
+  --pS1:70%;--pL1:45%;--pS2:70%;--pL2:12%;
+  --btn-bg:rgba(255,255,255,.06);--btn-fg:#f1f0ff;--btn-line:rgba(255,255,255,.12);--btn-on-bg:#f1f0ff;--btn-on-fg:#0b0b12;
+  --f-display:"Space Grotesk",system-ui,sans-serif;--f-body:"Instrument Sans",system-ui,sans-serif;--title-w:700;--title-size:36px;--title-track:-.035em;--kick-color:#3ee0ff;
+  --radius:10px;--radius-l:14px;--grad:linear-gradient(90deg,#8b5cff,#3ee0ff);--g1:#8b5cff;--g2:#3ee0ff}
 :root[data-look="gallery"]{
   /* Gallery: charcoal, whitespace, hairlines, light large sans, 2px frame + lift */
   --page-bg:#151618;--page-fg:#eeece6;--page-muted:#9b9890;--page-line:rgba(238,236,230,.18);
@@ -375,9 +454,9 @@ button.sv{cursor:pointer}
 
 /* ---------- Mercury ---------- */
 .blob,.lchips,.lq{display:none}
-[data-look="mercury"] .blob{display:block;position:absolute;left:0;top:0;z-index:6;pointer-events:none;opacity:0;
+:is([data-look="mercury"],[data-look="nocturne"],[data-look="pulse"]) .blob{display:block;position:absolute;left:0;top:0;z-index:6;pointer-events:none;opacity:0;
   transition:transform .3s cubic-bezier(.25,1.06,.45,1),width .3s cubic-bezier(.25,1.06,.45,1),height .3s cubic-bezier(.25,1.06,.45,1),border-radius .3s ease,opacity .25s ease}
-[data-look="mercury"] .blob.show{opacity:1}
+:is([data-look="mercury"],[data-look="nocturne"],[data-look="pulse"]) .blob.show{opacity:1}
 .blob i{position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1.5px var(--chrome),0 0 14px var(--chrome-glow)}
 /* Mercury type pairings: only the display face changes; sizes keep titles at the same visual weight */
 :root[data-look="mercury"][data-type="syne"]{--f-display:"Syne","Helvetica Neue",system-ui,sans-serif;--title-w:800;--title-track:-.035em;--title-size:30px;--ts:.94}
@@ -478,6 +557,83 @@ button.sv{cursor:pointer}
 .req[data-state="fetching"] .lq i{width:100%;animation:breathe 1.6s ease-in-out infinite}
 .req[data-state="stuck"] .lq i{width:100%;background:var(--warn);border-color:var(--warn);animation:breathe 3.6s ease-in-out 1}
 
+/* ---------- Explorations: signature CSS ---------- */
+/* Noir: film stills, typewriter chips, a subtitle rule under the hero */
+[data-look="noir"] .art{filter:grayscale(1) contrast(1.25)}
+[data-look="noir"] :is(.chip,.lib,.new,.row-h small,.meta){font-family:"Special Elite","Courier New",monospace;font-weight:400;letter-spacing:.04em}
+[data-look="noir"] .hero::after{content:"";width:62%;height:1px;margin-top:6px;background:var(--fg);opacity:.85}
+[data-look="noir"] .row-h{font-family:var(--f-display);font-size:14px;font-style:italic}
+[data-look="noir"] .card.on .art{transform:translate(-2px,-2px)}
+/* Paper: a newspaper column with a drop cap; focus is an ink underline that slides in */
+[data-look="paper"] .hero{width:48%;border-top:3px double var(--fg);margin-top:16px}
+[data-look="paper"] .kick{font-variant-caps:all-small-caps;letter-spacing:.12em;font-size:12px}
+[data-look="paper"] .hero .syn{display:block;max-height:4.4em;-webkit-line-clamp:unset;color:var(--fg);font-size:12px;column-count:1}
+[data-look="paper"] .hero .syn::first-letter{float:left;font-family:var(--f-display);font-size:3.1em;line-height:.8;padding:3px 5px 0 0;color:var(--fg)}
+[data-look="paper"] .bd::after{background:linear-gradient(90deg,var(--bg) 30%,color-mix(in srgb,var(--bg) 60%,transparent) 55%,transparent 80%),linear-gradient(0deg,var(--bg) 42%,transparent 75%)}
+[data-look="paper"] .card::after{content:"";position:absolute;left:0;right:0;bottom:-5px;height:2px;background:var(--fg);transform:scaleX(0);transform-origin:left;transition:transform .3s ease}
+[data-look="paper"] .card.on::after{transform:scaleX(1)}
+[data-look="paper"] .row-h{font-family:var(--f-display);font-size:14px;font-weight:500;border-top:1px solid var(--faint);margin:0 28px;padding:6px 0 0}
+[data-look="paper"] .track{padding-bottom:16px}
+/* Brutal: 2px borders on everything, huge numerals */
+[data-look="brutal"] :is(.art,.btn,.chip,.sv,.ov-box,.toast,.vr){border:2px solid var(--fg);box-shadow:none;box-sizing:border-box}
+[data-look="brutal"] .card.on .art{border-color:var(--accent)}
+[data-look="brutal"] .row-h{align-items:flex-end;font-family:var(--f-display);text-transform:uppercase;font-size:13px;font-weight:400}
+[data-look="brutal"] .row-h::before{content:counter(r,decimal-leading-zero);font-size:30px;line-height:.85;color:var(--fg)}
+[data-look="brutal"] .row-h small{font-family:var(--f-display);font-size:13px;color:var(--accent)}
+[data-look="brutal"] .sh h2::before{content:"\2116 ";color:var(--accent)}
+:is([data-look="brutal"],[data-look="studio"]) .rows{counter-reset:r}
+:is([data-look="brutal"],[data-look="studio"]) .row{counter-increment:r}
+/* Velvet: small-caps headings, gold hairline focus, a curtain on both edges */
+[data-look="velvet"] :is(.ttl,.sh h2,.mark,.row-h){font-variant-caps:small-caps}
+[data-look="velvet"] .row-h{font-family:var(--f-display);font-size:16px;color:var(--accent)}
+[data-look="velvet"] .stage::before{content:"";position:absolute;inset:0;z-index:4;pointer-events:none;
+  background:repeating-linear-gradient(90deg,var(--curtain-a) 0 5px,var(--curtain-b) 5px 12px);
+  -webkit-mask:linear-gradient(90deg,#000 0,#000 1.4%,transparent 3.3%,transparent 96.7%,#000 98.6%,#000 100%);mask:linear-gradient(90deg,#000 0,#000 1.4%,transparent 3.3%,transparent 96.7%,#000 98.6%,#000 100%)}
+/* Phosphor: green CRT, scanlines, an inverted block for focus, 1px flicker on the hero */
+[data-look="phosphor"] .art{background:radial-gradient(circle at 70% 25%,hsl(125 70% calc(var(--h1) * .05% + 30%) / .6),transparent 45%),linear-gradient(165deg,hsl(125 55% calc(var(--h1) * .06% + 12%)),hsl(140 60% 4%) 85%)}
+[data-look="phosphor"] .card.on .art::after{background:var(--fg);color:var(--bg);padding:1px 3px}
+[data-look="phosphor"] :is(.chip,.lib,.new,.row-h small){font-family:"VT323",ui-monospace,monospace;font-size:12px;font-weight:400;letter-spacing:.06em}
+[data-look="phosphor"] .stage::before{content:"";position:absolute;inset:0;z-index:7;pointer-events:none;background:repeating-linear-gradient(0deg,var(--scan) 0 1px,transparent 1px 3px)}
+[data-look="phosphor"] #s-home:not(.intro) .hero{animation:flick 5s steps(1) infinite}
+@keyframes flick{0%,100%{transform:none;opacity:1}41%{transform:translateX(1px)}42%{transform:none}77%{opacity:.86}78%{opacity:1}}
+[data-look="phosphor"] .row-h::before{content:"> "}
+/* Frost: a bright, airy backdrop behind a white frosted hero */
+[data-look="frost"] .bd::after{background:linear-gradient(0deg,var(--bg) 36%,color-mix(in srgb,var(--bg) 50%,transparent) 58%,transparent 80%)}
+[data-look="frost"] .hero{box-shadow:0 18px 40px rgba(29,39,51,.12)}
+[data-look="frost"] .chip{border-radius:999px}
+/* Ember: lit from below, posters reflected on a dark floor */
+[data-look="ember"] .stage::before{content:"";position:absolute;left:0;right:0;bottom:0;height:46%;z-index:1;pointer-events:none;background:radial-gradient(ellipse 75% 100% at 50% 100%,var(--floor),transparent 70%)}
+[data-look="ember"] .card:not(.wide) .art{-webkit-box-reflect:below 3px linear-gradient(transparent 58%,rgba(255,255,255,.3))}
+[data-look="ember"] .track{padding-bottom:22px}
+/* Studio: Swiss grid, numbered sections, a red square marks focus */
+[data-look="studio"] .stage::before{content:"";position:absolute;top:0;bottom:0;left:28px;right:28px;z-index:1;pointer-events:none;border-right:1px solid var(--grid);
+  background:linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/calc(100% / 12) 100%}
+[data-look="studio"] .row-h{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;gap:8px}
+[data-look="studio"] .row-h::before{content:counter(r,decimal-leading-zero);color:var(--accent);font-weight:800}
+[data-look="studio"] :is(.btn,.sv,.vr,.dot){position:relative}
+[data-look="studio"] .f.on::after{content:"";position:absolute;left:-9px;top:0;width:5px;height:5px;background:var(--accent)}
+[data-look="studio"] :is(.btn,.sv,.vr).on::after{top:50%;margin-top:-3px}
+[data-look="studio"] .bd::after{background:linear-gradient(90deg,var(--bg) 25%,color-mix(in srgb,var(--bg) 40%,transparent) 55%,transparent 75%),linear-gradient(0deg,var(--bg) 40%,transparent 70%)}
+/* Nocturne: a silver ring, and a slow star field behind the hero */
+[data-look="nocturne"] .stage::before{content:"";position:absolute;left:-200px;top:-150px;width:1200px;height:520px;z-index:1;pointer-events:none;
+  background:radial-gradient(1.6px 1.6px at 20px 30px,var(--star),transparent),radial-gradient(1.2px 1.2px at 140px 90px,var(--star),transparent),radial-gradient(2px 2px at 90px 150px,var(--star),transparent),radial-gradient(1.2px 1.2px at 180px 20px,var(--star),transparent),radial-gradient(1.4px 1.4px at 60px 110px,var(--star),transparent);background-size:210px 170px;
+  -webkit-mask:linear-gradient(180deg,#000 40%,transparent 85%);mask:linear-gradient(180deg,#000 40%,transparent 85%);opacity:.9;animation:stars 90s linear infinite alternate}
+@keyframes stars{to{transform:translate(160px,60px)}}
+/* Pulse: violet-to-cyan accents, a rotating gradient ring, rows that ripple in */
+@property --ang{syntax:'<angle>';inherits:false;initial-value:0deg}
+[data-look="pulse"] .blob i{box-shadow:0 0 18px color-mix(in srgb,var(--g1) 45%,transparent);padding:2px;background:conic-gradient(from var(--ang),var(--g1),var(--g2),var(--g1));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0);animation:ang 5s linear infinite}
+@keyframes ang{to{--ang:360deg}}
+[data-look="pulse"] :is(.rail){height:3px;opacity:0;transition:opacity .3s ease}
+[data-look="pulse"] .row.cur .rail{opacity:1}
+[data-look="pulse"] .rail i{left:0!important;width:calc(var(--p,0) * 100%)!important;border-radius:3px;background:var(--grad);transition:width .35s ease}
+[data-look="pulse"] .new{background:var(--grad);border:0;color:var(--accent-fg)}
+[data-look="pulse"] .row-h>span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+[data-look="pulse"] .rows.focus-in .row.cur{transform:none}
+[data-look="pulse"] .row.wave .card{animation:up .45s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--ci,0) * 35ms)}
+:is([data-look="nocturne"],[data-look="pulse"]) .track{scroll-behavior:auto}
+[data-look="nocturne"] .rows.focus-in .row.cur{transform:none}
+
 /* ---------- Motion (all looks; Calm turns it into short fades) ---------- */
 @keyframes up{from{opacity:0;transform:translateY(10px)}}
 @keyframes rise{from{opacity:0;transform:translateY(24px)}}
@@ -567,13 +723,10 @@ button.sv{cursor:pointer}
 <div class="page">
   <header class="bar">
     <div class="brand"><strong>Media Box</strong><span>TV prototype</span></div>
-    <div class="seg" role="group" aria-label="Look" id="looks">
-      <span class="seg-l">Look</span>
-      <button id="look-cinema" data-look="cinema" aria-pressed="true">Cinema</button>
-      <button id="look-gallery" data-look="gallery" aria-pressed="false">Gallery</button>
-      <button id="look-signal" data-look="signal" aria-pressed="false">Signal</button>
-      <button id="look-mercury" data-look="mercury" aria-pressed="false">Mercury</button>
-    </div>
+    <label class="seg" id="looks"><span class="seg-l">Look</span><select id="look-sel">
+      <optgroup label="Originals"><option value="cinema">Cinema</option><option value="gallery">Gallery</option><option value="signal">Signal</option><option value="mercury">Mercury</option></optgroup>
+      <optgroup label="Explorations"><option value="noir">Noir</option><option value="paper">Paper</option><option value="brutal">Brutal</option><option value="velvet">Velvet</option><option value="phosphor">Phosphor</option><option value="frost">Frost</option><option value="ember">Ember</option><option value="studio">Studio</option><option value="nocturne">Nocturne</option><option value="pulse">Pulse</option></optgroup>
+    </select></label>
     <div class="seg" role="group" aria-label="Screen" id="screens">
       <span class="seg-l">Screen</span>
       <button id="go-home" data-go="home" aria-pressed="true">Home</button>
@@ -778,6 +931,7 @@ function renderHome(){
     row('Movies','',MOVIES.map(id=>card(id,'Movies','mv')).join(''),'mv')+
     row('Browse: Popular','From your browse source',POPULAR.map(id=>card(id,'Browse · Popular','bp',{lib:1})).join(''),'bp');
   [...$('#rows').children].forEach((r,i)=>r.style.setProperty('--i',i));
+  $('#rows').querySelectorAll('.track').forEach(t=>[...t.children].forEach((c,i)=>c.style.setProperty('--ci',i)));
   $('#rq-track').innerHTML=reqs.map(r=>reqCard(r,1)).join('');
   paintReqs();
 }
@@ -879,6 +1033,7 @@ function focus(el,noScroll,dir){
   cur.classList.add('on');
   const rowsEl=$('#rows'),rw0=cur.closest('.row');
   if(cur.closest('#s-home')){rowsEl.classList.toggle('focus-in',!!rw0);rowsEl.querySelectorAll('.row.cur').forEach(r=>r!==rw0&&r.classList.remove('cur'));if(rw0)rw0.classList.add('cur')}
+  if(rw0&&!calm()&&document.documentElement.dataset.look==='pulse'&&rw0!==(prev&&prev.closest('.row'))){rw0.classList.remove('wave');void rw0.offsetWidth;rw0.classList.add('wave');setTimeout(()=>rw0.classList.remove('wave'),900)}
   if(dir&&!calm()){
     if((dir==='l'||dir==='r')&&cur.classList.contains('card')){const c=cur;c.style.setProperty('--tilt',dir==='r'?'1deg':'-1deg');setTimeout(()=>c.style.removeProperty('--tilt'),200)}
     if(prev&&prev.classList.contains('card')){prev.classList.remove('pass');void prev.offsetWidth;prev.classList.add('pass');setTimeout(()=>prev.classList.remove('pass'),250)}
@@ -893,7 +1048,7 @@ function focus(el,noScroll,dir){
 const blob=$('#blob');let blobT;
 function placeBlob(dir,settled){
   clearTimeout(blobT);
-  if(document.documentElement.dataset.look!=='mercury')return;
+  if(!['mercury','nocturne','pulse'].includes(document.documentElement.dataset.look))return;
   if(!cur||!cur.offsetParent){blob.classList.remove('show');return}
   const t=cur.querySelector('.art')||cur,r=t.getBoundingClientRect(),sr=stage.getBoundingClientRect(),k=sr.width/800;
   const card=cur.classList.contains('card'),g=card?1.03:1,pad=card?3:2;
@@ -901,7 +1056,7 @@ function placeBlob(dir,settled){
   const x=((r.left+r.right)/2-sr.left)/k-w/2,y=((r.top+r.bottom)/2-sr.top)/k-h/2;
   blob.style.cssText=`width:${w}px;height:${h}px;transform:translate(${x}px,${y}px);border-radius:${parseFloat(getComputedStyle(t).borderRadius)+pad}px`;
   blob.classList.add('show');
-  if(!settled)blobT=setTimeout(()=>placeBlob(null,true),650); // catch scrolls and entrance animations that move the target
+  if(!settled)blobT=setTimeout(()=>placeBlob(null,true),850); // catch scrolls and entrance animations that move the target
 }
 function reveal(el){
   const tr=el.parentElement.classList.contains('track')?el.parentElement:null;
@@ -1026,7 +1181,7 @@ document.querySelectorAll('#screens button').forEach(b=>b.onclick=e=>{
 });
 function setLook(v){
   document.documentElement.dataset.look=v;
-  document.querySelectorAll('#looks button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.look===v));
+  $('#look-sel').value=v;
   try{localStorage.setItem('mb-look',v)}catch(_){}
   $('#types').hidden=v!=='mercury';
   requestAnimationFrame(()=>{if(cur)reveal(cur);placeBlob()});
@@ -1039,7 +1194,7 @@ function setType(v){
 }
 $('#type-sel').onchange=e=>setType(e.target.value);
 {let ty=null;try{ty=localStorage.getItem('mb-type')}catch(_){}setType([...$('#type-sel').options].some(o=>o.value===ty)?ty:'bricolage')}
-document.querySelectorAll('#looks button').forEach(b=>b.onclick=e=>{setLook(b.dataset.look);if(e.detail)$('#tv').focus({preventScroll:true})});
+$('#look-sel').onchange=e=>setLook(e.target.value);
 
 // boot-in: logo, then hero rises and rows cascade (about 2 s)
 function boot(){
@@ -1075,6 +1230,6 @@ const clock=()=>{$('#clock').textContent=$('#amb-clock').textContent=new Date().
 clock();setInterval(clock,20000);
 
 let saved='cinema';try{saved=localStorage.getItem('mb-look')||'cinema'}catch(_){}
-setLook(['cinema','gallery','signal','mercury'].includes(saved)?saved:'cinema');
+setLook([...$('#look-sel').options].some(o=>o.value===saved)?saved:'cinema');
 renderHome();setHero(heroId,heroK,true);show('home');boot();
 </script>
