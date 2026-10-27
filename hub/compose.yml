@@ -4,7 +4,9 @@
 # Player on the Android box then uses http://<elitemini-lan-ip>:8097.
 services:
   hub:
-    build: .
+    build:
+      context: .
+      dockerfile: Containerfile
     container_name: hub
     restart: unless-stopped
     ports:
