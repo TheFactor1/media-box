@@ -206,7 +206,7 @@ New order: **Phase 0-Lite → Phase 1-Lite (onn)** → the Fedora box phases bel
 **State 2026-10-27 (end of day):** built and unit-tested, not yet run on the onn:
 - Hub (`hub/`): full API, release matching, connection presets, token pairing (code-and-approve or 6 words), encrypted settings, setup page with "Set up for me" from a debrid key, discovery beacon, AIOStreams quadlet; 23+ tests; image on GHCR. Live on the EliteMini is still the first version; update + pair needed.
 - Player (`tv-player`, branch `home-programme`, 3 commits): Programme Home in Mercury, Refine, Search, Title page, Keep this, Quality with Auto, Keystore-held token, first-run discovery + code pairing; builds locally; 155+ unit tests.
-- Next: push the branch (CI builds the APK), update the mini's hub, install on the onn, walk the first run with the phone, then the Phase 0-Lite spikes.
+- **First run on the onn, 2026-10-27 evening: works.** Hub running natively on the EliteMini (hub.service; Docker Desktop can't host-network), ufw opened for 8097/tcp and 8098/udp; the onn found it by beacon, paired by code from the phone page, and played from Browse. Polish pass in progress from Matt's notes: filters off for Continue/Next Up, posters + backdrops, safe-area insets, rich title page with episodes, shows in Browse/New, "Add to library", Space theme.
 
 ### Phase 0 — Spikes (1–2 weeks)
 Answer the questions that could kill the design before building anything.
