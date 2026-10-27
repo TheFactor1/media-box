@@ -147,7 +147,10 @@ system_files/
   usr/share/<name>/kodi-defaults/       # advancedsettings.xml, skin + addon preinstalls
 wizard/                        # small web app: QR on TV → phone setup
 kodi-addons/plugin.video.browse/     # Browse anything: Stremio-protocol client, Keep this, In your library
+kodi-addons/skin.mediabox/           # the skin, from the prototype's chosen look + layout
 resolver/                            # .strm target: asks AIOStreams for the best stream, redirects; writes .strm/.nfo
+lite/launcher/                       # Android HOME launcher that starts Kodi (Player Lite)
+lite/install.sh                      # ADB: debloat, launcher, Kodi, repo zip, defaults; re-runnable
 disk_config/iso.toml
 .github/workflows/build.yml, build-disk.yml   # from the template
 ```
@@ -155,6 +158,24 @@ disk_config/iso.toml
 ## 6. Phases
 
 Each phase ends with an exit test on **real hardware**. VMs only prove the boot flow; HDR, passthrough and CEC need a TV and an AVR.
+
+### Decided 2026-10-27: Player Lite on the onn 4K Pro is the first milestone
+Everything above the OS is a Kodi layer, so it runs on the onn today, before any x86 hardware exists. On the onn: every Google component disabled over ADB (launcher, setup, Assistant surfaces; the debloat session's list), a tiny HOME-category launcher APK of ours that does nothing but start Kodi (boot → our interface; Home button → Kodi; crash → Kodi restarts), CEC from the TV remote, HDR10 and Dolby Vision through Android's own path, Atmos as DD+. The hub (Jellyfin + resolver) runs on the EliteMini. What the onn can't do: TrueHD passthrough, atomic updates; a Google TV update may re-enable the launcher, so the ADB script is re-runnable. IPTV (PVR IPTV Simple with the user's own M3U/EPG) is a later add on the same box.
+
+New order: **Phase 0-Lite → Phase 1-Lite (onn)** → the Fedora box phases below, which keep their numbering. The skin, Browse addon, resolver and wizard are built once and shared.
+
+### Phase 0-Lite — Spikes on the onn (days, not weeks)
+1. ADB: disable `launcherx` and friends on the onn's current Google TV build; confirm Settings is still reachable (from our launcher or a Kodi menu item) and the box survives a reboot and a Google update.
+2. Our launcher APK: HOME intent → start Kodi; boot lands in Kodi; Home button returns to Kodi; killing Kodi brings it back within 2 s.
+3. Kodi 22 on the onn: HDR10 and DV output confirmed on a 4K remux stream from AIOStreams; DD+ Atmos to the soundbar; refresh-rate switching; a Mercury-class skin stays at 60 fps with 3 GB RAM.
+4. `.strm` round trip from the EliteMini's Jellyfin to the onn (same as spike 5 below, on Android).
+
+### Phase 1-Lite — The onn as the daily player
+- One ADB install script: debloat, launcher, Kodi, repo zip (skin, Browse addon, Jellyfin for Kodi), `kodi-defaults` for Android.
+- Hub on the EliteMini: Jellyfin + resolver as two containers in the existing Docker stack (the same quadlet images; compose file for now).
+- Phone page for "Keep this".
+
+**Exit:** onn powers on into our interface; Browse plays a 4K DV title in < 10 s; Keep this on the phone → on the TV in < 30 s; TV remote drives everything.
 
 ### Phase 0 — Spikes (1–2 weeks)
 Answer the questions that could kill the design before building anything.
