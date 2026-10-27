@@ -60,7 +60,8 @@ One small service (Python 3.12 stdlib + sqlite3, one container, port 8097) that 
 | Call | Does |
 |---|---|
 | `GET /health` | `{ok, addons: [..reachable?..]}` |
-| `GET /library?collection=continue\|next\|new\|movies\|shows` | Kept titles, filtered/sorted per collection. `continue` = has a resume point under 92 %; `next` = series with a next episode; `new` = last 30 days by kept time |
+| `GET /library?collection=continue\|next\|movies\|shows` | Kept titles, filtered/sorted per collection. `continue` = has a resume point under 92 %, most recently watched first; `next` = series with a next episode; `movies`/`shows` = all kept of that type, newest kept first |
+| `GET /new?skip=N` | **New releases from the user's catalogs**, not recently kept: the catalog named by `new_catalog` in `hub.toml` (default: Cinemeta's movie and series "top" catalogs filtered to the current and previous year, newest first), with `inLibrary` and `resume` filled in. A fresh box has a populated New tab on day one |
 | `POST /keep {id, type}` | Adds the title: metadata from the meta addon, best-stream badges from the stream addons, returns the item. Idempotent |
 | `DELETE /library/{id}` | Removes it |
 | `GET /play/{id}[/{s}/{e}]?preset=best\|balanced\|saver` | 302 to the best stream URL right now; `?json=1` returns `{url, headers, badges, source}` instead (Player uses this) |
