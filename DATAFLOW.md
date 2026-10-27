@@ -54,6 +54,27 @@ Target: first frame < 5 s for cached debrid, < 10 s for usenet. Seeks are range 
 ## Browse anything
 Kodi Browse addon → the user's Stremio-protocol addon URLs (AIOStreams for streams, Cinemeta for catalogs/meta). Play uses the same "pick best for preset" rule as the resolver, implemented once in the resolver and called by the addon (`GET /pick/tt…` returns the URL and badges). "In your library" = IMDb id present in Jellyfin (one API call, cached). "Keep this" = `POST /keep`.
 
+## Hub API (the resolver, grown up; decided 2026-10-27)
+One small service (Python 3.12 stdlib + sqlite3, one container, port 8097) that both front ends talk to: Player's Home on Android and the Kodi addon on the Fedora box. Jellyfin is no longer in the path.
+
+| Call | Does |
+|---|---|
+| `GET /health` | `{ok, addons: [..reachable?..]}` |
+| `GET /library?collection=continue\|next\|new\|movies\|shows` | Kept titles, filtered/sorted per collection. `continue` = has a resume point under 92 %; `next` = series with a next episode; `new` = last 30 days by kept time |
+| `POST /keep {id, type}` | Adds the title: metadata from the meta addon, best-stream badges from the stream addons, returns the item. Idempotent |
+| `DELETE /library/{id}` | Removes it |
+| `GET /play/{id}[/{s}/{e}]?preset=best\|balanced\|saver` | 302 to the best stream URL right now; `?json=1` returns `{url, headers, badges, source}` instead (Player uses this) |
+| `GET /resume/{id}[/{s}/{e}]` · `PUT` `{positionMs, durationMs}` | Shared positions across front ends; Player writes on exit, reads on launch |
+| `GET /browse/catalogs` | The user's catalogs (from the meta/catalog addons' manifests) |
+| `GET /browse/catalog/{type}/{catalogId}?skip=N` | Items, with `inLibrary` and `resume` filled in |
+| `GET /browse/meta/{type}/{id}` | Full metadata |
+| `GET /browse/streams/{type}/{id}[/{s}/{e}]` | Ranked streams with parsed badges; same ranking `/play` uses |
+| `GET /search?q=` | Library first (title start, then any word, then genre), then catalog search via the addons |
+
+Item shape, everywhere: `{id (imdb tt…), type (movie|series), title, year, runtimeMin, genres[], poster, backdrop, logo, overview, badges {res, hdr, audio}, inLibrary, keptAt, resume {positionMs, durationMs, updatedAt} | null, nextEpisode {s, e, title} | null}`.
+
+Config: `/var/lib/hub/hub.toml` (addon manifest URLs, meta addon, preset); data: `/var/lib/hub/hub.sqlite`. Stream cache per title 10 min. Addon unreachable → `/play` serves the cached URL if any, else 503 with `{reason}`.
+
 ## Resolver rules
 - Preset → filter: Best = prefer remux, 4K, HDR, TrueHD/DTS-HD; Balanced = 4K web; Bandwidth saver = 1080p. Within a preset, AIOStreams' own order wins.
 - Cache: last good stream URL per title for 10 min; if AIOStreams is unreachable, serve the cached URL if any, else 503 and the status screen shows "Streams: unreachable".

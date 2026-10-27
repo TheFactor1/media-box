@@ -159,12 +159,27 @@ disk_config/iso.toml
 
 Each phase ends with an exit test on **real hardware**. VMs only prove the boot flow; HDR, passthrough and CEC need a TV and an AVR.
 
-### Proposed 2026-10-27: on the onn, the engine is Matt's own **Player** app, not Kodi
+### Decided 2026-10-27: on Android, the engine is Matt's own **Player** app (github.com/TheFactor1/tv-player), not Kodi
+Home spec for Player: the prototype's **Programme** layout in the **Mercury** look (graphite, colourless glass with one chrome line, one blurred layer, mercury-blue accent, amber for attention only), text tabs with the meniscus, the **Refine** sheet, **Search** with the d-pad letter grid, Browse via the hub, "Keep this". Display face: Bricolage Grotesque unless Matt picks another from the Type dropdown; UI Instrument Sans; mono Geist Mono. Motion per Player's existing rules (gentle ease in, quicker out, no bounce). Hub API contract in DATAFLOW.md.
 Player (`com.thefactor1.player`, Kotlin, Media3 + FFmpeg) already does playback the way this project wants it: passthrough with decode fallback, DV → HDR10 fallback, reconnect and retry on debrid/usenet, resume across releases, frame-rate matching, a phone companion. It has no browsing. The Programme home, Browse (Stremio protocol via AIOStreams) and "Keep this" are the browsing. So on Android: **Player gains a Home** (Programme layout, Mercury material, the Refine sheet, Search) and plays its own streams; no Kodi, no skin engine limits, real blur where wanted. The Fedora box keeps Kodi (GBM is the only HDR path on x86). The two front ends share one hub API.
 
 **Hub becomes an API, not Jellyfin.** The resolver grows into the hub: `/library` (kept titles with Cinemeta metadata and chosen-stream badges), `/keep`, `/play` (best stream now), `/resume` (positions, so the onn and a future box agree), `/browse` proxying the user's addon URLs. Player's home reads it; the Kodi addon reads it; Jellyfin becomes optional (the "real files" tier and multi-user metadata), not the backbone. One small service, one API, two clients.
 
 Test reality: the box in the house is an onn 4K **Plus** behind an SDR, 2-channel projector, so HDR and passthrough can't be verified there; a 4K HDR TV is needed for those spikes.
+
+**Parity: the Fedora/Kodi box must carry Player's features.** Matt's rule, 2026-10-27. Where each one lives on the x86 side:
+| Player feature | On the Kodi box |
+|---|---|
+| Reconnect from the same spot; usenet/debrid retries; next-stream fallback | The Kodi Browse addon plays from the hub's ranked stream list and moves to the next on failure; `cache.buffermode=1` for stalls |
+| Passthrough with decode fallback | Kodi's own ALSA fallback + the 10-bit fix (spike 9) |
+| Resume across releases and front ends | Hub `/resume`, keyed by IMDb id, written by the Kodi addon's player monitor |
+| Projectionist pre-show, film-sampled accent colour | Skin: loading screen fed by hub metadata (logo, backdrop, colour) |
+| Skip intro/credits (IntroDB), online subtitles, forced-track handling | Addon: IntroDB lookups and OpenSubtitles via the hub; Kodi subtitle settings seeded |
+| Night mode, dialogue boost, audio sync | Kodi has audio offset; night mode/dialogue boost are a later ALSA/Kodi audio-DSP item |
+| X-Ray cast on pause | Skin pause overlay from hub metadata (TMDB cast via the hub) |
+| Phone companion (transcript, jump to line, remote) | Player's companion web page can run against the hub; Kodi's Chorus for remote in the meantime |
+| Frame-rate matching before first frame | Kodi `adjustrefreshrate` (seeded) |
+The hub carries the shared pieces (metadata, resume, streams, IntroDB/subtitle lookups) so neither front end re-implements them.
 
 ### ~~Decided 2026-10-27: Player Lite on the onn 4K Pro is the first milestone~~ (superseded by the proposal above if accepted; the phases below keep their shape with Player in place of Kodi-on-Android)
 Everything above the OS is a Kodi layer, so it runs on the onn today, before any x86 hardware exists. On the onn: every Google component disabled over ADB (launcher, setup, Assistant surfaces; the debloat session's list), a tiny HOME-category launcher APK of ours that does nothing but start Kodi (boot → our interface; Home button → Kodi; crash → Kodi restarts), CEC from the TV remote, HDR10 and Dolby Vision through Android's own path, Atmos as DD+. The hub (Jellyfin + resolver) runs on the EliteMini. What the onn can't do: TrueHD passthrough, atomic updates; a Google TV update may re-enable the launcher, so the ADB script is re-runnable. IPTV (PVR IPTV Simple with the user's own M3U/EPG) is a later add on the same box.
