@@ -112,18 +112,21 @@ Remote access: the server uses cloudflared (`*.mattshosted.com`); the box plan s
 
 ## 4. Hardware
 
+Full research with sources in [docs/HARDWARE.md](docs/HARDWARE.md) (2026-10-27).
+
 | Tier | Hardware | Notes |
 |---|---|---|
-| 1 (reference) | Intel N100 / N150 / N305 (Alder/Twin Lake-N), 16 GB RAM, 512 GB NVMe | HEVC 10-bit + AV1 decode, Quick Sync for transcoding to remote clients |
-| 2 | AMD Ryzen 7000/8000 mini PCs | Good VA-API; verify HDR + passthrough per model |
-| Player mode only | Same, 8 GB RAM | — |
+| 1 (reference) | **Beelink EQ14** (N150, 16 GB, 2× native HDMI 2.0; the box LibreELEC's lead tests on). Runner-up ASUS NUC 14 Essential N150; floor GMKtec G3 Plus (~$150) | N100 and N150 share the same 24-EU Gen12 iGPU: HEVC/VP9/AV1 10-bit decode. N305/N355 only buys Jellyfin transcode headroom. Idle is 10–14 W at the wall, not the 6 W folklore. |
+| 2 ("server too") | Intel N355 or Core Ultra, **after a bench test**. AMD (780M-class) demoted: wrong HDR colours on LibreELEC 12/13 (Apr 2025, unfixed) and the AMD TrueHD passthrough bug reopened Sep 2026 | Core Ultra: HDR correct but 8-bit only + AVR resync loss. The EliteMini (AMD) must pass spike 1 before it becomes the combined box. |
+| Player mode | Any tier-1 box, 8 GB | Kodi needs ~2 GB. Hub mode wants 16 GB: Jellyfin idles at ~1 GB and transcode buffers are RAM. Plan 1–2 phone transcodes on an N150, not the vendor's 3–4. |
 
-**Hardware gotchas to test per model:**
-- **CEC:** most mini PCs have **no HDMI-CEC**. Options: a Pulse-Eight USB-CEC adapter, or bundle/recommend a USB RF or Bluetooth remote. Decide in Phase 0. This affects the "premium" feel more than anything else.
-- **HDMI via LSPCON:** many N100 boxes drive one HDMI port through a DP→HDMI converter. HDR and passthrough can fail on that port. The supported-hardware list records which port works.
-- **Audio:** verify TrueHD/Atmos and DTS:X bitstream via an AVR on each model.
+**Known blockers, per model, to test in Phase 0:**
+- **Intel Gen12+ drops HD audio at 2160p/23.976 Hz** (TrueHD/DTS-HD), which is our hero use case. Open since Dec 2023, no upstream fix as of Jan 2026. LibreELEC 13 carries a kernel patch capping HDMI to 10-bit, which fixes it on the EQ14; a runtime `max bpc` connector-property script is the alternative. **The image must carry one of them** (spike 9) or tier 1 fails its own target.
+- HDR start/stop black screens and Denon AVR resync issues persist on LE13 nightlies (Aug 2026).
+- **HDMI:** Alder/Twin Lake-N has native HDMI from the SoC, so LSPCON is not the N-series problem; the trap is a DP→HDMI converter sold as "HDMI 2" (no BT.2020, no bitstream). Check with `edid-decode` and the connector name. No candidate has HDMI 2.1 FRL, so 4K60 HDR is 4:2:0 everywhere; 4K24 is the real target.
+- **CEC:** no cheap box has it. The Pulse-Eight adapter can't pass 4K HDR, so it can't sit in the video path. Recommend **Flirc (~$20) or the OSMC RF remote (~£19, wakes from S5)**; CEC only as a spare-input trick.
 
-Start with **two** reference models. Ship a short, honest supported list instead of claiming everything.
+Start with the EQ14. Ship a short, honest supported list instead of claiming everything.
 
 ## 5. Repo layout
 
@@ -163,8 +166,9 @@ Answer the questions that could kill the design before building anything.
 6. Remote: test CEC adapter vs a bundled USB remote. Pick one.
 7. Bound images: after the first `bootc upgrade`, the quadlets' images are in `/usr/lib/bootc/storage`, start with no network, and survive a rollback.
 8. Success rate: for 20 titles across quality presets, does AIOStreams return a playable stream, and how often is the first choice the one that plays?
+9. **HD audio at 4K23.976 on Intel Gen12:** reproduce the TrueHD/DTS-HD drop on the stock Fedora kernel, then fix it with either LibreELEC's 10-bit HDMI cap patch (means building our own kernel package into the image) or a boot-time `max bpc=10` DRM connector property. Pick the one that works; the runtime script wins if it does.
 
-**Exit:** a written yes/no per spike. Any "no" on 1, 3 or 7 means rethinking the base before going further.
+**Exit:** a written yes/no per spike. Any "no" on 1, 3, 7 or 9 means rethinking the base before going further.
 
 ### Phase 1 — The appliance (player)
 - Image boots to Kodi, branded Plymouth splash, no visible console.
@@ -232,7 +236,9 @@ The only meaningful custom code in the project.
 | Debrid provider crackdowns (RD June 2026) | Fewer cached releases | AIOStreams is provider-agnostic; usenet as second source |
 | Library depends on AIOStreams being up | Nothing in the library plays if the server (or hosted instance) is down | Resolver caches the last good stream URL per title for a short time; status screen says "Streams: unreachable"; "real files" tier for anything that must always play |
 | AIOStreams usenet bytes route through the host it runs on | Server upload path becomes the bottleneck away from home | Spike 4 measures it; LAN is unaffected |
-| No CEC on mini PCs | Clunky first impression | Decide on adapter or bundled remote in Phase 0 |
+| No CEC on mini PCs | Clunky first impression | Flirc or OSMC RF remote (Phase 0 item 6); CEC adapters can't carry 4K HDR |
+| Intel drops TrueHD/DTS-HD at 4K23.976 | The hero use case has no HD audio | Spike 9: 10-bit HDMI cap via kernel patch or runtime DRM property; the fixes live in LibreELEC's patch tree, so plan to cherry-pick |
+| AMD HDR/passthrough bugs | The EliteMini can't be the combined box yet | Tier 2 is Intel until AMD passes spike 1 |
 | HDR/passthrough varies per box and port | "It doesn't work on my TV" | Small supported-hardware list, tested per port |
 | Skin breaks on Kodi updates | Ugly home screen after update | Pin skin version in the image; update together with Kodi |
 | Legal exposure | Project takedown | No sources shipped, ever (section 1) |
@@ -242,7 +248,7 @@ The only meaningful custom code in the project.
 
 ## 8. Open decisions
 1. Name.
-2. Remote: CEC adapter vs bundled USB/Bluetooth remote (Phase 0, item 6).
+2. Remote: Flirc vs OSMC RF remote (Phase 0, item 6). CEC adapters ruled out for the video path by the research.
 3. ~~NzbDAV vs AltMount.~~ Neither in v1: AIOStreams' native usenet (decided 2026-10-27).
 4. Wizard and resolver language. Suggest Python stdlib or Go single binary; no framework. Same language for both.
 5. ~~Do we ever offer on-demand debrid browsing in Kodi?~~ Decided: yes, "Browse anything" in Phase 2 via the Stremio addon protocol, user-supplied addon URLs only.
