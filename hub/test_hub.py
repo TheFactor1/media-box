@@ -117,6 +117,12 @@ class FakeAddon(BaseHTTPRequestHandler):
                     'catalogs': [{'type': 'movie', 'id': 'top', 'name': 'Top', 'extra': [{'name': 'search'}, {'name': 'skip'}]}]}
         elif p == '/catalog/movie/top.json':
             body = {'metas': [METAS['tt1'], METAS['tt5']]}
+        elif p == '/catalog/movie/fresh2.json':  # a second New catalog, two pages long
+            body = {'metas': [METAS['tt4']]}
+        elif p == '/catalog/movie/fresh2/skip=1.json':
+            body = {'metas': [METAS['tt5']]}
+        elif p.startswith(('/catalog/movie/fresh/skip=', '/catalog/movie/fresh2/skip=')):
+            body = {'metas': []}
         elif p == '/catalog/movie/fresh.json':
             body = {'metas': [METAS['tt6'], METAS['tt5'], METAS['tt1'], METAS['tt5']]}
         elif p == '/catalog/movie/top/search=drama.json':
@@ -157,7 +163,8 @@ class Fixture(unittest.TestCase):
             f.write(f'bind = "127.0.0.1"\nport = 0\ndiscovery_port = 0\npreset = "standard"\nmeta_addons = ["{manifest}"]\n'
                     + (f'stream_addons = ["{manifest}"]\n' if cls.streams else '')
                     + f'aiostreams_url = "http://127.0.0.1:{cls.addon.server_port}"\n'
-                    f'new_catalog = {{addon = "{manifest}", type = "movie", id = "fresh"}}\n' + cls.extra)
+                    f'new_catalog = [{{addon = "{manifest}", type = "movie", id = "fresh"}},'
+                    f' {{addon = "{manifest}", type = "movie", id = "fresh2"}}]\n' + cls.extra)
         cls.server = hub.make_server(config, cls.tmp.name)
         cls.hub = cls.server.RequestHandlerClass.hub
         threading.Thread(target=cls.server.serve_forever, daemon=True).start()
@@ -251,9 +258,13 @@ class HubTest(Fixture):
         self.assertEqual([i['id'] for i in self.get('/search?q=Drama')['items']], ['tt1', 'tt3', 'tt9', 'tt4', 'tt5'])
 
     def test_5b_new(self):
-        # Configured catalog: newest year first, catalog order within a year, duplicates dropped, kept one marked.
+        # Two configured catalogs (fresh2 pages): merged, newest year first, catalog order within a year,
+        # duplicates dropped, kept ones marked.
         self.assertEqual([(i['id'], i['inLibrary']) for i in self.get('/new')['items']],
-                         [('tt1', True), ('tt5', False), ('tt6', False)])
+                         [('tt1', True), ('tt4', True), ('tt5', False), ('tt6', False)])
+
+    def test_5c_new_skip_pages_the_merged_list(self):
+        self.assertEqual([i['id'] for i in self.get('/new?skip=1')['items']], ['tt4', 'tt5', 'tt6'])
 
     def test_7_beacon(self):
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:

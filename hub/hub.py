@@ -32,6 +32,7 @@ MANIFEST_TTL = 3600
 META_TTL = 86400
 PAIR_WINDOW = 600     # pairing words, setup page and TV pairing requests each last 10 min
 MAX_BODY = 64 * 1024
+NEW_PAGE, NEW_MAX = 50, 300  # /new page size; titles read per catalog
 MAX_ADDON = 8 * 2**20    # an addon answer over 8 MB is refused, so a hostile addon can't exhaust memory
 OWN_PORTS = set()        # this process's hub ports: an addon URL (or its redirect) must never point back at the hub
 DONE = 0.92              # contract: "continue" = resume point under 92 %
@@ -218,6 +219,7 @@ class Hub:
         self.new = [(known.setdefault(c['addon'], Addon(c['addon'])), c['type'], c['id'])
                     for c in new or [{'addon': CINEMETA, 'type': t, 'id': 'top'} for t in ('movie', 'series')]]
         self.meta_cache = {}
+        self.new_cache = (0, None)
         self.cache = {}  # shortcut: in memory, lost on restart and never pruned; fine for one household, move to sqlite if it grows
         self.limits = {'play': security.Bucket(10, 10), 'setup': security.Bucket(10, 10), 'health': security.Bucket(1, 5),
                        'pair': security.Bucket(5 / 60, 5), 'pair/request': security.Bucket(3 / 60, 3)}
@@ -545,16 +547,30 @@ class Hub:
         raise HttpError(404, f'no addon has catalog {type_}/{cid}')
 
     def new_releases(self, skip):
+        # Several catalogs feed New, so a per-catalog skip can't page the merged list: build it whole, then slice.
+        at, merged = self.new_cache
+        if merged is None or time.time() - at >= STREAM_TTL:
+            merged = self.merge_new()
+            self.new_cache = (time.time(), merged)
+        return self.annotate([dict(i) for i in merged[skip:skip + NEW_PAGE]])  # copies: annotate fills them in
+
+    def merge_new(self):
         items, seen, errors = [], set(), 0
         year = time.localtime().tm_year
         for addon, type_, cid in self.new:
-            try:
-                metas = lst(addon.get('catalog', type_, cid, {'skip': skip} if skip else None).get('metas'))
-            except AddonError:
-                errors += 1
-                continue
-            for m in metas:
-                if isinstance(m, dict) and m.get('id') not in seen:
+            metas = []
+            while len(metas) < NEW_MAX:
+                try:
+                    page = lst(addon.get('catalog', type_, cid, {'skip': len(metas)} if metas else None).get('metas'))
+                except AddonError:
+                    errors += not metas  # a failed later page just ends this catalog
+                    break
+                fresh = [m for m in page if isinstance(m, dict) and m.get('id') not in {x.get('id') for x in metas}]
+                if not fresh:  # exhausted, or an addon that ignores skip
+                    break
+                metas += fresh
+            for m in metas[:NEW_MAX]:
+                if m.get('id') not in seen:
                     item = to_item(m)
                     if not self.new_recent_only or (item['year'] or 0) >= year - 1:
                         items.append(item)
@@ -562,7 +578,7 @@ class Hub:
         if errors == len(self.new):
             raise AddonError('no new_catalog addon answered')
         # Stable sort: newest year first, the catalogs' own order within a year.
-        return self.annotate(sorted(items, key=lambda i: i['year'] or 0, reverse=True))
+        return sorted(items, key=lambda i: i['year'] or 0, reverse=True)
 
     def search(self, q):
         q = q.strip().casefold()
