@@ -2,7 +2,7 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@500;600&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Hanken+Grotesk:wght@300;400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600&family=Instrument+Sans:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Syne:wght@700;800&family=Instrument+Serif:ital@0;1&family=Unbounded:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;800&family=Barlow:wght@500;600&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Hanken+Grotesk:wght@300;400;500;600&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600&family=Instrument+Sans:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Syne:wght@700;800&family=Instrument+Serif:ital@0;1&family=Unbounded:wght@500;600&family=Big+Shoulders+Display:wght@700&family=Anybody:wdth,wght@125,700&family=Michroma&family=Gloock&family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Bodoni+Moda:opsz,wght@6..96,600&family=Dela+Gothic+One&family=Zilla+Slab:wght@600&family=Familjen+Grotesk:wght@700&family=Chakra+Petch:wght@600&display=swap">
 <style>
 /* Layout: toolbar, then a 16:9 TV whose 800x450 stage is scaled to fit; each look re-tokens and re-arranges the same markup. */
 :root{
@@ -101,6 +101,8 @@ body{background:var(--page-bg);color:var(--page-fg);font-family:var(--f-body)}
 .brand span{color:var(--page-muted);font-size:13px}
 .seg{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
 .seg-l{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--page-muted);margin-right:4px}
+.seg select{font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--page-line);background:var(--page-bg);color:var(--page-fg);border-radius:6px;cursor:pointer}
+.seg select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .seg button{font:inherit;font-size:13px;padding:6px 11px;border:1px solid var(--page-line);background:transparent;color:var(--page-fg);border-radius:6px;cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--page-fg);color:var(--page-bg);border-color:var(--page-fg)}
 .seg button:focus-visible,.tv:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
@@ -380,9 +382,22 @@ button.sv{cursor:pointer}
 /* Mercury type pairings: only the display face changes; sizes keep titles at the same visual weight */
 :root[data-look="mercury"][data-type="syne"]{--f-display:"Syne","Helvetica Neue",system-ui,sans-serif;--title-w:800;--title-track:-.035em;--title-size:30px;--ts:.94}
 :root[data-look="mercury"][data-type="serif"]{--f-display:"Instrument Serif",Georgia,"Times New Roman",serif;--title-w:400;--title-track:-.01em;--title-size:42px;--ts:1.3}
-:root[data-look="mercury"][data-type="unbounded"]{--f-display:"Unbounded","Helvetica Neue",system-ui,sans-serif;--title-w:500;--title-track:-.02em;--title-size:25px;--ts:.85}
+:root[data-look="mercury"][data-type="unbounded"]{--f-display:"Unbounded","Helvetica Neue",system-ui,sans-serif;--title-w:500;--title-track:-.02em;--title-size:25px;--ts:.85;--pts:7.9px}
 [data-look="mercury"][data-type="serif"] .hero .ttl{font-style:italic}
+:root[data-look="mercury"][data-type="shoulders"]{--f-display:"Big Shoulders Display","Arial Narrow",sans-serif;--title-w:700;--title-track:.005em;--title-size:34px;--ts:1.05;}
+:root[data-look="mercury"][data-type="anybody"]{--f-display:"Anybody","Helvetica Neue",sans-serif;--title-w:700;--title-track:-.02em;--title-size:25px;--ts:0.78;--wdth:125%;--pts:7.1px;}
+:root[data-look="mercury"][data-type="michroma"]{--f-display:"Michroma","Helvetica Neue",sans-serif;--title-w:400;--title-track:.03em;--title-size:23px;--ts:0.72;--pts:7.0px;}
+:root[data-look="mercury"][data-type="gloock"]{--f-display:"Gloock",Georgia,serif;--title-w:400;--title-track:-.01em;--title-size:34px;--ts:1.05;--pts:10.9px;}
+:root[data-look="mercury"][data-type="cormorant"]{--f-display:"Cormorant Garamond",Garamond,Georgia,serif;--title-w:600;--title-track:-.01em;--title-size:42px;--ts:1.3;--pts:12.6px;}
+:root[data-look="mercury"][data-type="bodoni"]{--f-display:"Bodoni Moda",Didot,Georgia,serif;--title-w:600;--title-track:-.015em;--title-size:35px;--ts:1.1;--pts:10.5px;}
+:root[data-look="mercury"][data-type="dela"]{--f-display:"Dela Gothic One","Arial Black",sans-serif;--title-w:400;--title-track:.02em;--title-size:25px;--ts:0.78;--pts:7.7px;}
+:root[data-look="mercury"][data-type="zilla"]{--f-display:"Zilla Slab",Rockwell,Georgia,serif;--title-w:600;--title-track:-.01em;--title-size:35px;--ts:1.08;--pts:11px;}
+:root[data-look="mercury"][data-type="familjen"]{--f-display:"Familjen Grotesk","Helvetica Neue",sans-serif;--title-w:700;--title-track:-.025em;--title-size:34px;--ts:1.05;}
+:root[data-look="mercury"][data-type="chakra"]{--f-display:"Chakra Petch","Helvetica Neue",sans-serif;--title-w:600;--title-track:.02em;--title-size:32px;--ts:1.0;--pts:9.9px;}
+[data-look="mercury"][data-type="cormorant"] .hero .ttl{font-style:italic;font-weight:500}
+[data-look="mercury"] :is(.ttl,.sh h2,.mark,.amb-clock,.boot span),[data-look="mercury"] .art::after{font-stretch:var(--wdth,100%)}
 [data-look="mercury"][data-type="syne"] .art::after{font-weight:700;font-size:8.6px;letter-spacing:-.01em} /* Syne 800 is too wide for 70px posters */
+[data-look="mercury"] .amb-wall .art::after{font-size:calc(16px * var(--ts))} /* ambient tiles are twice as wide as row posters */
 /* glass: only these blur (hero or title panel, toast, playback bar, boot capsule) */
 [data-look="mercury"] :is(.hero,.tp,.toast,.np .osd,.boot span){backdrop-filter:blur(15px) saturate(105%);-webkit-backdrop-filter:blur(15px) saturate(105%);
   background:var(--gl-tint);border-color:transparent;box-shadow:inset 0 1px 0 var(--gl-chrome),inset 0 0 0 1px var(--gl-edge),0 14px 34px var(--gl-drop)}
@@ -395,7 +410,7 @@ button.sv{cursor:pointer}
 [data-look="mercury"] .bd .art{animation:kb 24s ease-in-out infinite alternate;transform-origin:65% 35%}
 [data-look="mercury"] .bd::after{background:linear-gradient(0deg,var(--bg) 40%,color-mix(in srgb,var(--bg) 70%,transparent) 55%,transparent 85%),linear-gradient(90deg,color-mix(in srgb,var(--bg) 80%,transparent),transparent 55%)}
 [data-look="mercury"] :is(.ttl,.sh h2,.mark,.amb-clock,.boot span){font-variation-settings:"opsz" 96}
-[data-look="mercury"] .art::after{font-weight:var(--title-w);font-size:calc(10.5px * var(--ts));letter-spacing:var(--title-track);font-variation-settings:"opsz" 96}
+[data-look="mercury"] .art::after{font-weight:var(--title-w);font-size:var(--pts,calc(10.5px * var(--ts)));letter-spacing:var(--title-track);font-variation-settings:"opsz" 96}
 [data-look="mercury"] .art{box-shadow:0 8px 20px var(--gl-drop)}
 [data-look="mercury"] .card.on .art{transform:scale(1.03);transition-duration:.35s;transition-timing-function:ease}
 [data-look="mercury"] .top .mark{font-weight:var(--title-w);font-size:calc(14px * var(--ts));letter-spacing:var(--title-track)}
@@ -573,13 +588,7 @@ button.sv{cursor:pointer}
       <button id="mo-full" data-mo="full" aria-pressed="true">Full</button>
       <button id="mo-calm" data-mo="calm" aria-pressed="false">Calm</button>
     </div>
-    <div class="seg" role="group" aria-label="Type" id="types" hidden>
-      <span class="seg-l">Type</span>
-      <button id="ty-bricolage" data-ty="bricolage" aria-pressed="true">Bricolage</button>
-      <button id="ty-syne" data-ty="syne" aria-pressed="false">Syne</button>
-      <button id="ty-serif" data-ty="serif" aria-pressed="false">Instrument Serif</button>
-      <button id="ty-unbounded" data-ty="unbounded" aria-pressed="false">Unbounded</button>
-    </div>
+    <label class="seg" id="types" hidden><span class="seg-l">Type</span><select id="type-sel"><option value="bricolage">Bricolage Grotesque</option><option value="syne">Syne</option><option value="serif">Instrument Serif</option><option value="unbounded">Unbounded</option><option value="shoulders">Big Shoulders</option><option value="anybody">Anybody Wide</option><option value="michroma">Michroma</option><option value="gloock">Gloock</option><option value="cormorant">Cormorant Garamond</option><option value="bodoni">Bodoni Moda</option><option value="dela">Dela Gothic One</option><option value="zilla">Zilla Slab</option><option value="familjen">Familjen Grotesk</option><option value="chakra">Chakra Petch</option></select></label>
     <div class="seg"><button id="go-idle">Go idle</button></div>
   </header>
 
@@ -1024,12 +1033,12 @@ function setLook(v){
 }
 function setType(v){
   document.documentElement.dataset.type=v;
-  document.querySelectorAll('#types button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.ty===v));
+  $('#type-sel').value=v;
   try{localStorage.setItem('mb-type',v)}catch(_){}
   requestAnimationFrame(()=>placeBlob());
 }
-document.querySelectorAll('#types button').forEach(b=>b.onclick=e=>{setType(b.dataset.ty);if(e.detail)$('#tv').focus({preventScroll:true})});
-{let ty=null;try{ty=localStorage.getItem('mb-type')}catch(_){}setType(['bricolage','syne','serif','unbounded'].includes(ty)?ty:'bricolage')}
+$('#type-sel').onchange=e=>setType(e.target.value);
+{let ty=null;try{ty=localStorage.getItem('mb-type')}catch(_){}setType([...$('#type-sel').options].some(o=>o.value===ty)?ty:'bricolage')}
 document.querySelectorAll('#looks button').forEach(b=>b.onclick=e=>{setLook(b.dataset.look);if(e.detail)$('#tv').focus({preventScroll:true})});
 
 // boot-in: logo, then hero rises and rows cascade (about 2 s)
