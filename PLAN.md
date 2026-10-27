@@ -80,7 +80,8 @@ The idea that holds it together: debrid and usenet never stream to Kodi directly
 | Jellyfin in Kodi | **Jellyfin for Kodi** (DB sync; direct paths in Hub mode) | Syncs into Kodi's database, so skin widgets (continue watching, new episodes) work natively | JellyCon if sync proves slow on big libraries |
 | Subtitles | **Bazarr** | Forced and foreign-language subs are where streamed remuxes fall short; Bazarr fetches them per item | — |
 | Requests in Kodi | Small Kodi plugin against the Jellyseerr API | No Jellyseerr addon exists; needed for the Requested row and for pending-request feedback on the TV | Cut the Trending row if short on time |
-| Skin | Arctic Fuse 2 (or successor), then a branded fork | Already looks premium; widget-driven home screen | Estuary + custom widgets |
+| Skin | Arctic Fuse 2 as the base, restyled to **Nuvio's layout** (hero banner, poster rows, one Play button) | Already looks premium; widget-driven home screen; XML so the layout can match Nuvio exactly | Estuary + custom widgets |
+| Browse anything | Kodi addon speaking the **Stremio addon protocol** (manifest → catalog/meta/stream JSON); users paste their own addon URLs | Nuvio's browse-and-play-instantly model, through the one player that does HDR + passthrough. No addon URLs shipped. | — |
 | Debrid | **Decypharr** | Multi-provider (Real-Debrid, TorBox, AllDebrid…), qBittorrent API so the arrs talk to it natively | Zurg (Real-Debrid only) |
 | Usenet streaming | **NzbDAV** or **AltMount** (bake-off in Phase 0) | Both: WebDAV mount + SABnzbd-compatible API, stream before download | SABnzbd fast download, play when done |
 | Automation | Sonarr, Radarr, Prowlarr, Recyclarr | Recyclarr applies "best quality" profiles so users never tune them | — |
@@ -89,6 +90,9 @@ The idea that holds it together: debrid and usenet never stream to Kodi directly
 | Updates | `bootc upgrade` timer + **greenboot** health checks | Staged, applied on reboot while idle, auto-rollback if Kodi or Jellyfin fail to come up | — |
 | Data backup | Nightly snapshot of `/var/lib/*` (btrfs snapshot timer, or tar to the data disk) | Rollback protects `/usr`, not `/var`; a corrupt Jellyfin DB would wipe watch state | — |
 | Remote access | Tailscale (opt-in in wizard) | Jellyfin outside the home with no port forwarding | — |
+
+### Decided 2026-10-27: Kodi is the engine, not Nuvio or Stremio
+Nuvio's official desktop has no Linux build; the NuvioLinux fork is a v0.1 alpha rendering mpv through a GL window. Stremio's Linux shell needs X11/Wayland. In both cases the player sits inside a window on a compositor, and no Linux compositor gives a windowed player HDR output or reliable TrueHD passthrough. Only a player that owns the display (Kodi on GBM) reaches the quality bar. What we want from Nuvio is its layout (→ skin) and its browse-anything model (→ Stremio-protocol addon), both of which fit inside Kodi.
 
 ### Upstream facts that shaped this (checked 2026-10-27)
 - **Real-Debrid** removed a large amount of cached content and added filename filtering in June 2026; many users moved to **TorBox**. That's why the debrid layer is Decypharr (multi-provider), not Zurg (RD-only). The wizard should present TorBox and RD as equals.
@@ -167,8 +171,28 @@ Answer the questions that could kill the design before building anything.
 - Recyclarr presets: "Best (remux)", "Balanced (web-dl 4K)", "Bandwidth saver (1080p)".
 - Jellyseerr pre-linked to Sonarr/Radarr/Jellyfin.
 - Requests plugin for Kodi (v0): a "Requested" row showing each request's state (searching, downloading, ready). Without it the TV is silent until a title appears, which for uncached debrid or a slow usenet import can be a long wait.
+- **Browse anything** addon (v0): user pastes Stremio addon manifest URLs in the wizard; a Browse row and search backed by those catalogs; one Play button that picks the best cached stream for the quality preset, "Other versions" as a submenu; metadata and art from a meta addon (Cinemeta) so pages look like library pages; direct play of the stream URL in Kodi. Design rules in EXPERIENCE.md.
 
-**Exit:** request a cached movie on the phone → playing on the TV in < 2 min, through both debrid and usenet, with its status visible on the TV while pending.
+**Exit:** request a cached movie on the phone → playing on the TV in < 2 min, through both debrid and usenet, with its status visible on the TV while pending. Browse a title not in the library → playing in < 10 s.
+
+### v1 features, easiest first
+Build in this order; each is done when it works from the remote with no setup beyond the wizard.
+| # | Feature | How | Phase |
+|---|---|---|---|
+| 1 | Ambient mode | Kodi screensaver showing library art + clock; config only | 1 |
+| 2 | Trakt sync | Kodi Trakt addon preinstalled; user signs in from the status screen | 1 |
+| 3 | Phone as keyboard and remote | Kodi web server + Chorus; QR on the status screen; Kore supported | 1 |
+| 4 | Up Next + skip intro/credits | Jellyfin Intro Skipper plugin + Kodi Up Next addon; wired by the wizard | 2 |
+| 5 | Quality badges on title pages | Skin reads resolution / HDR type / audio codec from the Jellyfin item | 4 (skin) |
+| 6 | Subtitles in Browse anything | Stremio subtitle addons (user-added) through the same protocol | 2 (Browse addon) |
+| 7 | Second box auto-pairs | Hub advertises over mDNS; Player wizard shows "Join <hub>" | 3 (wizard) |
+| 8 | "In your library" badge in Browse | Match IMDb/TMDB id against Jellyfin; hide streams for owned titles | 2 (Browse addon) |
+| 9 | "Keep this" on browsed titles | Button → Jellyseerr request; title moves from Browse to Requested row | 2 (Browse addon) |
+
+### Later (each a real piece of work)
+Live TV & sports (PVR IPTV Simple, user's own M3U/EPG) · Spotify Connect (librespot container; audio handoff with Kodi is the hard bit) · Profiles with parental PIN (Jellyfin users + Kodi profiles) · Trailers (TMDB → YouTube id; YouTube playback in Kodi is fragile) · USB drive auto-import (udev + Radarr manual import) · Config export/import from the wizard · Provider bandwidth meter on the status screen.
+
+Left out on purpose: watch-together / multi-room sync (lots of code, few users); Dolby Vision output (DV profile 8 plays as HDR10 on Intel; true DV needs licensing we can't get).
 
 ### Phase 3 — The setup wizard
 The only meaningful custom code in the project.
@@ -211,4 +235,4 @@ The only meaningful custom code in the project.
 2. Remote: CEC adapter vs bundled USB/Bluetooth remote (Phase 0, item 6).
 3. NzbDAV vs AltMount (Phase 0, item 4).
 4. Wizard language. Suggest Python stdlib or Go single binary; no framework.
-5. Do we ever offer on-demand debrid browsing in Kodi (no request step)? Out of v1; revisit after Phase 4.
+5. ~~Do we ever offer on-demand debrid browsing in Kodi?~~ Decided: yes, "Browse anything" in Phase 2 via the Stremio addon protocol, user-supplied addon URLs only.

@@ -48,7 +48,18 @@ Rows, top to bottom. Each is a Kodi widget fed by Jellyfin for Kodi or the reque
 | Next Up | Jellyfin next episodes | hidden |
 | Recently Added | Jellyfin | "Nothing yet. Ask for something on your phone." with the QR |
 | Movies / Shows | Jellyfin libraries | — |
+| Browse: Popular / New / per catalog | Browse-anything addon (user's Stremio-protocol catalogs) | hidden until an addon URL is added; status screen card "Add a browse source" |
 | Trending *(Phase 4, cut first)* | Jellyseerr discover | hidden |
+
+Search (phone keyboard or on-screen) covers the library and the Browse catalogs in one list; library results come first with a "In your library" badge.
+
+## Browse anything
+Nuvio's model inside Kodi. Three rules:
+1. **Looks like the library.** Art and metadata from a meta addon (Cinemeta), the same title-page layout, the same quality badges once a stream is chosen.
+2. **One Play button.** The addon picks the best cached stream that matches the quality preset and plays it in Kodi (direct play: HDR and passthrough as for the library). "Other versions" is a submenu for the curious. A list of forty torrents is never shown.
+3. **Keep this.** Every browsed title page has "Keep this": sends a Jellyseerr request, the title appears in the Requested row, and a permanent best-quality copy lands in the library. Owned titles show "In your library" instead and play from the library.
+
+The box ships with no catalog or stream addon URLs. The wizard has an "Add a browse source" card where the user pastes a manifest URL; the same card lives on the status screen.
 
 Top-right: one small status dot. Green = all fine. Amber = something needs attention (pressing it opens the status screen). Never red on the home screen; failures live on the status screen with words, not colours.
 
