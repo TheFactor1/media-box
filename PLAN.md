@@ -203,6 +203,11 @@ New order: **Phase 0-Lite → Phase 1-Lite (onn)** → the Fedora box phases bel
 
 **Exit:** onn powers on into our interface; Browse plays a 4K DV title in < 10 s; Keep this on the phone → on the TV in < 30 s; TV remote drives everything.
 
+**State 2026-10-27 (end of day):** built and unit-tested, not yet run on the onn:
+- Hub (`hub/`): full API, release matching, connection presets, token pairing (code-and-approve or 6 words), encrypted settings, setup page with "Set up for me" from a debrid key, discovery beacon, AIOStreams quadlet; 23+ tests; image on GHCR. Live on the EliteMini is still the first version; update + pair needed.
+- Player (`tv-player`, branch `home-programme`, 3 commits): Programme Home in Mercury, Refine, Search, Title page, Keep this, Quality with Auto, Keystore-held token, first-run discovery + code pairing; builds locally; 155+ unit tests.
+- Next: push the branch (CI builds the APK), update the mini's hub, install on the onn, walk the first run with the phone, then the Phase 0-Lite spikes.
+
 ### Phase 0 — Spikes (1–2 weeks)
 Answer the questions that could kill the design before building anything.
 1. Kodi GBM on reference box #1: 4K HDR10 remux plays with HDR on the TV, TrueHD/Atmos bitstreams to the AVR, refresh rate switches 23.976 ↔ 60.

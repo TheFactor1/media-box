@@ -1,4 +1,15 @@
-# Media mini-PC image (Phase 0)
+# Media box
+
+Two front ends, one hub. See [PLAN.md](PLAN.md), [EXPERIENCE.md](EXPERIENCE.md), [DATAFLOW.md](DATAFLOW.md).
+
+## Hub (`hub/`)
+Python 3.12 stdlib + SQLite. Tests: `python -I -m unittest discover -s hub -t .`
+Run on a Docker host: `cd hub && mkdir -p data && cp hub.example.toml data/hub.toml && docker compose up -d --build`, then open `http://<host>:8097/setup?n=<nonce>` (first boot: get the link with `docker exec hub wget -qO- http://127.0.0.1:8097/setup/link`). The setup page takes a debrid key and approves TVs by their 6-digit code.
+
+## Player (Android TV)
+github.com/TheFactor1/tv-player, branch `home-programme`: the Home that talks to the hub. CI builds the APK; sideload with `adb install`.
+
+# Fedora image (Phase 0)
 
 Fedora bootc image that boots straight into Kodi on GBM and carries the hub's
 container images inside the OS image. See [PLAN.md](PLAN.md).
