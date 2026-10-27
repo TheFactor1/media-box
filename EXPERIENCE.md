@@ -44,7 +44,7 @@ Rows, top to bottom. Each is a Kodi widget fed by Jellyfin for Kodi or the reque
 | Row | Source | Empty state |
 |---|---|---|
 | Continue Watching | Jellyfin resume points | hidden |
-| Requested | requests plugin (see states below) | hidden |
+| Requested *(only with the later "Keep offline" tier)* | download states (see below) | hidden |
 | Next Up | Jellyfin next episodes | hidden |
 | Recently Added | Jellyfin | "Nothing yet. Ask for something on your phone." with the QR |
 | Movies / Shows | Jellyfin libraries | — |
@@ -57,26 +57,24 @@ Search (phone keyboard or on-screen) covers the library and the Browse catalogs 
 Nuvio's model inside Kodi. Three rules:
 1. **Looks like the library.** Art and metadata from a meta addon (Cinemeta), the same title-page layout, the same quality badges once a stream is chosen.
 2. **One Play button.** The addon picks the best cached stream that matches the quality preset and plays it in Kodi (direct play: HDR and passthrough as for the library). "Other versions" is a submenu for the curious. A list of forty torrents is never shown.
-3. **Keep this.** Every browsed title page has "Keep this": sends a Jellyseerr request, the title appears in the Requested row, and a permanent best-quality copy lands in the library. Owned titles show "In your library" instead and play from the library.
+3. **Keep this.** Every browsed title page has "Keep this": the title joins the library within seconds (Recently Added row, with a "New" badge), with full metadata, watch state and the quality badges of its best stream. Nothing downloads; each play fetches the best stream available that day. Owned titles show "In your library" instead and play from the library. A later "Keep offline" downloads a permanent copy.
 
 The box ships with no catalog or stream addon URLs. The wizard has an "Add a browse source" card where the user pastes a manifest URL; the same card lives on the status screen.
 
 Top-right: one small status dot. Green = all fine. Amber = something needs attention (pressing it opens the status screen). Never red on the home screen; failures live on the status screen with words, not colours.
 
 ## Asking for something
-Phone: Jellyseerr. Search, tap, done. No approval step for the admin.
+Phone: the box's own web page (same address as the wizard). Search, tap "Keep this", done. The title is in the library and on the TV's Recently Added row within 30 s. No queue, no approval step.
 
-TV, Requested row, one card per request:
+If no stream can be found for a title, the phone says so at once: "No good copy right now. Try a lower quality?" with one button. Nothing is added silently.
 
-| State | Card text | Triggered by |
-|---|---|---|
-| Looking | "Looking for a good copy…" | Request created, no grab yet |
-| Fetching (debrid) | "Fetching · ready in moments" | Decypharr reports cached |
-| Downloading | "Downloading · 43 %" | NzbDAV / Decypharr progress |
-| Ready | Normal poster, "New" badge; card leaves the row on first play | Jellyfin has the item |
-| Stuck | "Couldn't find a good copy. Try a lower quality?" with OK = retry at next profile down | No grab within 15 min, or all grabs failed |
+**Later, "Keep offline"** (the real-files tier) brings back a Requested row with download states:
 
-Timing target for a cached debrid or usenet-stream title: Looking → Ready in under 2 minutes, and the card changes state within 10 s of the backend.
+| State | Card text |
+|---|---|
+| Downloading | "Downloading · 43 %" |
+| Ready | Normal poster, "New" badge; card leaves the row on first play |
+| Stuck | "Couldn't find a good copy. Try a lower quality?" with OK = retry one quality lower |
 
 ## Playback
 - Direct play always for the TV. No transcoding on the player path. HDR10/HLG passed through; TV switches mode; refresh rate matches the file.
@@ -100,10 +98,10 @@ Downloaded in the background, applied on the next reboot in the overnight window
 |---|---|
 | Kodi crashes | Restarts in 2 s; home screen returns. Three crashes in 5 min → error screen with QR |
 | No network at boot | Home screen loads (library is cached); status dot amber; "No internet" on the status screen |
-| Provider key expired | Request cards go "Stuck"; status screen: "Debrid: key not accepted. Fix on your phone" + QR |
+| Streams unreachable (AIOStreams down or key expired) | Play says "Can't reach your streams right now"; status screen: "Streams: unreachable. Fix on your phone" + QR |
 | Data disk full | Status amber; downloads pause; "Storage full" with the biggest items listed |
 | Update broke boot | Automatic rollback (see Updates) |
 | Everything broke | Error screen: plain sentence, QR to the logs, "Hold power to restart" |
 
 ## Player mode differences
-No Requested row unless a Jellyseerr address is given in the wizard. No storage or provider cards. Everything else identical.
+Browse works the same. "Keep this" needs a hub; without one the button reads "Play" only. No storage card. Everything else identical.

@@ -10,7 +10,7 @@ dnf5 install -y \
 
 # RPM Fusion's single kodi binary is built with x11, wayland and gbm backends;
 # `kodi --windowing=gbm` picks GBM at runtime (spike 2: yes).
-dnf5 install -y kodi libcec rclone fuse3 skopeo podman \
+dnf5 install -y kodi libcec podman \
   intel-media-driver libva-intel-media-driver mesa-dri-drivers mesa-va-drivers-freeworld \
   plymouth plymouth-system-theme alsa-utils
 
