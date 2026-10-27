@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Phone setup wizard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07090D}
+.col{display:flex;flex-direction:column;gap:16px;width:360px;flex:none}
+.cap{font-size:20px;font-weight:700;color:#C4CAD6}
+.cap b{color:#8AB4FF}
+.ph{width:360px;height:760px;box-sizing:border-box;padding:30px 22px 24px;border-radius:44px;background:#0F1218;border:1.5px solid rgba(242,244,248,.18);display:flex;flex-direction:column;gap:14px;overflow:hidden}
+.pg{font-size:14px;font-weight:700;color:#A3ABBD}
+.bar{height:4px;border-radius:2px;background:rgba(242,244,248,.12)}
+.bar i{display:block;height:4px;border-radius:2px;background:#8AB4FF}
+.ph h2{margin:6px 0 0;font-size:26px;line-height:1.2;font-weight:800}
+.ph p{margin:0;font-size:15px;line-height:1.5;color:#A3ABBD}
+.opt{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:14px;border:1.5px solid rgba(242,244,248,.16);background:#151922;font-size:16px;line-height:1.4}
+.opt:has(:checked){border-color:#8AB4FF}
+.opt input{accent-color:#8AB4FF;width:20px;height:20px;margin:1px 0 0;flex:none}
+.opt small{display:block;color:#A3ABBD;font-size:14px}
+.tg{display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;background:#151922;font-size:16px;line-height:1.35}
+.tg span{flex-grow:1}
+.tg small{display:block;color:#A3ABBD;font-size:14px}
+.sw{appearance:none;-webkit-appearance:none;flex:none;width:52px;height:30px;margin:0;border-radius:15px;background:#3A4152;position:relative}
+.sw::after{content:"";position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#F2F4F8}
+.sw:checked{background:#8AB4FF}
+.sw:checked::after{left:25px}
+.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:700;color:#C4CAD6}
+.f input,.f select{height:46px;box-sizing:border-box;padding:0 14px;border-radius:10px;border:1.5px solid rgba(242,244,248,.18);background:#0B0D12;color:#F2F4F8;font:500 16px Manrope,system-ui,sans-serif}
+.cd{padding:14px;border-radius:14px;background:#151922;display:flex;flex-direction:column;gap:10px}
+.cd .hd{display:flex;align-items:center;justify-content:space-between;font-size:17px;font-weight:800}
+.sm{height:40px;padding:0 16px;border-radius:10px;border:1.5px solid rgba(138,180,255,.6);background:none;color:#8AB4FF;font:700 15px Manrope,system-ui,sans-serif}
+.go{height:54px;border-radius:14px;border:0;background:#8AB4FF;color:#0B0D12;font:800 18px Manrope,system-ui,sans-serif}
+.sk{height:44px;border:0;background:none;color:#C4CAD6;font:600 16px Manrope,system-ui,sans-serif}
+.sp{flex-grow:1}
+</style>
+</helmet>
+<div style="width: 2936px; height: 940px; box-sizing: border-box; padding: 48px 64px; font-family: Manrope, system-ui, sans-serif; color: #F2F4F8; background: #0B0D12; display: flex; flex-direction: column; gap: 16px">
+<div style="font-size: 18px; color: #A3ABBD">Opened by scanning the TV's code. Every step can be skipped; skipped steps wait as a card on the status screen.</div>
+<div style="display: flex; gap: 48px">
+
+<div class="col"><div class="cap"><b>1</b> Mode</div>
+<div class="ph"><div class="pg">Step 1 of 7</div><div class="bar"><i style="width: 14%"></i></div>
+<h2>How will you use this box?</h2>
+<label class="opt"><input type="radio" name="m" checked><span>This box is my media server<small>It keeps your library and fetches what you ask for.</small></span></label>
+<label class="opt"><input type="radio" name="m"><span>I already have a media server<small>Just play from it. You'll enter its address and sign in.</small></span></label>
+<div class="sp"></div><button class="go">Next</button><button class="sk">Skip for now</button></div></div>
+
+<div class="col"><div class="cap"><b>2</b> Picture &amp; sound</div>
+<div class="ph"><div class="pg">Step 2 of 7</div><div class="bar"><i style="width: 28%"></i></div>
+<h2>What is the box plugged into?</h2>
+<label class="opt"><input type="radio" name="s"><span>TV only</span></label>
+<label class="opt"><input type="radio" name="s"><span>Soundbar</span></label>
+<label class="opt"><input type="radio" name="s" checked><span>AV receiver<small>Sends surround sound untouched.</small></span></label>
+<label class="tg"><span>Match the film's frame rate?<small>Smoother motion. Recommended.</small></span><input class="sw" type="checkbox" role="switch" checked></label>
+<p>Asked once. Change it later in settings.</p>
+<div class="sp"></div><button class="go">Next</button><button class="sk">Skip for now</button></div></div>
+
+<div class="col"><div class="cap"><b>3</b> Your account</div>
+<div class="ph"><div class="pg">Step 3 of 7</div><div class="bar"><i style="width: 42%"></i></div>
+<h2>Your account</h2>
+<p>One name and password for watching and for asking for films.</p>
+<label class="f">Name<input type="text" placeholder="Your name"></label>
+<label class="f">Password<input type="password" placeholder="At least 8 characters"></label>
+<div class="sp"></div><button class="go">Next</button><button class="sk">Skip for now</button></div></div>
+
+<div class="col"><div class="cap"><b>4</b> Where films come from</div>
+<div class="ph"><div class="pg">Step 4 of 7</div><div class="bar"><i style="width: 57%"></i></div>
+<h2>Where films come from</h2>
+<p>Add any, all or none. You can add more later.</p>
+<div class="cd"><div class="hd">Debrid</div>
+<label class="f">Provider<select><option>Choose your provider</option></select></label>
+<label class="f">API key<input type="text" placeholder="Paste your key"></label>
+<button class="sm" style="align-self: flex-start">Test</button></div>
+<div class="cd"><div class="hd">Usenet<button class="sm">Add</button></div></div>
+<div class="cd"><div class="hd">Indexers<button class="sm">Add</button></div></div>
+<div class="cd"><div class="hd">Browse source<button class="sm">Add</button></div></div>
+<div class="sp"></div><button class="go">Next</button></div></div>
+
+<div class="col"><div class="cap"><b>5</b> Quality</div>
+<div class="ph"><div class="pg">Step 5 of 7</div><div class="bar"><i style="width: 71%"></i></div>
+<h2>Picture quality</h2>
+<label class="opt"><input type="radio" name="q"><span>Best<small>Full-size copies, exactly as released. Needs fast internet.</small></span></label>
+<label class="opt"><input type="radio" name="q" checked><span>Balanced<small>4K with HDR at a size most connections handle.</small></span></label>
+<label class="opt"><input type="radio" name="q"><span>Bandwidth saver<small>1080p, for slower or capped connections.</small></span></label>
+<div class="sp"></div><button class="go">Next</button><button class="sk">Skip for now</button></div></div>
+
+<div class="col"><div class="cap"><b>6</b> Away from home</div>
+<div class="ph"><div class="pg">Step 6 of 7</div><div class="bar"><i style="width: 85%"></i></div>
+<h2>Watch outside the house?</h2>
+<p>Pick one. When it's on, a sign-in link appears here.</p>
+<label class="tg"><span>Tailscale<small>Private link between your devices.</small></span><input class="sw" type="checkbox" role="switch"></label>
+<label class="tg"><span>Cloudflare tunnel<small>Reach it from any browser at your own address.</small></span><input class="sw" type="checkbox" role="switch"></label>
+<div class="sp"></div><button class="go">Next</button><button class="sk">Skip for now</button></div></div>
+
+<div class="col"><div class="cap"><b>7</b> Updates</div>
+<div class="ph"><div class="pg">Step 7 of 7</div><div class="bar"><i style="width: 100%"></i></div>
+<h2>Updates</h2>
+<label class="tg"><span>Install updates overnight at 4 am<small>Only when nothing is playing.</small></span><input class="sw" type="checkbox" role="switch" checked></label>
+<label class="tg"><span>Tell me on the TV when it happens</span><input class="sw" type="checkbox" role="switch" checked></label>
+<p>If an update ever fails, the box undoes it by itself.</p>
+<div class="sp"></div><button class="go">Finish</button></div></div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":2936,"height":940}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

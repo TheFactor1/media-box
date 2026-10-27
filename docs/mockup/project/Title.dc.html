@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Title page</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07090D}
+.tv{position:relative;overflow:hidden;font-family:Manrope,system-ui,sans-serif;color:#F2F4F8;background:#0B0D12}
+.serif{font-family:Fraunces,Georgia,serif;font-weight:600}
+.chip{display:inline-flex;align-items:center;height:36px;padding:0 14px;border:1.5px solid rgba(242,244,248,.55);border-radius:6px;font-size:18px;font-weight:700;letter-spacing:.04em}
+.btn{display:inline-flex;align-items:center;gap:12px;height:64px;padding:0 30px;border-radius:12px;border:0;font:700 22px Manrope,system-ui,sans-serif;background:rgba(242,244,248,.14);color:#F2F4F8}
+.btn.pri{height:80px;padding:0 48px;font-size:28px;background:#8AB4FF;color:#0B0D12;box-shadow:0 0 0 4px #F2F4F8}
+.lib{display:inline-flex;align-items:center;gap:10px;height:64px;padding:0 24px;border-radius:12px;border:1.5px solid rgba(138,180,255,.6);color:#8AB4FF;font-size:22px;font-weight:700}
+</style>
+</helmet>
+<div class="tv" style="width: 1600px; height: 900px">
+<div style="position: absolute; inset: 0; background: radial-gradient(ellipse at 78% 30%, rgba(121,184,201,.55), transparent 35%), radial-gradient(ellipse at 60% 95%, rgba(200,120,70,.35), transparent 40%), linear-gradient(180deg, #1a2f3a, #0a1318)" aria-hidden="true"></div>
+<div style="position: absolute; inset: 0; background: linear-gradient(90deg, #0B0D12 0%, rgba(11,13,18,.9) 38%, transparent 75%), linear-gradient(0deg, #0B0D12 0%, transparent 45%)" aria-hidden="true"></div>
+<button aria-label="Status: all fine" style="position: absolute; right: 80px; top: 40px; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: #4ADE80; box-shadow: 0 0 12px rgba(74,222,128,.7)"></button>
+<div style="position: absolute; left: 96px; top: 150px; width: 820px; display: flex; flex-direction: column; gap: 18px">
+<div style="font-size: 16px; font-weight: 800; letter-spacing: .14em; color: #8AB4FF">BROWSE · POPULAR</div>
+<h1 class="serif" style="margin: 0; font-size: 92px; line-height: 1">Night Ferry</h1>
+<div style="font-size: 22px; color: #C4CAD6">2023 · Thriller · 1 h 58 min · 15</div>
+<div style="display: flex; gap: 10px"><span class="chip">4K</span><span class="chip">HDR10</span><span class="chip">TrueHD Atmos</span></div>
+<p style="margin: 6px 0 14px; font-size: 22px; line-height: 1.5; color: #C4CAD6; max-width: 660px">The last crossing of the night, a deckhand who saw too much, and four hours until the coast.</p>
+<div style="display: flex; align-items: center; gap: 18px">
+<button class="btn pri"><svg width="24" height="26" viewBox="0 0 20 22" aria-hidden="true"><path d="M2 2 L18 11 L2 20 Z" fill="currentColor"></path></svg>Play</button>
+<button class="btn"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M11 3 V19 M3 11 H19" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"></path></svg>Keep this</button>
+<button class="btn" style="background: none; color: #C4CAD6">Other versions ›</button>
+</div>
+<div style="font-size: 18px; color: #A3ABBD">Plays the best copy for your quality setting. "Keep this" adds it to your library for good.</div>
+</div>
+<div style="position: absolute; right: 80px; bottom: 72px; width: 460px; padding: 24px 28px; border-radius: 16px; background: rgba(11,13,18,.82); border: 1px solid rgba(242,244,248,.16); display: flex; flex-direction: column; gap: 16px">
+<div style="font-size: 16px; font-weight: 800; letter-spacing: .12em; color: #A3ABBD">SAME PAGE, TITLE YOU ALREADY OWN</div>
+<div style="display: flex; align-items: center; gap: 14px">
+<button class="btn" style="background: #8AB4FF; color: #0B0D12"><svg width="18" height="20" viewBox="0 0 20 22" aria-hidden="true"><path d="M2 2 L18 11 L2 20 Z" fill="currentColor"></path></svg>Play</button>
+<span class="lib"><svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 10.5 L8 15 L17 5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>In your library</span>
+</div>
+<div style="font-size: 17px; color: #A3ABBD">Plays from the library, not the browse source.</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

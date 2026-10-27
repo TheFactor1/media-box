@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Architecture</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07090D}
+.ar text{font-family:Manrope,system-ui,sans-serif}
+.ar .c{fill:#151922;stroke:rgba(242,244,248,.22);stroke-width:1.5}
+.ar .x{fill:#0B0D12;stroke:rgba(242,244,248,.35);stroke-width:1.5;stroke-dasharray:4 4}
+.ar .n{fill:#F2F4F8;font-size:18px;font-weight:700;text-anchor:middle}
+.ar .m{font-family:ui-monospace,Consolas,monospace !important;font-size:17px}
+.ar .s{fill:#A3ABBD;font-size:14px;text-anchor:middle}
+.ar .l{fill:#C4CAD6;font-size:14px;font-weight:600}
+.ar .rq{fill:none;stroke:#8AB4FF;stroke-width:2.5}
+.ar .pl{fill:none;stroke:#C4CAD6;stroke-width:2}
+.ar .br{fill:none;stroke:#8AB4FF;stroke-width:2.5;stroke-dasharray:8 6}
+</style>
+</helmet>
+<div style="width: 1600px; height: 900px; background: #0B0D12">
+<svg class="ar" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-label="Request pipeline: phone to Jellyseerr to Radarr to Prowlarr; Radarr hands torrent releases to Decypharr (debrid) and usenet releases to NzbDAV; both are mounted and symlinked into /media/library, which Jellyfin indexes and Kodi plays directly. Browse path: Kodi's Browse addon asks the home server's AIOStreams and StremThru, which use the debrid account.">
+<defs>
+<marker id="ha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#8AB4FF"></path></marker>
+<marker id="hg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#C4CAD6"></path></marker>
+</defs>
+<text x="60" y="58" style="fill: #F2F4F8; font-size: 26px; font-weight: 800">A request, end to end, and the Browse path</text>
+<line x1="1010" y1="50" x2="1060" y2="50" class="rq"></line><text x="1070" y="55" class="l">request</text>
+<line x1="1160" y1="50" x2="1210" y2="50" class="br"></line><text x="1220" y="55" class="l">Browse (play now)</text>
+<line x1="1390" y1="50" x2="1440" y2="50" class="pl"></line><text x="1450" y="55" class="l">playback</text>
+<rect x="280" y="100" width="1000" height="620" rx="20" fill="none" stroke="rgba(242,244,248,.3)" stroke-width="1.5" stroke-dasharray="6 6"></rect>
+<text x="304" y="130" class="l" style="fill: #A3ABBD">THIS BOX (HUB MODE)</text>
+
+<path d="M240 186 H318" class="rq" marker-end="url(#ha)"></path>
+<path d="M520 186 H598" class="rq" marker-end="url(#ha)"></path>
+<path d="M800 186 H878" class="rq" marker-end="url(#ha)"></path>
+<path d="M1080 186 H1338" class="rq" marker-end="url(#ha)"></path>
+<path d="M700 222 V262 M530 262 H870" class="rq"></path>
+<path d="M530 262 V298" class="rq" marker-end="url(#ha)"></path>
+<path d="M870 262 V298" class="rq" marker-end="url(#ha)"></path>
+<path d="M430 336 H242" class="rq" marker-end="url(#ha)"></path>
+<path d="M970 336 H1338" class="rq" marker-end="url(#ha)"></path>
+<path d="M530 372 V418" class="pl" marker-end="url(#hg)"></path>
+<path d="M870 372 V418" class="pl" marker-end="url(#hg)"></path>
+<path d="M530 484 V528" class="pl" marker-end="url(#hg)"></path>
+<path d="M870 484 V528" class="pl" marker-end="url(#hg)"></path>
+<path d="M970 562 H1058" class="pl" marker-end="url(#hg)"></path>
+<path d="M700 594 V628" class="pl" marker-end="url(#hg)"></path>
+<path d="M1160 594 V662 H802" class="pl" marker-end="url(#hg)"></path>
+<path d="M600 662 H242" class="pl" marker-end="url(#hg)"></path>
+<path d="M700 694 V768" class="br" marker-end="url(#ha)"></path>
+<path d="M320 806 H30 V336 H58" class="br" marker-end="url(#ha)"></path>
+
+<text x="279" y="176" class="l" text-anchor="middle">1</text>
+<text x="559" y="176" class="l" text-anchor="middle">2</text>
+<text x="839" y="176" class="l" text-anchor="middle">3</text>
+<text x="1210" y="176" class="l" text-anchor="middle">search</text>
+<text x="712" y="247" class="l">4 pick release</text>
+<text x="520" y="288" class="l" text-anchor="end">torrent</text>
+<text x="880" y="288" class="l">usenet</text>
+<text x="336" y="324" class="l" text-anchor="middle">cached?</text>
+<text x="1155" y="326" class="l" text-anchor="middle">articles present?</text>
+<text x="542" y="512" class="l">6 symlink</text>
+<text x="1014" y="552" class="l" text-anchor="middle">7–8</text>
+<text x="712" y="616" class="l">direct paths</text>
+<text x="980" y="652" class="l" text-anchor="middle">9 sync item</text>
+<text x="440" y="652" class="l" text-anchor="middle">HDMI · HDR, passthrough</text>
+<text x="712" y="736" class="l">Browse</text>
+<text x="175" y="796" class="l" text-anchor="middle">your debrid account</text>
+
+<rect x="60" y="150" width="180" height="72" rx="12" class="c"></rect><text x="150" y="182" class="n">Phone</text><text x="150" y="204" class="s">asks for a film</text>
+<rect x="320" y="150" width="200" height="72" rx="12" class="c"></rect><text x="420" y="182" class="n">Jellyseerr</text><text x="420" y="204" class="s">requests</text>
+<rect x="600" y="150" width="200" height="72" rx="12" class="c"></rect><text x="700" y="182" class="n">Radarr / Sonarr</text><text x="700" y="204" class="s">picks a release</text>
+<rect x="880" y="150" width="200" height="72" rx="12" class="c"></rect><text x="980" y="182" class="n">Prowlarr</text><text x="980" y="204" class="s">searches</text>
+<rect x="1340" y="150" width="200" height="72" rx="12" class="x"></rect><text x="1440" y="182" class="n">Your indexers</text><text x="1440" y="204" class="s">added by you</text>
+<rect x="430" y="300" width="200" height="72" rx="12" class="c"></rect><text x="530" y="332" class="n">Decypharr</text><text x="530" y="354" class="s">5a · debrid client</text>
+<rect x="770" y="300" width="200" height="72" rx="12" class="c"></rect><text x="870" y="332" class="n">NzbDAV</text><text x="870" y="354" class="s">5b · usenet streaming</text>
+<rect x="60" y="300" width="180" height="72" rx="12" class="x"></rect><text x="150" y="332" class="n">Debrid provider</text><text x="150" y="354" class="s">your account</text>
+<rect x="1340" y="300" width="200" height="72" rx="12" class="x"></rect><text x="1440" y="332" class="n">Usenet provider</text><text x="1440" y="354" class="s">your account</text>
+<rect x="430" y="420" width="200" height="64" rx="12" class="c"></rect><text x="530" y="448" class="n m">/mnt/debrid</text><text x="530" y="470" class="s">read-only mount</text>
+<rect x="770" y="420" width="200" height="64" rx="12" class="c"></rect><text x="870" y="448" class="n m">/mnt/usenet</text><text x="870" y="470" class="s">read-only mount</text>
+<rect x="430" y="530" width="540" height="64" rx="12" class="c" style="stroke: #8AB4FF"></rect><text x="700" y="558" class="n m">/media/library</text><text x="700" y="580" class="s">symlinks: one library, wherever the file lives</text>
+<rect x="1060" y="530" width="200" height="64" rx="12" class="c"></rect><text x="1160" y="558" class="n">Jellyfin</text><text x="1160" y="580" class="s">metadata, watch state</text>
+<rect x="600" y="630" width="200" height="64" rx="12" class="c"></rect><text x="700" y="658" class="n">Kodi</text><text x="700" y="680" class="s">+ Browse addon</text>
+<rect x="60" y="630" width="180" height="64" rx="12" class="x"></rect><text x="150" y="658" class="n">TV</text><text x="150" y="680" class="s">and receiver</text>
+<rect x="320" y="770" width="440" height="72" rx="12" class="x"></rect><text x="540" y="802" class="n">Home server: AIOStreams · StremThru</text><text x="540" y="824" class="s">your self-hosted browse backend</text>
+</svg>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

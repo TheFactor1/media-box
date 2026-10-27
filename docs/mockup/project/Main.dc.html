@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TV home screen, top</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07090D}
+.tv{position:relative;overflow:hidden;font-family:Manrope,system-ui,sans-serif;color:#F2F4F8;background:#0B0D12}
+.serif{font-family:Fraunces,Georgia,serif;font-weight:600}
+.chip{display:inline-flex;align-items:center;height:32px;padding:0 12px;border:1.5px solid rgba(242,244,248,.5);border-radius:6px;font-size:16px;font-weight:700;letter-spacing:.04em}
+.btn{display:inline-flex;align-items:center;gap:12px;height:64px;padding:0 32px;border-radius:12px;border:0;font:700 22px Manrope,system-ui,sans-serif;background:rgba(242,244,248,.14);color:#F2F4F8}
+.btn.pri{background:#8AB4FF;color:#0B0D12}
+.nav{background:none;border:0;font:600 20px Manrope,system-ui,sans-serif;color:#C4CAD6;padding:8px 0}
+.nav.on{color:#F2F4F8;border-bottom:3px solid #8AB4FF}
+.rh{margin:0 0 14px;font-size:26px;font-weight:700}
+.rh small{font-size:18px;font-weight:500;color:#A3ABBD;margin-left:10px}
+.lc{position:relative;flex:none;width:240px;height:135px;border-radius:10px;overflow:hidden}
+.lc .t{position:absolute;left:0;right:0;bottom:0;padding:28px 14px 12px;background:linear-gradient(0deg,rgba(5,6,9,.92),transparent);font-size:17px;font-weight:700;line-height:1.25}
+.lc .t span{display:block;font-size:15px;font-weight:500;color:#D5DAE3}
+.lc .pr{position:absolute;left:0;bottom:0;height:5px;background:#8AB4FF}
+.focus{box-shadow:0 0 0 4px #F2F4F8}
+.dim{filter:grayscale(.7) brightness(.5)}
+.badge{position:absolute;left:10px;top:10px;padding:3px 10px;border-radius:6px;background:#8AB4FF;color:#0B0D12;font-size:14px;font-weight:800;letter-spacing:.06em}
+.a1{background:radial-gradient(ellipse at 70% 30%,#e7a861 0 8%,transparent 30%),linear-gradient(180deg,#24435c,#0d1a27 70%)}
+.a2{background:radial-gradient(circle at 70% 25%,#f0b46c 0 12%,transparent 13%),linear-gradient(180deg,#3a2a4f,#120d1c)}
+.a3{background:linear-gradient(200deg,#6d8f7f,#16241f 70%)}
+.a4{background:radial-gradient(ellipse at 30% 85%,#a8452f,transparent 60%),linear-gradient(180deg,#1b1f2e,#2c1414)}
+.a5{background:linear-gradient(160deg,#33508f,#0b1024 65%)}
+.a6{background:linear-gradient(180deg,#d9a35a,#6b3b23 50%,#14100e)}
+.a7{background:radial-gradient(circle at 50% 40%,#79b8c9 0 16%,#1a2f3a 17% 42%,#0a1318 43%)}
+.a8{background:linear-gradient(120deg,#5a2342,#1a0f24 60%,#2f5a62)}
+</style>
+</helmet>
+<div class="tv" style="width: 1600px; height: 900px">
+<div style="position: absolute; left: 0; top: 0; width: 1600px; height: 480px; background: radial-gradient(ellipse at 74% 38%, rgba(240,176,104,.6), transparent 38%), linear-gradient(180deg, #2a4a63 0%, #12273a 55%, #0b1621 100%)" aria-hidden="true"></div>
+<div style="position: absolute; left: 0; top: 330px; width: 1600px; height: 2px; background: rgba(255,214,160,.35)" aria-hidden="true"></div>
+<div style="position: absolute; left: 0; top: 0; width: 1600px; height: 482px; background: linear-gradient(90deg, #0B0D12 0%, rgba(11,13,18,.85) 30%, transparent 65%), linear-gradient(0deg, #0B0D12 0%, transparent 35%)" aria-hidden="true"></div>
+<div style="position: absolute; left: 80px; top: 28px; right: 80px; display: flex; align-items: center; gap: 40px">
+<button class="nav on">Home</button>
+<button class="nav">Movies</button>
+<button class="nav">Shows</button>
+<button class="nav">Search</button>
+<div style="flex-grow: 1"></div>
+<span style="font-size: 20px; font-weight: 600; color: #C4CAD6">20:41</span>
+<button aria-label="Status: all fine" style="width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: #4ADE80; box-shadow: 0 0 12px rgba(74,222,128,.7)"></button>
+</div>
+<div style="position: absolute; left: 80px; top: 104px; width: 760px; display: flex; flex-direction: column; gap: 14px">
+<div style="font-size: 16px; font-weight: 800; letter-spacing: .14em; color: #8AB4FF">CONTINUE WATCHING</div>
+<h1 class="serif" style="margin: 0; font-size: 76px; line-height: 1">The Long Harbour</h1>
+<div style="font-size: 20px; color: #C4CAD6">2024 · Drama · 2 h 11 min · 1 h 12 min left</div>
+<div style="display: flex; gap: 10px"><span class="chip">4K</span><span class="chip">HDR10</span><span class="chip">TrueHD Atmos</span></div>
+<p style="margin: 4px 0 8px; font-size: 21px; line-height: 1.45; color: #C4CAD6; max-width: 620px">A harbour pilot's last winter on the coast, and the ship she can't stop waiting for.</p>
+<div style="display: flex; gap: 16px">
+<button class="btn pri"><svg width="20" height="22" viewBox="0 0 20 22" aria-hidden="true"><path d="M2 2 L18 11 L2 20 Z" fill="currentColor"></path></svg>Resume</button>
+<button class="btn">More info</button>
+</div>
+</div>
+<div style="position: absolute; left: 80px; top: 486px; width: 1520px">
+<h2 class="rh">Continue Watching</h2>
+<div style="display: flex; gap: 24px">
+<div class="lc a1 focus"><div class="t">The Long Harbour<span>1 h 12 min left</span></div><div class="pr" style="width: 45%"></div></div>
+<div class="lc a6"><div class="t">Salt and Iron<span>38 min left</span></div><div class="pr" style="width: 70%"></div></div>
+<div class="lc a5"><div class="t">Copper Sky<span>S1 · E3 · 22 min left</span></div><div class="pr" style="width: 52%"></div></div>
+<div class="lc a7"><div class="t">The Glass Orchard<span>1 h 40 min left</span></div><div class="pr" style="width: 18%"></div></div>
+<div class="lc a8"><div class="t">Field Notes<span>S2 · E7 · 9 min left</span></div><div class="pr" style="width: 84%"></div></div>
+<div class="lc a2"><div class="t">Westward Rain<span>55 min left</span></div><div class="pr" style="width: 40%"></div></div>
+</div>
+</div>
+<div style="position: absolute; left: 80px; top: 686px; width: 1520px">
+<h2 class="rh">Requested<small>5 on the way</small></h2>
+<div style="display: flex; gap: 24px">
+<div class="lc"><div class="a3 dim" style="position: absolute; inset: 0"></div><div class="t">North of Quiet<span>Looking for a good copy…</span></div></div>
+<div class="lc"><div class="a4 dim" style="position: absolute; inset: 0"></div><div class="t">Ember County<span>Fetching · ready in moments</span></div></div>
+<div class="lc"><div class="a7 dim" style="position: absolute; inset: 0"></div><div class="t">Low Tide Hotel<span>Downloading · 43 %</span></div><div class="pr" style="width: 43%"></div></div>
+<div class="lc a2"><span class="badge">NEW</span><div class="t">Paper Lanterns<span>Ready to play</span></div></div>
+<div class="lc" style="width: 330px"><div class="a8 dim" style="position: absolute; inset: 0"></div><div class="t">The Ninth Winter<span>Couldn't find a good copy. Try a lower quality?</span><span style="margin-top: 4px; color: #8AB4FF; font-weight: 700">OK = try again</span></div></div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

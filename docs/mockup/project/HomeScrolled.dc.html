@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>TV home screen, scrolled</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#07090D}
+.tv{position:relative;overflow:hidden;font-family:Manrope,system-ui,sans-serif;color:#F2F4F8;background:#0B0D12}
+.nav{background:none;border:0;font:600 20px Manrope,system-ui,sans-serif;color:#C4CAD6;padding:8px 0}
+.nav.on{color:#F2F4F8;border-bottom:3px solid #8AB4FF}
+.rh{margin:0 0 10px;font-size:24px;font-weight:700}
+.rh small{font-size:17px;font-weight:500;color:#A3ABBD;margin-left:10px}
+.rw{display:flex;gap:18px}
+.lc{position:relative;flex:none;width:240px;height:135px;border-radius:10px;overflow:hidden}
+.lc .t{position:absolute;left:0;right:0;bottom:0;padding:28px 14px 12px;background:linear-gradient(0deg,rgba(5,6,9,.92),transparent);font-size:17px;font-weight:700;line-height:1.25}
+.lc .t span{display:block;font-size:15px;font-weight:500;color:#D5DAE3}
+.po{position:relative;flex:none;width:96px;height:144px;border-radius:8px;overflow:hidden}
+.po span{position:absolute;left:8px;right:8px;bottom:10px;font:600 14px/1.15 Fraunces,Georgia,serif;text-shadow:0 1px 4px rgba(0,0,0,.8)}
+.badge{position:absolute;left:6px;top:6px;padding:2px 7px;border-radius:5px;background:#8AB4FF;color:#0B0D12;font-size:12px;font-weight:800;letter-spacing:.06em}
+.focus{box-shadow:0 0 0 4px #F2F4F8}
+.a1{background:radial-gradient(ellipse at 70% 30%,#e7a861 0 8%,transparent 30%),linear-gradient(180deg,#24435c,#0d1a27 70%)}
+.a2{background:radial-gradient(circle at 70% 25%,#f0b46c 0 12%,transparent 13%),linear-gradient(180deg,#3a2a4f,#120d1c)}
+.a3{background:linear-gradient(200deg,#6d8f7f,#16241f 70%)}
+.a4{background:radial-gradient(ellipse at 30% 85%,#a8452f,transparent 60%),linear-gradient(180deg,#1b1f2e,#2c1414)}
+.a5{background:linear-gradient(160deg,#33508f,#0b1024 65%)}
+.a6{background:linear-gradient(180deg,#d9a35a,#6b3b23 50%,#14100e)}
+.a7{background:radial-gradient(circle at 50% 40%,#79b8c9 0 16%,#1a2f3a 17% 42%,#0a1318 43%)}
+.a8{background:linear-gradient(120deg,#5a2342,#1a0f24 60%,#2f5a62)}
+</style>
+</helmet>
+<div class="tv" style="width: 1600px; height: 900px">
+<div style="position: absolute; left: 80px; top: 22px; right: 80px; display: flex; align-items: center; gap: 40px">
+<button class="nav on">Home</button>
+<button class="nav">Movies</button>
+<button class="nav">Shows</button>
+<button class="nav">Search</button>
+<div style="flex-grow: 1"></div>
+<span style="font-size: 20px; font-weight: 600; color: #C4CAD6">20:41</span>
+<button aria-label="Status: all fine" style="width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; background: #4ADE80; box-shadow: 0 0 12px rgba(74,222,128,.7)"></button>
+</div>
+<div style="position: absolute; left: 80px; top: 84px; width: 1520px; display: flex; flex-direction: column; gap: 20px">
+<section>
+<h2 class="rh">Next Up</h2>
+<div class="rw">
+<div class="lc a5 focus"><div class="t">Copper Sky<span>S1 · E4 · The Low Road</span></div></div>
+<div class="lc a8"><div class="t">Field Notes<span>S2 · E8 · Spring Count</span></div></div>
+<div class="lc a1"><div class="t">Harbour Lights<span>S3 · E1 · New Moorings</span></div></div>
+<div class="lc a3"><div class="t">The Orchard House<span>S1 · E2 · Grafting</span></div></div>
+<div class="lc a4"><div class="t">Night Shift Radio<span>S1 · E6 · Dead Air</span></div></div>
+</div>
+</section>
+<section>
+<h2 class="rh">Recently Added</h2>
+<div class="rw">
+<div class="po a2"><b class="badge">NEW</b><span>Paper Lanterns</span></div>
+<div class="po a1"><span>Night Ferry</span></div>
+<div class="po a3"><span>Stone Garden</span></div>
+<div class="po a6"><span>Halfway Lights</span></div>
+<div class="po a5"><span>Blue Hour Motel</span></div>
+<div class="po a8"><span>The Stand-in Season</span></div>
+<div class="po a7"><span>Kestrel Road</span></div>
+<div class="po a4"><span>A Map of Small Rooms</span></div>
+<div class="po a6"><span>Lamplighters</span></div>
+<div class="po a3"><span>Tin Crown</span></div>
+<div class="po a2"><span>Second Summer</span></div>
+<div class="po a1"><span>The Quiet Shift</span></div>
+</div>
+</section>
+<section>
+<h2 class="rh">Movies<small>214 films</small></h2>
+<div class="rw">
+<div class="po a1"><span>The Long Harbour</span></div>
+<div class="po a6"><span>Salt and Iron</span></div>
+<div class="po a7"><span>The Glass Orchard</span></div>
+<div class="po a2"><span>Westward Rain</span></div>
+<div class="po a4"><span>The Last Signal</span></div>
+<div class="po a3"><span>Orchid Street</span></div>
+<div class="po a5"><span>Far Meadow</span></div>
+<div class="po a8"><span>Iron Lullaby</span></div>
+<div class="po a7"><span>Slow Comet</span></div>
+<div class="po a6"><span>The Cartographer's Daughter</span></div>
+<div class="po a4"><span>Ember County</span></div>
+<div class="po a2"><span>Kingfisher Lane</span></div>
+</div>
+</section>
+<section>
+<h2 class="rh">Browse: Popular<small>from your browse source</small></h2>
+<div class="rw">
+<div class="po a8"><span>Driftwood Kings</span></div>
+<div class="po a5"><span>Static Bloom</span></div>
+<div class="po a3"><span>The Hollow Bell</span></div>
+<div class="po a1"><span>Lantern Bay</span></div>
+<div class="po a4"><span>Under the Weir</span></div>
+<div class="po a6"><span>Marrow Hill</span></div>
+<div class="po a7"><span>Velvet Static</span></div>
+<div class="po a2"><span>Saltmarsh</span></div>
+<div class="po a5"><span>Grey Meridian</span></div>
+<div class="po a3"><span>Little Orbit</span></div>
+<div class="po a8"><span>Seven Bridges Out</span></div>
+<div class="po a1"><span>Quarry Lights</span></div>
+</div>
+</section>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1600,"height":900}}'>
+class Component extends DCLogic {
+renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
