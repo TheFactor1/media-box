@@ -18,11 +18,13 @@ Power button: screen to standby (HDMI off), box stays up. Hold 3 s: shutdown men
 | Step | On the TV | On the phone |
 |---|---|---|
 | 1 | Branded splash, no text, no boot log | — |
-| 2 | "Set up this box" screen: a QR code, the address `http://mediabox.local`, and a 6-digit pairing code | Scan QR → wizard opens, asks for the code |
-| 3 | Progress panel mirroring the phone: "Sound: Receiver ✓ · Accounts: 2 of 3 · Library: syncing 412/2,100" | Wizard steps (below) |
+| 2 | "Finding your hub…" → found on the LAN (UDP beacon), or a field to type its address. Then "Pairing code **482 913**" and a QR to the hub's setup page | Scan QR → setup page opens |
+| 3 | Waits, showing the code | **Your debrid**: provider + API key → **Where streams come from**: "Set up for me" (default) or paste an addon link → **Your internet**: Auto / Slow / Standard / Fast / Max → **Approve this TV**: the code from the TV, one tap |
 | 4 | Home screen | "Done. Grab the remote." |
 
-Target: step 1 to step 4 in under 10 minutes for someone who has their account details to hand.
+That is the whole setup: a debrid key and one tap. "Set up for me" provisions a stream config in the box's own AIOStreams from the key, using AIOStreams' own starter template; an "Adjust sources" link opens AIOStreams' configure page for anyone who wants to change what it searches. The box itself ships no source list.
+
+Target: step 1 to step 4 in under 5 minutes with the key to hand. A second TV skips the phone steps: it shows its code, and the first TV (or the phone page) approves it.
 
 ### Wizard steps (phone)
 1. **Mode:** "This box is my media server" (Hub) / "I already run Jellyfin" (Player: enter server address, sign in; skip to 6).
