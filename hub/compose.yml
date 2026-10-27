@@ -9,7 +9,8 @@ services:
       dockerfile: Containerfile
     container_name: hub
     restart: unless-stopped
-    # Host network: the UDP beacon, per-device rate limits and the setup QR all need the real LAN address.
+    # Real Docker Engine only. On Docker Desktop (a VM) host networking never reaches the LAN;
+    # run natively with hub.service instead.
     network_mode: host
     volumes:
       - ./data:/var/lib/hub

@@ -1,0 +1,22 @@
+# systemd user unit for running the hub natively (no container).
+# Needed on Docker Desktop hosts, where containers live in a VM and host networking
+# never reaches the LAN. Install:
+#   sed "s#__HUBDIR__#$PWD#g" hub.service > ~/.config/systemd/user/mediabox-hub.service
+#   systemctl --user daemon-reload && systemctl --user enable --now mediabox-hub
+#   loginctl enable-linger   # keep it running when you log out
+[Unit]
+Description=Media box hub
+After=network-online.target
+
+[Service]
+# -m hub.hub needs the parent of the hub/ package as the working directory.
+WorkingDirectory=__HUBDIR__/..
+Environment=HUB_DATA=__HUBDIR__/data
+Environment=HUB_CONFIG=__HUBDIR__/data/hub.toml
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 -I -m hub.hub
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=default.target
