@@ -1,0 +1,25 @@
+[Unit]
+Description=Kodi media center (GBM, no compositor)
+After=systemd-user-sessions.service sound.target network-online.target
+Wants=network-online.target
+Conflicts=getty@tty1.service
+
+[Service]
+User=media
+Group=media
+SupplementaryGroups=audio video render input
+# A logind session on tty1 gives Kodi DRM master and libinput access.
+PAMName=login
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+# Creates /var/lib/media owned by media; also Kodi's $HOME.
+StateDirectory=media
+Environment=HOME=/var/lib/media
+ExecStart=/usr/bin/kodi --windowing=gbm
+Restart=on-abort
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

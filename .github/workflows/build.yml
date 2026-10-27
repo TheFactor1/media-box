@@ -1,0 +1,47 @@
+name: Build container image
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+    paths-ignore: ["**.md"]
+  schedule:
+    - cron: "05 10 * * *" # pick up base image and Kodi updates daily
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: ${{ github.event.repository.name }}
+  IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: sudo rm -rf /usr/local/lib/android /opt/ghc /usr/share/dotnet
+
+      - name: Lowercase image path
+        run: echo "IMAGE=$(echo '${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: sudo podman build --tag "$IMAGE:latest" --tag "$IMAGE:${{ github.sha }}" .
+
+      - name: Login to GHCR
+        if: github.event_name != 'pull_request'
+        run: echo '${{ github.token }}' | sudo podman login ghcr.io -u '${{ github.actor }}' --password-stdin
+
+      - name: Push
+        if: github.event_name != 'pull_request'
+        run: |
+          sudo podman push "$IMAGE:latest"
+          sudo podman push "$IMAGE:${{ github.sha }}"

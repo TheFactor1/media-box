@@ -1,0 +1,17 @@
+# bootc-image-builder config for the anaconda-iso output.
+# Admin account for SSH during the Phase 0 spikes. Put your public key here;
+# password login stays off.
+[[customizations.user]]
+name = "admin"
+groups = ["wheel"]
+key = "ssh-ed25519 REPLACE_WITH_YOUR_PUBLIC_KEY"
+
+[customizations.installer.kickstart]
+contents = """
+text
+network --bootproto=dhcp --activate
+zerombr
+clearpart --all --initlabel
+autopart --type=btrfs --nohome
+reboot
+"""

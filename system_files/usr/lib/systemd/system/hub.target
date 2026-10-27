@@ -1,0 +1,7 @@
+[Unit]
+Description=Hub mode: local Jellyfin and media automation stack
+Requires=multi-user.target
+After=multi-user.target
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+[Unit]
+Description=Jellyfin
+PartOf=hub.target
+
+[Container]
+Image=docker.io/jellyfin/jellyfin:latest
+# Image is embedded in the OS image; never pull at runtime.
+Pull=never
+Network=host
+AddDevice=/dev/dri
+Volume=/var/lib/jellyfin/config:/config:Z
+Volume=/var/lib/jellyfin/cache:/cache:Z
+Volume=/media:/media:ro
+
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=hub.target
