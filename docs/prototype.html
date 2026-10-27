@@ -634,6 +634,83 @@ button.sv{cursor:pointer}
 :is([data-look="nocturne"],[data-look="pulse"]) .track{scroll-behavior:auto}
 [data-look="nocturne"] .rows.focus-in .row.cur{transform:none}
 
+/* ---------- Home layouts (independent of Look) ---------- */
+#s-alt .alt-h{margin:0;font-family:var(--f-mono,var(--f-body));font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+#s-alt .alt-h b{margin-left:8px;color:var(--fg);font-weight:400}
+.credits{display:flex;flex-wrap:wrap;gap:4px}
+.glass{background:color-mix(in srgb,var(--bg) 48%,transparent);backdrop-filter:blur(16px) saturate(105%);-webkit-backdrop-filter:blur(16px) saturate(105%);border-radius:var(--radius-l);box-shadow:inset 0 1px 0 var(--faint),0 14px 34px color-mix(in srgb,var(--bg) 60%,transparent)}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;padding:18px 28px 0}
+.tab{font-family:var(--f-mono,var(--f-body));font-size:9px;letter-spacing:.16em;text-transform:uppercase;padding:5px 10px;border-radius:999px;border:1px solid var(--faint);background:none;color:var(--muted);cursor:pointer}
+.tab.sel{color:var(--fg);border-color:var(--muted)}
+@keyframes inR{from{opacity:0;transform:translateX(40px)}}
+@keyframes inL{from{opacity:0;transform:translateX(-40px)}}
+@keyframes inD{from{opacity:0;transform:translateY(16px)}}
+@keyframes inU{from{opacity:0;transform:translateY(-16px)}}
+#s-alt .in-r{animation:inR .5s cubic-bezier(.2,.7,.2,1)}
+#s-alt .in-l{animation:inL .5s cubic-bezier(.2,.7,.2,1)}
+#s-alt .in-d{animation:inD .5s cubic-bezier(.2,.7,.2,1)}
+#s-alt .in-u{animation:inU .5s cubic-bezier(.2,.7,.2,1)}
+/* Marquee */
+.alt-marquee .mq-ch{position:absolute;left:28px;top:22px}
+.mq-card{position:absolute;left:28px;bottom:72px;width:48%;display:flex;flex-direction:column;gap:9px;padding:18px 22px;border:0;text-align:left;cursor:pointer;color:var(--fg)}
+.mq-card .ttl{font-size:calc(var(--title-size) * 1.35)}
+.mq-strip{position:absolute;left:28px;right:28px;bottom:20px;display:flex;gap:8px}
+.mq-t{width:56px;opacity:.4;transition:opacity .3s ease,transform .3s ease}
+.mq-t .art{aspect-ratio:16/9}
+.mq-t .art::after{display:none}
+.mq-t.now{opacity:1;transform:translateY(-4px)}
+.mq-t.now .art{box-shadow:0 0 0 1.5px var(--fg)}
+/* Wall */
+.wl-grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px;padding:14px 28px;align-content:start;position:relative;overflow:hidden}
+.wl-grid .card{width:auto;transition:opacity .4s ease}
+.wl-grid.dwell .card:not(.on){opacity:.28}
+.wl-panel{position:absolute;top:54px;right:14px;bottom:14px;width:32%;padding:20px;display:flex;flex-direction:column;justify-content:flex-end;gap:9px;transform:translateX(110%);transition:transform .4s cubic-bezier(.2,.7,.2,1)}
+.wl-panel.show{transform:none}
+.wl-panel .ttl{font-size:calc(var(--title-size) * .85)}
+.wl-panel .btn{align-self:flex-start;pointer-events:none}
+[data-home="wall"] .bd::after{background:color-mix(in srgb,var(--bg) 40%,transparent)}
+/* Programme */
+.pg-l{position:absolute;left:0;top:0;bottom:0;width:45%;display:flex;flex-direction:column;background:var(--bg)}
+.pg-list{flex:1;min-height:0;overflow:hidden;position:relative;padding:14px 28px;display:flex;flex-direction:column;gap:3px}
+.pg-i{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:3px 0;border:0;background:none;text-align:left;cursor:pointer;color:var(--fg);opacity:.36;transition:opacity .3s ease}
+.pg-n{font-family:var(--f-display);font-weight:var(--title-w);letter-spacing:var(--title-track);text-transform:var(--title-case);font-size:calc(var(--title-size) * .6);line-height:1.05}
+.pg-i.on{opacity:1}
+.pg-i.on .pg-n{font-size:calc(var(--title-size) * .95)}
+.pg-c{display:none;font-family:var(--f-mono,var(--f-body));font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.pg-i.on .pg-c{display:block}
+.pg-btns{position:absolute;left:calc(45% + 28px);bottom:28px;display:flex;gap:8px}
+[data-home="programme"] .bd{left:45%;width:auto;right:0}
+[data-home="programme"] .bd::after{background:linear-gradient(90deg,var(--bg),transparent 30%),linear-gradient(0deg,color-mix(in srgb,var(--bg) 70%,transparent),transparent 40%)}
+[data-home="programme"] .bd{transition:opacity .9s ease}
+/* Tonight */
+.tn{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:0 28px}
+.tn-h{display:flex;align-items:baseline;justify-content:space-between}
+.tn-h .ttl{font-size:calc(var(--title-size) * 1.1)}
+.tn-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.tn-card{display:flex;flex-direction:column;gap:7px;padding:0;border:0;background:none;text-align:left;cursor:pointer;color:var(--fg);min-width:0}
+.tn-card .art{aspect-ratio:16/10;border-radius:var(--radius-l)}
+.tn-card .art::after{display:none}
+.tn-card.on .art{transform:scale(1.03)}
+.tn-card .ttl{font-size:calc(var(--title-size) * .7)}
+.tn-r{font-size:11.5px;line-height:1.45;color:var(--muted)}
+.tn-more{display:flex;justify-content:space-between;padding:10px 0;border:0;border-top:1px solid var(--faint);background:none;color:var(--muted);font-family:var(--f-mono,var(--f-body));font-size:10px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer}
+.tn-more.on{color:var(--fg)}
+/* Pages */
+.pp{position:absolute;inset:0;padding:22px 28px;display:flex;flex-direction:column;gap:12px}
+.pp-h{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--faint);padding-bottom:8px}
+.pp-h .ttl{font-size:calc(var(--title-size) * 1.45)}
+.pp-grid{flex:1;min-height:0;display:grid;grid-template-columns:1.35fr 1fr;grid-template-rows:repeat(3,minmax(0,1fr));gap:12px 22px}
+.pp-i{display:flex;gap:10px;padding:0;border:0;background:none;text-align:left;color:var(--fg);cursor:pointer;min-height:0;overflow:hidden}
+.pp-i .art{width:104px;flex:none;aspect-ratio:16/9;align-self:flex-start}
+.pp-i .art::after{display:none}
+.pp-i.big{grid-row:1 / span 3;flex-direction:column}
+.pp-i.big .art{width:100%}
+.pp-tx{display:flex;flex-direction:column;gap:4px;min-width:0}
+.pp-tx .ttl{font-size:calc(var(--title-size) * .5)}
+.pp-i.big .pp-tx .ttl{font-size:calc(var(--title-size) * .9)}
+.pp-tx .pg-c{display:block}
+.pp-i.on .art{transform:scale(1.02)}
+
 /* ---------- Motion (all looks; Calm turns it into short fades) ---------- */
 @keyframes up{from{opacity:0;transform:translateY(10px)}}
 @keyframes rise{from{opacity:0;transform:translateY(24px)}}
@@ -742,6 +819,7 @@ button.sv{cursor:pointer}
       <button id="mo-calm" data-mo="calm" aria-pressed="false">Calm</button>
     </div>
     <label class="seg" id="types" hidden><span class="seg-l">Type</span><select id="type-sel"><option value="bricolage">Bricolage Grotesque</option><option value="syne">Syne</option><option value="serif">Instrument Serif</option><option value="unbounded">Unbounded</option><option value="shoulders">Big Shoulders</option><option value="anybody">Anybody Wide</option><option value="michroma">Michroma</option><option value="gloock">Gloock</option><option value="cormorant">Cormorant Garamond</option><option value="bodoni">Bodoni Moda</option><option value="dela">Dela Gothic One</option><option value="zilla">Zilla Slab</option><option value="familjen">Familjen Grotesk</option><option value="chakra">Chakra Petch</option></select></label>
+    <label class="seg"><span class="seg-l">Layout</span><select id="lay-sel"><option value="rows">Rows</option><option value="marquee">Marquee</option><option value="wall">Wall</option><option value="programme">Programme</option><option value="tonight">Tonight</option><option value="pages">Pages</option></select></label>
     <div class="seg"><button id="go-idle">Go idle</button></div>
   </header>
 
@@ -768,6 +846,7 @@ button.sv{cursor:pointer}
           <div class="rows" id="rows"></div>
         </section>
 
+        <section class="scr" id="s-alt" hidden></section>
         <section class="scr" id="s-title" hidden></section>
 
         <section class="scr" id="s-browse" hidden>
@@ -1009,22 +1088,26 @@ const byId=(fid,scope)=>fid&&scope.querySelector(`[data-id="${CSS.escape(fid)}"]
 function show(s,id,fid){
   screen=s;if(id)titleId=id;
   SCREENS.forEach(n=>$('#s-'+n).hidden=n!==s);
+  const altOn=s==='home'&&lay!=='rows';
+  $('#s-home').hidden=s!=='home'||altOn;$('#s-alt').hidden=!altOn;
+  document.documentElement.dataset.home=s==='home'?lay:'';
+  if(altOn)renderAlt();
   if(s==='title')renderTitle();
   if(s==='browse'&&!browsed){browsed=true;const g=$('#grid');if(!calm()){g.classList.add('loading');setTimeout(()=>{g.classList.remove('loading');g.classList.add('in');setTimeout(()=>{g.classList.remove('in');placeBlob(null,true)},1200)},600)}}
-  if(s==='home')setBd(heroId);else if(s==='title')setBd(titleId,true);else setBd(null);
-  const sc=$('#s-'+s);
+  if(s==='home'&&!altOn)setBd(heroId);else if(altOn){}else if(s==='title')setBd(titleId,true);else setBd(null);
+  const sc=altOn?$('#s-alt'):$('#s-'+s);
   if(s==='home'&&!fid)$('#rows').scrollTop=0;
-  focus(byId(fid,sc)||sc.querySelector('#hero .f:not([hidden])')||sc.querySelector('.f:not([hidden])'));
+  focus(byId(fid,sc)||sc.querySelector('#hero .f:not([hidden]),.start')||sc.querySelector('.f:not([hidden])'));
   document.querySelectorAll('#screens button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.go===s));
 }
-function go(s,id){stack.push({s:screen,id:titleId,k:titleK,f:cur&&cur.dataset.id});show(s,id)}
+function go(s,id){stack.push({s:screen,id:titleId,k:titleK,f:cur&&cur.dataset.id,lay});show(s,id)}
 function back(){
   if(ovOpen)return closeOv();
   const p=stack.pop();
   const fromTitle=screen==='title';
-  if(p){titleK=p.k;show(p.s,p.id,p.f);if(fromTitle&&cur&&cur.classList.contains('card'))zoom(cur,true)}else if(screen!=='home')show('home');
+  if(p){titleK=p.k;if(p.lay)lay=p.lay;show(p.s,p.id,p.f);if(fromTitle&&cur&&cur.classList.contains('card'))zoom(cur,true)}else if(screen!=='home')show('home');else if(lay!=='rows')altBack();
 }
-function home(){if(ovOpen)closeOv();stack=[];show('home')}
+function home(){if(ovOpen)closeOv();stack=[];lay=layPref;alt={col:0,idx:0,page:0};show('home')}
 
 // ---------- focus + spatial navigation ----------
 function focus(el,noScroll,dir){
@@ -1042,14 +1125,15 @@ function focus(el,noScroll,dir){
   const rw=cur.closest('.row');
   if(rw){const items=[...rw.querySelectorAll('.track .f')],i=items.indexOf(cur);rw.querySelector('.rail i').style.left=(i/items.length*100)+'%';rw.querySelector('.rail').style.setProperty('--p',(i+1)/items.length)}
   placeBlob(dir);
-  if(screen==='home'&&cur.dataset.t&&!ovOpen&&cur.dataset.t!==heroId)setHero(cur.dataset.t,cur.dataset.k);
+  if(screen==='home'&&lay==='rows'&&cur.dataset.t&&!ovOpen&&cur.dataset.t!==heroId)setHero(cur.dataset.t,cur.dataset.k);
+  if(screen==='home'&&lay!=='rows'&&!ovOpen)altFocus();
 }
 // Mercury: one chrome ring that glides to whatever has focus
 const blob=$('#blob');let blobT;
 function placeBlob(dir,settled){
   clearTimeout(blobT);
   if(!['mercury','nocturne','pulse'].includes(document.documentElement.dataset.look))return;
-  if(!cur||!cur.offsetParent){blob.classList.remove('show');return}
+  if(!cur||!cur.offsetParent||cur.matches('.pg-i,.mq-card')){blob.classList.remove('show');return} // these layouts mark focus themselves
   const t=cur.querySelector('.art')||cur,r=t.getBoundingClientRect(),sr=stage.getBoundingClientRect(),k=sr.width/800;
   const card=cur.classList.contains('card'),g=card?1.03:1,pad=card?3:2;
   const w=t.offsetWidth*g+pad*2,h=t.offsetHeight*g+pad*2;
@@ -1065,6 +1149,7 @@ function reveal(el){
   const rows=$('#rows');
   if(el.closest('#rows'))rows.scrollTop=el.closest('.row').offsetTop-8; // room for the 8px nudge
   else if(el.closest('#hero'))rows.scrollTop=0;
+  const vs=el.closest('.vscroll');if(vs){const t=el.offsetTop,b=t+el.offsetHeight;if(t<vs.scrollTop)vs.scrollTop=t-8;else if(b>vs.scrollTop+vs.clientHeight)vs.scrollTop=b-vs.clientHeight+8}
 }
 function visibleInTrack(el){
   const tr=el.closest('.track');if(!tr)return true;
@@ -1072,7 +1157,7 @@ function visibleInTrack(el){
   return a.right>b.left+2&&a.left<b.right-2;
 }
 function move(d){
-  const scope=ovOpen?$('#ov'):$('#s-'+screen);
+  const scope=ovOpen?$('#ov'):scr();
   const all=[...scope.querySelectorAll('.f')].filter(e=>!e.hidden&&e.offsetParent);
   if(!cur||!all.includes(cur))return focus(all[0]);
   const a=cur.getBoundingClientRect(),acx=(a.left+a.right)/2,acy=(a.top+a.bottom)/2;
@@ -1116,7 +1201,7 @@ function openOv(html,cls=''){
 }
 function closeOv(){
   clearTimeout(npT);const o=$('#ov');o.hidden=true;o.innerHTML='';ovOpen=false;
-  focus(byId(ovPrev,$('#s-'+screen)),true);
+  focus(byId(ovPrev,scr()),true);
 }
 function play(id,badges){
   const t=T[id],b=badges||t.b;
@@ -1146,6 +1231,11 @@ function activate(el){
   else if(a==='check')toast('Up to date. Version 2026.10.3 is the newest.');
   else if(a==='fix')openOv(`<div class="ov-box"><h3>${esc(el.dataset.h)}</h3><p>${esc(el.dataset.p)}</p>${qr(el.dataset.h.length*7)}<button class="f btn pri" data-id="ov-done" data-act="close">Done</button></div>`);
   else if(a==='close')closeOv();
+  else if(a==='tplay')play(id);
+  else if(a==='pgplay')play((progLast||el).dataset.t||COLS[alt.col].ids[0]);
+  else if(a==='pginfo'){const t=(progLast&&progLast.dataset.t)||COLS[alt.col].ids[0];titleK=COLS[alt.col].k;go('title',t)}
+  else if(a==='everything'){stack.push({s:'home',id:titleId,k:titleK,f:el.dataset.id,lay});lay='rows';show('home')}
+  else if(a==='tab'){alt.col=+el.dataset.i;alt.idx=0;renderAlt();focus(byId('tab-'+alt.col,scr()))}
 }
 
 // ---------- input ----------
@@ -1158,6 +1248,7 @@ document.addEventListener('keydown',e=>{
   if(ambOn){e.preventDefault();leaveAmb();return}
   if(ovOpen&&$('#ov').classList.contains('np')&&!['Backspace','Escape','h','H'].includes(e.key)){e.preventDefault();wake();return}
   const dir={ArrowUp:'u',ArrowDown:'d',ArrowLeft:'l',ArrowRight:'r'}[e.key];
+  if(dir&&screen==='home'&&lay!=='rows'&&!ovOpen&&altKey(dir)){e.preventDefault();return}
   if(dir){e.preventDefault();move(dir)}
   else if(e.key==='Enter'){if(inBar)return;e.preventDefault();activate(ovOpen&&!cur?null:cur)}
   else if(e.key==='Backspace'||e.key==='Escape'){e.preventDefault();back()}
@@ -1223,6 +1314,89 @@ document.querySelectorAll('#motion button').forEach(b=>b.onclick=e=>{setMotion(b
 let mo=null;try{mo=localStorage.getItem('mb-motion')}catch(_){}
 setMotion(mo==='full'||mo==='calm'?mo:matchMedia('(prefers-reduced-motion: reduce)').matches?'calm':'full');
 
+// ---------- Home layouts: same data, different structure ----------
+const COLS=[{n:'Continue Watching',k:'Continue watching',ids:CONT.map(c=>c[0])},{n:'Next Up',k:'Next up',ids:NEXT.map(c=>c[0])},
+  {n:'Recently Added',k:'Recently added',ids:RECENT},{n:'Movies',k:'Movies',ids:MOVIES},{n:'Browse: Popular',k:'Browse · Popular',ids:POPULAR}];
+let layPref='rows',lay='rows',alt={col:0,idx:0,page:0},progLast=null,dwellT;
+const scr=()=>screen==='home'&&lay!=='rows'?$('#s-alt'):$('#s-'+screen);
+const sub=(id,ci)=>ci===1?EP[id]:(PROG[id]||EP[id]); // in Next Up, show the episode rather than the resume point
+const facts=(t,ci)=>[t.y,t.g,t.r,sub(t.id,ci)].filter(Boolean).join(' · ');
+function renderAlt(dir){
+  const A=$('#s-alt'),c=COLS[alt.col],ids=c.ids,anim=dir?' in-'+dir:'';
+  A.className='scr alt-'+lay;
+  const tabs=`<div class="tabs">${COLS.map((x,i)=>`<button class="f tab${i===alt.col?' sel':''}" data-id="tab-${i}" data-i="${i}" data-act="tab">${x.n}</button>`).join('')}</div>`;
+  if(lay==='marquee'){
+    const id=ids[alt.idx],t=T[id],from=Math.max(0,Math.min(alt.idx-3,ids.length-7));setBd(id);
+    A.innerHTML=`<p class="mq-ch alt-h${dir==='u'||dir==='d'?anim:''}">${c.n}<b>${alt.col+1} / ${COLS.length}</b></p>
+      <button class="f mq-card glass start${dir==='l'||dir==='r'?anim:''}" data-id="mq" data-t="${id}" data-k="${esc(c.k)}" data-act="open"><span class="credits">${lchips(t,sub(id,alt.col))}</span><span class="ttl">${esc(t.n)}</span><span class="syn">${esc(t.s)}</span><span class="alt-h">OK details · ← → titles · ↑ ↓ collections</span></button>
+      <div class="mq-strip">${ids.slice(from,from+7).map((x,i)=>`<span class="mq-t${from+i===alt.idx?' now':''}">${art(T[x])}</span>`).join('')}</div>`;
+  }else if(lay==='wall'){
+    setBd(null);
+    // one continuous wall of every collection; the tabs jump to a collection's first poster
+    A.innerHTML=tabs+`<div class="wl-grid vscroll">${COLS.map((x,ci)=>x.ids.map((id,i)=>`<button class="f card${ci===alt.col&&!i?' start':''}" data-id="wl-${ci}-${id}" data-c="${ci}"${i?'':' style="grid-column-start:1"'} data-t="${id}" data-k="${esc(x.k)}" data-act="tplay" aria-label="${esc(T[id].n)}">${art(T[id])}</button>`).join('')).join('')}</div><aside class="wl-panel glass" aria-live="polite"></aside>`;
+    A.querySelector('.wl-grid').scrollTop=A.querySelector('.start').offsetTop-14;
+  }else if(lay==='programme'){
+    progLast=null;
+    // the narrow column takes one collection switcher instead of five tabs
+    A.innerHTML=`<div class="pg-l"><div class="tabs"><button class="f tab sel" data-id="tab-${alt.col}" data-i="${alt.col}" data-act="tab">‹ ${c.n} ›</button></div><div class="pg-list vscroll">${ids.map((id,i)=>`<button class="f pg-i${i?'':' start'}" data-id="pg-${id}" data-t="${id}" data-k="${esc(c.k)}" data-act="open"><span class="pg-n">${esc(T[id].n)}</span><span class="pg-c">${facts(T[id],alt.col)}</span></button>`).join('')}</div></div>
+      <div class="pg-btns"><button class="f btn pri" data-id="pg-play" data-act="pgplay">Play</button><button class="f btn" data-id="pg-info" data-act="pginfo">Details</button></div>`;
+  }else if(lay==='tonight'){
+    setBd(null);
+    const picks=[[CONT[0][0],'Pick up where you left off',`${CONT[0][2]}. You stopped at the halfway mark last night.`],
+      [NEXT[0][0],'Next episode',`${NEXT[0][1]} is ready, and it's the one everyone talks about.`],
+      [RECENT[0],'Something new',`Added this week in ${T[RECENT[0]].b.slice(0,2).join(' ')}. Two hours, no cliffhanger.`]];
+    A.innerHTML=`<div class="tn"><div class="tn-h"><span class="ttl">Tonight</span><span class="alt-h">Three picks for this evening</span></div>
+      <div class="tn-cards">${picks.map(([id,k,r],i)=>`<button class="f tn-card${i?'':' start'}" data-id="tn-${i}" data-t="${id}" data-act="tplay">${art(T[id])}<span class="alt-h">${k}</span><span class="ttl">${esc(T[id].n)}</span><span class="tn-r">${esc(r)}</span></button>`).join('')}</div>
+      <button class="f tn-more" data-id="tn-more" data-act="everything"><span>Everything else</span><span>→</span></button></div>`;
+  }else if(lay==='pages'){
+    setBd(null);
+    const n=COLS.length,pc=COLS[alt.page],its=pc.ids.slice(0,4),pad=x=>String(x).padStart(2,'0');
+    A.innerHTML=`<div class="pp${anim}"><header class="pp-h"><span class="ttl">${pc.n}</span><span class="alt-h">P. ${pad(alt.page+1)} / ${pad(n)}</span></header>
+      <div class="pp-grid">${its.map((id,i)=>`<button class="f pp-i${i?'':' big start'}" data-id="pp-${id}" data-t="${id}" data-k="${esc(pc.k)}" data-act="open">${art(T[id])}<span class="pp-tx"><span class="ttl">${esc(T[id].n)}</span><span class="pg-c">${facts(T[id],alt.page)}</span>${i?'':`<span class="syn">${esc(T[id].s)}</span>`}</span></button>`).join('')}</div></div>`;
+  }
+}
+function altFocus(){
+  if(lay==='programme'&&cur.classList.contains('pg-i')){progLast=cur;setBd(cur.dataset.t)}
+  if(lay==='wall'){
+    if(cur.dataset.c){alt.col=+cur.dataset.c;$('#s-alt').querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('sel',i===alt.col))}
+    clearTimeout(dwellT);const p=$('.wl-panel'),g=$('.wl-grid');if(!p)return;
+    p.classList.remove('show');g.classList.remove('dwell');setBd(null);
+    if(cur.closest('.wl-grid'))dwellT=setTimeout(()=>{const id=cur.dataset.t,t=T[id];if(!id)return;setBd(id);
+      p.innerHTML=`<span class="credits">${lchips(t,sub(id,+cur.dataset.c))}</span><span class="ttl">${esc(t.n)}</span><span class="syn">${esc(t.s)}</span><span class="btn pri">OK to play</span>`;
+      p.classList.add('show');g.classList.add('dwell')},600);
+  }
+}
+function altKey(d){
+  const S=$('#s-alt'),n=COLS.length;
+  if(cur&&cur.classList.contains('tab')&&(d==='l'||d==='r')){alt.col=(alt.col+(d==='r'?1:-1)+n)%n;alt.idx=0;renderAlt();focus(byId('tab-'+alt.col,S));return true}
+  if(lay==='wall'&&d==='d'&&cur&&cur.classList.contains('tab')){focus(S.querySelector('.start'));return true}
+  if(lay==='marquee'){
+    const m=COLS[alt.col].ids.length;
+    if(d==='l'||d==='r')alt.idx=(alt.idx+(d==='r'?1:-1)+m)%m;else{alt.col=(alt.col+(d==='d'?1:-1)+n)%n;alt.idx=0}
+    renderAlt(d);focus(byId('mq',S));return true;
+  }
+  if(lay==='programme'){
+    if(d==='l'&&cur.closest('.pg-btns')){focus(progLast||S.querySelector('.pg-i'));return true}
+    if(d==='r'&&cur.classList.contains('pg-i')){focus(byId('pg-play',S));return true}
+  }
+  if(lay==='pages'&&(d==='l'||d==='r')){
+    const b=cur;move(d);
+    if(cur===b){alt.page=(alt.page+(d==='r'?1:-1)+n)%n;renderAlt(d);focus(S.querySelector('.start'))}
+    return true;
+  }
+  return false;
+}
+function altBack(){
+  if(lay==='programme'&&cur&&cur.closest('.pg-btns'))return focus(progLast||$('#s-alt .pg-i'));
+  alt.idx=0;renderAlt();focus($('#s-alt .start'));
+}
+function setLayout(v){
+  layPref=lay=v;$('#lay-sel').value=v;try{localStorage.setItem('mb-lay',v)}catch(_){}
+  if(v!=='rows'&&document.documentElement.dataset.look!=='mercury')setLook('mercury');
+  alt={col:0,idx:0,page:0};if(screen==='home'){stack=[];show('home')}
+}
+$('#lay-sel').onchange=e=>setLayout(e.target.value);
+
 // scale the 800x450 stage to the frame
 const tv=$('#tv');
 new ResizeObserver(()=>stage.style.setProperty('--s',tv.clientWidth/800)).observe(tv);
@@ -1231,5 +1405,6 @@ clock();setInterval(clock,20000);
 
 let saved='cinema';try{saved=localStorage.getItem('mb-look')||'cinema'}catch(_){}
 setLook([...$('#look-sel').options].some(o=>o.value===saved)?saved:'cinema');
+{let l=null;try{l=localStorage.getItem('mb-lay')}catch(_){}if([...$('#lay-sel').options].some(o=>o.value===l)){layPref=lay=l;$('#lay-sel').value=l}}
 renderHome();setHero(heroId,heroK,true);show('home');boot();
 </script>
