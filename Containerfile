@@ -16,10 +16,13 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
 # Embed the hub's container images so they update and roll back with the OS
 # (Phase 0 spike 7). Podman reads this store via additionalimagestores in
 # system_files/etc/containers/storage.conf.
-# shortcut: only jellyfin for the spike, add the rest of the stack in Phase 2
-RUN --mount=type=tmpfs,dst=/run/containers \
-    skopeo copy docker://docker.io/jellyfin/jellyfin:latest \
-      "containers-storage:[overlay@/usr/lib/containers/storage+/run/containers/storage]docker.io/jellyfin/jellyfin:latest" \
+# The list lives in build_files/images.txt; every quadlet's Image= must be in it.
+RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
+    --mount=type=tmpfs,dst=/run/containers \
+    while read -r img; do \
+      skopeo copy "docker://$img" \
+        "containers-storage:[overlay@/usr/lib/containers/storage+/run/containers/storage]$img"; \
+    done < /ctx/build_files/images.txt \
     && rm -rf /usr/lib/containers/storage/overlay/*/work \
     && rm -f /usr/lib/containers/storage/*.lock /usr/lib/containers/storage/overlay/.has_mount_program
 

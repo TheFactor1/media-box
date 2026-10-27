@@ -1,6 +1,7 @@
 [Unit]
 Description=Jellyfin
 PartOf=hub.target
+After=mnt-debrid.service mnt-usenet.service
 
 [Container]
 Image=docker.io/jellyfin/jellyfin:latest
@@ -10,7 +11,8 @@ Network=host
 AddDevice=/dev/dri
 Volume=/var/lib/jellyfin/config:/config:Z
 Volume=/var/lib/jellyfin/cache:/cache:Z
-Volume=/media:/media:ro
+Volume=/media:/media:rslave
+Volume=/mnt:/mnt:rslave
 
 [Service]
 Restart=on-failure

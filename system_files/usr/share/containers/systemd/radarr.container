@@ -1,0 +1,19 @@
+[Unit]
+Description=radarr
+PartOf=hub.target
+After=mnt-debrid.service mnt-usenet.service
+
+[Container]
+Image=lscr.io/linuxserver/radarr:latest
+Pull=never
+Network=host
+Environment=PUID=1000 PGID=1000 TZ=Etc/UTC
+Volume=/var/lib/radarr:/config:Z
+Volume=/media:/media:rslave
+Volume=/mnt:/mnt:rslave
+
+[Service]
+Restart=on-failure
+
+[Install]
+WantedBy=hub.target
