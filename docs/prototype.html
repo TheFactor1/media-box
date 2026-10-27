@@ -24,6 +24,21 @@
   --zoom:1.08;--bzoom:1.04;--lift:0px;--ring-w:1.5px;--ring-off:0px;
   --cap-display:none;--rail-display:none;
 }
+:root[data-look="cinema"]{
+  /* Cinema, pushed: true black, tungsten light, title cards on the picture */
+  --page-bg:#000;--page-fg:#f4ece0;--page-muted:#998f80;--page-line:rgba(244,236,224,.14);
+  --bg:#000;--fg:#f4ece0;--muted:#a89d8c;--faint:rgba(244,236,224,.1);
+  --panel:transparent;--panel-line:transparent;--sheet:#0c0b0a;
+  --accent:#e8b765;--accent-fg:#1a1206;--ring:rgba(232,183,101,.55);
+  --glow:0 0 0 1px rgba(232,183,101,.45),0 0 34px 6px rgba(232,183,101,.32),0 18px 40px rgba(0,0,0,.8);
+  --warn:#e8a54a;--chip-bg:transparent;--chip-fg:#d9cdb8;--chip-line:rgba(244,236,224,.22);
+  --qr-bg:#f4ece0;--qr-fg:#000;--kick-color:#e8b765;
+  --btn-bg:transparent;--btn-fg:#a89d8c;--btn-line:rgba(244,236,224,.16);--btn-on-bg:#e8b765;--btn-on-fg:#1a1206;
+  --title-size:42px;--title-track:-.025em;--title-lh:.98;--syn-size:12.5px;
+  --radius:6px;--radius-l:10px;--gap:16px;--blur:0px;--panel-pad:0;
+  --zoom:1.07;--bzoom:1.05;--ring-w:0px;
+  --shadow:0 10px 22px rgba(0,0,0,.85);--tung-soft:rgba(232,183,101,.1);
+}
 :root[data-look="gallery"]{
   /* Gallery: charcoal, whitespace, hairlines, light large sans, 2px frame + lift */
   --page-bg:#151618;--page-fg:#eeece6;--page-muted:#9b9890;--page-line:rgba(238,236,230,.18);
@@ -287,6 +302,65 @@ button.sv{cursor:pointer}
 [data-look="signal"] .code span{background:var(--fg);color:var(--bg);font-weight:800;font-size:24px}
 [data-look="signal"] .toast{background:var(--accent);color:var(--accent-fg);border:0;font-weight:600}
 
+/* ---------- Cinema: arrangement and effects ---------- */
+.mb,.l-det{display:none}
+[data-look="cinema"] .mb,[data-look="cinema"] .l-det{display:inline}
+[data-look="cinema"] .mg,[data-look="cinema"] .l-more,[data-look="cinema"] .hero .kick,[data-look="cinema"] .tp .kick,[data-look="cinema"] .hero .badges,[data-look="cinema"] .tp .badges{display:none}
+[data-look="cinema"] .stage::after{content:"";position:absolute;inset:-40px;z-index:7;pointer-events:none;opacity:.05;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1.4 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");animation:grain .9s steps(3) infinite}
+@keyframes grain{33%{transform:translate(-14px,9px)}66%{transform:translate(11px,-16px)}}
+[data-look="cinema"] .bd{transition:opacity .9s ease}
+[data-look="cinema"] .bd .art{animation:kb 20s ease-in-out infinite alternate;transform-origin:62% 40%}
+@keyframes kb{from{transform:scale(1)}to{transform:scale(1.06)}}
+[data-look="cinema"] .bd::after{background:
+  radial-gradient(ellipse 85% 90% at 62% 30%,transparent 45%,color-mix(in srgb,var(--bg) 80%,transparent) 100%),
+  linear-gradient(0deg,var(--bg) 40%,color-mix(in srgb,var(--bg) 80%,transparent) 52%,color-mix(in srgb,var(--bg) 25%,transparent) 72%,transparent 88%),
+  linear-gradient(90deg,color-mix(in srgb,var(--bg) 80%,transparent) 0%,transparent 55%)}
+[data-look="cinema"] .f,[data-look="cinema"] .art,[data-look="cinema"] .btn{transition-duration:.3s;transition-timing-function:cubic-bezier(.25,.1,.25,1)}
+[data-look="cinema"] .kick,[data-look="cinema"] .ttl,[data-look="cinema"] .meta,[data-look="cinema"] .syn{transition-duration:.3s}
+[data-look="cinema"] .top .mark{font-weight:500;letter-spacing:.04em}
+[data-look="cinema"] .hero{margin-top:20px;gap:9px}
+[data-look="cinema"] .meta{font-size:9.5px;font-weight:500;letter-spacing:.24em;text-transform:uppercase;color:var(--muted)}
+[data-look="cinema"] .ttl{font-weight:500}
+[data-look="cinema"] .hero .meta,[data-look="cinema"] .tp .meta{order:-1}
+[data-look="cinema"] .syn{max-width:320px;color:var(--fg);opacity:.78}
+[data-look="cinema"] .btn{padding:8px 18px;letter-spacing:.02em}
+[data-look="cinema"] .btn.pri{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+[data-look="cinema"] .btn:not(.pri).on{background:var(--tung-soft);color:var(--fg);border-color:transparent;box-shadow:0 0 26px 2px var(--tung-soft)}
+[data-look="cinema"] .owned{color:var(--accent);font-weight:500;letter-spacing:.04em}
+[data-look="cinema"] .row-h{font-size:9.5px;font-weight:500;letter-spacing:.26em;text-transform:uppercase;color:var(--muted)}
+[data-look="cinema"] .row-h small{letter-spacing:.1em;text-transform:none;font-size:10px}
+[data-look="cinema"] .track{padding-bottom:18px}
+[data-look="cinema"] .art{box-shadow:var(--shadow)}
+[data-look="cinema"] .art::after{font-weight:500}
+[data-look="cinema"] .chip{border-radius:999px}
+[data-look="cinema"] .lib{border-radius:4px;letter-spacing:.12em;font-weight:500;background:color-mix(in srgb,var(--bg) 70%,transparent)}
+[data-look="cinema"] .tp{margin-top:110px;width:50%;gap:10px}
+[data-look="cinema"] .tp .ttl{font-size:56px}
+[data-look="cinema"] .sh{padding-top:28px}
+[data-look="cinema"] .sh h2{font-weight:500;font-size:32px;letter-spacing:-.02em}
+[data-look="cinema"] .lbl{letter-spacing:.26em;font-weight:500;color:var(--accent)}
+[data-look="cinema"] .sv.on,[data-look="cinema"] .vr.on{background:var(--tung-soft);box-shadow:0 0 28px var(--tung-soft)}
+[data-look="cinema"] .steps .ttl{font-size:46px}
+[data-look="cinema"] .steps li::before{border-color:var(--ring);color:var(--accent);font-family:var(--f-display)}
+[data-look="cinema"] .code span{border-color:var(--ring);font-weight:500;box-shadow:0 0 18px var(--tung-soft)}
+[data-look="cinema"] .ov-box{box-shadow:0 30px 80px var(--bg)}
+[data-look="cinema"] .ov-box h3{font-weight:500;font-size:24px}
+[data-look="cinema"] .toast{border-color:var(--ring)}
+/* Now playing: letterboxed marquee */
+[data-look="cinema"] .np{animation:fade .6s ease}
+[data-look="cinema"] .np::before,[data-look="cinema"] .np::after{content:"";position:absolute;left:0;right:0;height:13%;background:var(--bg);z-index:2}
+[data-look="cinema"] .np::before{top:0}
+[data-look="cinema"] .np::after{bottom:0}
+[data-look="cinema"] .np .art{animation:kb 20s ease-in-out infinite alternate}
+[data-look="cinema"] .osd{position:absolute;inset:0;z-index:1;padding:0 60px;align-items:center;justify-content:center;text-align:center;gap:10px;background:radial-gradient(ellipse 70% 60% at 50% 50%,color-mix(in srgb,var(--bg) 55%,transparent),color-mix(in srgb,var(--bg) 20%,transparent))}
+[data-look="cinema"] .osd .kick{letter-spacing:.4em;font-weight:500}
+[data-look="cinema"] .osd .ttl{font-size:52px;font-weight:500}
+[data-look="cinema"] .osd .badges{gap:0;justify-content:center}
+[data-look="cinema"] .osd .chip{border:0;height:auto;padding:0;font-size:10px;font-weight:500;letter-spacing:.32em;color:var(--fg)}
+[data-look="cinema"] .osd .chip+.chip::before{content:"\00B7";margin:0 .7em 0 .4em;color:var(--accent)}
+[data-look="cinema"] .osd .scrub{width:260px}
+[data-look="cinema"] .osd .meta{text-transform:none;font-size:11px;letter-spacing:.04em;max-width:440px;line-height:1.6}
+
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}.track,.rows,.grid{scroll-behavior:auto}}
 </style>
 
@@ -326,7 +400,7 @@ button.sv{cursor:pointer}
             <p class="syn" id="h-s"></p>
             <div class="btns">
               <button class="f btn pri" data-id="h-play" data-act="hplay" id="h-play">Resume</button>
-              <button class="f btn" data-id="h-info" data-act="hinfo">More info</button>
+              <button class="f btn" data-id="h-info" data-act="hinfo"><span class="l-more">More info</span><span class="l-det">Details</span></button>
             </div>
           </div>
           <div class="rows" id="rows"></div>
@@ -535,7 +609,7 @@ function setHero(id,k,instant){
   heroId=id;heroK=k;setBd(id);
   const fill=()=>{const t=T[id],r=reqOf(id),pending=r&&rs(r).s!=='ready';
     $('#h-k').textContent=k;$('#h-t').textContent=t.n;
-    $('#h-m').textContent=[t.y,t.g,t.r,PROG[id]].filter(Boolean).join(' · ');
+    $('#h-m').innerHTML=credits(t,PROG[id]);
     $('#h-b').innerHTML=t.b.map(b=>`<span class="chip">${b}</span>`).join('');
     $('#h-s').textContent=t.s;
     const p=$('#h-play');p.hidden=pending;p.textContent=PROG[id]?'Resume':'Play';
@@ -545,6 +619,9 @@ function setHero(id,k,instant){
   $('#hero').classList.add('swap');swapT=setTimeout(fill,160);
 }
 
+// meta line; Cinema hides genre and adds the picture format, so it reads like film credits
+const credits=(t,extra)=>`${t.y}<span class="mg"> · ${t.g}</span> · ${t.r}${extra?' · '+extra:''}<span class="mb"> · ${t.b.filter(x=>/^(4K|1080p|HDR|HLG)/.test(x)).join(' ')}</span>`;
+
 // ---------- screens + history ----------
 let screen='home',titleId='night-ferry',titleK='Browse · Popular',cur=null,stack=[],ovOpen=false,ovPrev=null,toastT,npT;
 const SCREENS=['home','title','browse','requested','status','setup'];
@@ -552,7 +629,7 @@ function renderTitle(){
   const t=T[titleId],own=owned(titleId),r=reqOf(titleId);
   const second=own?`<span class="owned">In your library</span>`:r?`<span class="owned">Asked for · on its way</span>`:`<button class="f btn" data-id="t-keep" data-act="keep">Keep this</button>`;
   const hint=own?'Plays from the library, not the browse source.':r?'It shows in the Requested row on Home, then lands in your library for good.':'Plays the best copy for your quality setting. "Keep this" adds it to your library for good.';
-  $('#s-title').innerHTML=`<div class="tp"><p class="kick">${esc(titleK)}</p><h1 class="ttl">${esc(t.n)}</h1><p class="meta">${[t.y,t.g,t.r].join(' · ')}</p><div class="badges">${t.b.map(b=>`<span class="chip">${b}</span>`).join('')}</div><p class="syn">${esc(t.s)}</p><div class="btns"><button class="f btn pri" data-id="t-play" data-act="play">Play</button>${second}${own?'':`<button class="f btn" data-id="t-ver" data-act="versions">Other versions ›</button>`}</div><p class="hint">${hint}</p></div>`;
+  $('#s-title').innerHTML=`<div class="tp"><p class="kick">${esc(titleK)}</p><h1 class="ttl">${esc(t.n)}</h1><p class="meta">${credits(t)}</p><div class="badges">${t.b.map(b=>`<span class="chip">${b}</span>`).join('')}</div><p class="syn">${esc(t.s)}</p><div class="btns"><button class="f btn pri" data-id="t-play" data-act="play">Play</button>${second}${own?'':`<button class="f btn" data-id="t-ver" data-act="versions">Other versions ›</button>`}</div><p class="hint">${hint}</p></div>`;
 }
 const byId=(fid,scope)=>fid&&scope.querySelector(`[data-id="${CSS.escape(fid)}"]`);
 function show(s,id,fid){
@@ -604,7 +681,11 @@ function move(d){
   let best=null;
   if(d==='u'||d==='d'){
     const s=d==='d'?1:-1;
-    const c=cand.filter(c=>(c.cy-acy)*s>4&&visibleInTrack(c.e)).map(c=>({...c,gap:Math.max(0,s>0?c.r.top-a.bottom:a.top-c.r.bottom)}));
+    let c=cand.filter(c=>(c.cy-acy)*s>4&&visibleInTrack(c.e)).map(c=>({...c,gap:Math.max(0,s>0?c.r.top-a.bottom:a.top-c.r.bottom)}));
+    // outside poster rows, stay in the same column first (Status has two); rows of different lengths must not skip a row
+    const col=c.filter(c=>c.r.left<a.right&&c.r.right>a.left);if(col.length&&!cur.closest('.track'))c=col;
+    // inside a scrolling list, rows scrolled up behind the hero still come before the hero
+    const box=cur.closest('.rows,.grid'),inBox=box?c.filter(c=>box.contains(c.e)):[];if(inBox.length)c=inBox;
     if(c.length){const m=Math.min(...c.map(c=>c.gap));best=c.filter(c=>c.gap<=m+24).sort((p,q)=>Math.abs(p.cx-acx)-Math.abs(q.cx-acx))[0]}
   }else{
     const s=d==='r'?1:-1;
