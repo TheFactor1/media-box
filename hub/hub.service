@@ -14,7 +14,7 @@ WorkingDirectory=__PARENT__
 Environment=HUB_DATA=__HUBDIR__/data
 Environment=HUB_CONFIG=__HUBDIR__/data/hub.toml
 Environment=PYTHONUNBUFFERED=1
-ExecStart=/usr/bin/python3 -I -m hub.hub
+ExecStart=/usr/bin/python3 -E -s -m hub.hub
 Restart=on-failure
 RestartSec=3
 
