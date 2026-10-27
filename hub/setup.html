@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="referrer" content="no-referrer">
+<title>Set up your box</title>
+<style>
+  /* Mercury: graphite, colourless glass, one chrome line, mercury-blue accent, amber only for attention. */
+  :root {
+    --bg: #0b0c0e; --fg: #eceef1; --muted: #a3a8b0; --line: rgba(236,238,241,.12);
+    --glass: rgba(255,255,255,.05); --chrome: rgba(242,245,250,.9); --blue: #9fb4ff; --amber: #e0a446;
+    --font: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.45 var(--font); }
+  main { max-width: 440px; margin: 0 auto; padding: 28px 18px 48px; }
+  .steps { display: flex; gap: 6px; margin-bottom: 26px; }
+  .steps span { flex: 1; height: 3px; border-radius: 2px; background: var(--line); transition: background .3s ease-in; }
+  .steps span.on { background: var(--blue); }
+  h1 { font-size: 26px; font-weight: 600; letter-spacing: -.01em; margin: 0 0 6px; }
+  p.lead { color: var(--muted); margin: 0 0 22px; }
+  section { display: none; }
+  section.on { display: block; animation: in .28s ease-in; }
+  @keyframes in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .card { background: var(--glass); border: 1px solid var(--line); border-top-color: var(--chrome);
+          border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  label.opt { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 10px; border: 1px solid var(--line);
+              margin-bottom: 8px; cursor: pointer; }
+  label.opt:has(input:checked) { border-color: var(--blue); background: rgba(159,180,255,.08); }
+  label.opt input { accent-color: var(--blue); margin-top: 3px; }
+  label.opt small { display: block; color: var(--muted); }
+  .chips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .chips label { text-align: center; padding: 12px 6px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+  .chips input { position: absolute; opacity: 0; }
+  .chips label:has(input:checked) { border-color: var(--blue); color: var(--blue); }
+  .chips label:has(input:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
+  input[type=text], input[type=password], input[type=url] {
+    width: 100%; padding: 13px 14px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0,0,0,.35);
+    color: var(--fg); font: inherit; }
+  input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  .row { display: flex; gap: 8px; margin-top: 10px; }
+  button { font: inherit; font-weight: 600; border-radius: 10px; padding: 13px 16px; border: 1px solid var(--line);
+           background: var(--glass); color: var(--fg); cursor: pointer; }
+  button.go { background: var(--fg); color: var(--bg); border-color: var(--fg); flex: 1; }
+  button:disabled { opacity: .5; cursor: progress; }
+  .msg { min-height: 1.4em; margin: 10px 0 0; color: var(--muted); font-size: 14px; }
+  .msg.warn { color: var(--amber); }
+  .msg.ok { color: var(--blue); }
+  a { color: var(--blue); }
+  .words { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; counter-reset: w; }
+  .words span { padding: 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 18px; font-weight: 600; }
+  .words span::before { counter-increment: w; content: counter(w) "  "; color: var(--muted); font-weight: 400; }
+  .req { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0;
+         border-bottom: 1px solid var(--line); }
+  .req b { font-size: 20px; letter-spacing: .08em; }
+  .hidden { display: none; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <div class="steps" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+
+  <section id="s0" aria-labelledby="h0">
+    <h1 id="h0">Your debrid</h1>
+    <p class="lead">The service that plays your streams. Your key goes straight to your own AIOStreams; this box doesn't keep it.</p>
+    <div class="chips" id="providers" role="radiogroup" aria-label="Debrid service"></div>
+    <input id="key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="API key" aria-label="Debrid API key">
+    <div class="row"><button id="test" type="button">Test</button><button class="go" id="next0" type="button">Next</button></div>
+    <p class="msg" id="m0" role="status"></p>
+  </section>
+
+  <section id="s1" aria-labelledby="h1">
+    <h1 id="h1">Where streams come from</h1>
+    <p class="lead">Pick one. You can change it later.</p>
+    <label class="opt"><input type="radio" name="src" value="auto" checked>
+      <span>Set up for me<small>Creates your AIOStreams with its official starter setup and your debrid key.</small></span></label>
+    <label class="opt"><input type="radio" name="src" value="link">
+      <span>I already have an AIOStreams or Stremio addon link<small>Paste the link that ends in manifest.json.</small></span></label>
+    <input id="manifest" class="hidden" type="url" autocomplete="off" spellcheck="false" placeholder="https://…/manifest.json" aria-label="Addon link">
+    <div class="row"><button id="back1" type="button">Back</button><button class="go" id="next1" type="button">Continue</button></div>
+    <p class="msg" id="m1" role="status"></p>
+    <p class="msg hidden" id="adjust"><a id="adjustLink" target="_blank" rel="noreferrer noopener">Adjust sources</a> in AIOStreams</p>
+  </section>
+
+  <section id="s2" aria-labelledby="h2">
+    <h1 id="h2">Your internet</h1>
+    <p class="lead">Caps what the box asks for, so playback doesn't stall. Auto measures your connection on each TV.</p>
+    <div id="speeds"></div>
+    <div class="row"><button id="back2" type="button">Back</button><button class="go" id="next2" type="button">Continue</button></div>
+    <p class="msg" id="m2" role="status"></p>
+  </section>
+
+  <section id="s3" aria-labelledby="h3">
+    <h1 id="h3">Done</h1>
+    <p class="lead">Now connect your TVs. If a TV shows a pairing code, approve it here.</p>
+    <div class="card" id="reqs"><p class="msg" id="noreq">Waiting for a TV… (open the app on the TV and choose Pair)</p></div>
+    <p class="lead">No code on the TV? Type these six words on it instead:</p>
+    <div class="words" id="words" aria-label="Pairing words"></div>
+    <p class="msg" id="m3" role="status"></p>
+  </section>
+</main>
+<script>
+(() => {
+  const n = new URLSearchParams(location.search).get('n');
+  const $ = id => document.getElementById(id);
+  let step = 0, info = null;
+
+  async function call(method, path, body) {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify({ n, ...body });
+    const r = await fetch(path + (method === 'GET' ? '?n=' + encodeURIComponent(n) : ''), opts);
+    const j = await r.json().catch(() => ({ reason: 'The box did not answer. Is it still on?' }));
+    if (!r.ok) throw new Error(j.reason || ('Error ' + r.status));
+    return j;
+  }
+  function say(id, text, kind) { const m = $(id); m.textContent = text; m.className = 'msg' + (kind ? ' ' + kind : ''); }
+  function busy(btn, on) { btn.disabled = on; }
+  function show(i) {
+    step = i;
+    document.querySelectorAll('section').forEach((s, k) => s.classList.toggle('on', k === i));
+    document.querySelectorAll('.steps span').forEach((s, k) => s.classList.toggle('on', k <= i));
+    const h = $('h' + i); h.tabIndex = -1; h.focus();
+    if (i === 3) finish();
+  }
+  const provider = () => (document.querySelector('input[name=prov]:checked') || {}).value;
+  const source = () => document.querySelector('input[name=src]:checked').value;
+
+  $('test').onclick = async () => {
+    if (!provider()) return say('m0', 'Pick your debrid service first.', 'warn');
+    try { const j = await call('POST', '/setup', { action: 'test', provider: provider(), key: $('key').value });
+          say('m0', j.message, j.ok ? 'ok' : 'warn'); }
+    catch (e) { say('m0', e.message, 'warn'); }
+  };
+  $('next0').onclick = () => show(1);
+  $('back1').onclick = () => show(0);
+  $('back2').onclick = () => show(1);
+  document.querySelectorAll('input[name=src]').forEach(r => r.onchange = () => {
+    $('manifest').classList.toggle('hidden', source() !== 'link'); say('m1', '');
+  });
+  $('next1').onclick = async () => {
+    const btn = $('next1'); busy(btn, true);
+    try {
+      if (source() === 'auto') {
+        if (!provider() || !$('key').value) { busy(btn, false); return say('m1', 'Go back and add your debrid key, or paste a link instead.', 'warn'); }
+        say('m1', 'Setting up AIOStreams…');
+        const j = await call('POST', '/setup', { action: 'provision', provider: provider(), key: $('key').value });
+        $('key').value = '';  // the key now lives in AIOStreams only
+        $('adjustLink').href = j.configureUrl; $('adjust').classList.remove('hidden');
+        say('m1', 'Your streams are set up.', 'ok');
+      } else {
+        await call('POST', '/setup', { action: 'link', manifest: $('manifest').value });
+        say('m1', 'Link saved.', 'ok');
+      }
+      show(2);
+    } catch (e) {
+      // Never a dead end: on any failure, offer the paste-a-link path.
+      say('m1', e.message + (source() === 'auto' ? ' You can paste an addon link instead.' : ''), 'warn');
+      if (source() === 'auto') { document.querySelector('input[name=src][value=link]').checked = true; $('manifest').classList.remove('hidden'); }
+    } finally { busy(btn, false); }
+  };
+  $('next2').onclick = async () => {
+    const choice = (document.querySelector('input[name=speed]:checked') || {}).value || 'auto';
+    try { await call('POST', '/setup', { action: 'internet', preset: choice }); show(3); }
+    catch (e) { say('m2', e.message, 'warn'); }
+  };
+
+  async function finish() {
+    try {
+      const j = await call('POST', '/setup', { action: 'done' });
+      $('words').replaceChildren(...(j.words || []).map(w => { const s = document.createElement('span'); s.textContent = w; return s; }));
+      poll();
+    } catch (e) { say('m3', e.message, 'warn'); }
+  }
+  async function poll() {
+    try {
+      const j = await call('GET', '/pair/requests');
+      const rows = j.requests.map(r => {
+        const d = document.createElement('div'); d.className = 'req';
+        const t = document.createElement('span'); t.textContent = r.name + ' ';
+        const c = document.createElement('b'); c.textContent = r.code.slice(0, 3) + ' ' + r.code.slice(3); t.append(c);
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'go'; b.style.flex = '0'; b.textContent = 'Approve';
+        b.onclick = async () => { busy(b, true);
+          try { await call('POST', '/pair/approve', { requestId: r.requestId }); d.textContent = r.name + ' is paired.'; }
+          catch (e) { say('m3', e.message, 'warn'); busy(b, false); } };
+        d.append(t, b); return d;
+      });
+      $('reqs').replaceChildren(...(rows.length ? rows : [$('noreq')]));
+      setTimeout(poll, 2000);
+    } catch (e) { say('m3', 'Setup has closed. Open it again from the TV to pair more.', ''); }
+  }
+
+  (async () => {
+    try { info = await call('GET', '/setup/info'); }
+    catch (e) { document.querySelector('main').textContent = e.message; return; }
+    $('providers').replaceChildren(...Object.entries(info.providers).map(([id, label], k) => {
+      const l = document.createElement('label'); const i = document.createElement('input');
+      i.type = 'radio'; i.name = 'prov'; i.value = id; if (k === 0) i.checked = true; l.append(i, label); return l;
+    }));
+    const speeds = [['auto', 'Auto', 'Each TV measures its own connection']].concat(
+      ['slow', 'standard', 'fast', 'max'].filter(k => info.presets[k]).map(k => {
+        const p = info.presets[k];
+        const caps = [p.max_mbps ? 'up to ' + p.max_mbps + ' Mbps' : 'no bitrate cap', p.max_res ? 'max ' + p.max_res : '',
+                      p.require_cached ? 'instant streams only' : ''].filter(Boolean).join(' · ');
+        return [k, k[0].toUpperCase() + k.slice(1), caps];
+      }));
+    $('speeds').replaceChildren(...speeds.map(([v, name, sub]) => {
+      const l = document.createElement('label'); l.className = 'opt';
+      const i = document.createElement('input'); i.type = 'radio'; i.name = 'speed'; i.value = v; i.checked = v === 'auto';
+      const s = document.createElement('span'); s.textContent = name; const sm = document.createElement('small'); sm.textContent = sub;
+      s.append(sm); l.append(i, s); return l;
+    }));
+    show(info.configured ? 3 : 0);  // already set up (e.g. opened to approve a TV): straight to pairing
+  })();
+})();
+</script>
+</body>
+</html>

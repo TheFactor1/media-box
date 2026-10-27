@@ -29,6 +29,8 @@ Companion documents: [EXPERIENCE.md](EXPERIENCE.md) (what the user sees, screen 
 ### Legal posture (decide once, apply everywhere)
 Ship plumbing, never sources. Debrid, usenet, Jellyfin and the *arr apps are legal tools. The distro ships **no** preconfigured indexers, scrapers, torrent addons or provider credentials. The setup wizard asks the user for *their* debrid key, usenet provider and indexers. Docs say nothing about where to find content.
 
+**Nuance recorded 2026-10-27 (Matt to confirm):** "Set up for me" in the setup page provisions the user's own AIOStreams instance from their debrid key using the starter template that AIOStreams itself serves at runtime (`GET /api/v1/templates`, `builtin.debrid-starter`). That template enables AIOStreams' default upstream addons, some of which are public scrapers. Our code and image contain no source list; the choice of defaults is AIOStreams', made on the user's own box, and the page says so with an "Adjust sources" link into AIOStreams' UI. The stricter alternative, library-only defaults, is a one-line change in `hub/onboarding.py` if Matt prefers it; it would make a fresh box play only what is already in the debrid account.
+
 ## 2. Two modes, one image
 
 | Mode | What runs | For whom |

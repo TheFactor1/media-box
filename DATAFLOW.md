@@ -7,7 +7,9 @@ Companion to [PLAN.md](PLAN.md). Hub mode unless stated. Everything runs on the 
 |---|---|---|---|
 | Wizard (web app, incl. phone search + Keep this) | 80 | yes | Pairing code needed while unpaired |
 | Jellyfin | 8096 | yes | |
-| Hub | 8097 | yes | Player on the onn calls it over the LAN; no auth yet (shortcut: LAN-trusted, add a pairing token before any box leaves the house) |
+| Hub | 8097 | yes | Player calls it over the LAN with the pairing token; setup page and pairing approval live here too |
+| Hub discovery | 8098/udp | yes | `MEDIABOX?` → `MEDIABOX 1 <port> <name>`; nothing about the user |
+| AIOStreams (on the box) | 3000 | yes, LAN | Only so "Adjust sources" opens its configure page from a phone; otherwise loopback would do |
 | Kodi web server (Chorus + JSON-RPC) | 8080 | yes | Phone remote/keyboard; random per-box password seeded at first boot, shown as a QR on the status screen |
 | AIOStreams | — | outbound only | The user's instance: LAN (EliteMini), tailnet, or a hosted URL |
 | Tailscale / cloudflared | — | opt-in | Tailscale for video, a tunnel for the web pages |
@@ -66,7 +68,7 @@ One small service (Python 3.12 stdlib + sqlite3, one container, port 8097) that 
 | `DELETE /library/{id}` | Removes it |
 | `GET /play/{id}[/{s}/{e}]?preset=slow\|standard\|fast\|max` | 302 to the best stream URL right now; `?json=1` returns `{url, headers, badges, source}` instead (Player uses this). Overrides: `?max_mbps=`, `?max_res=`, `?cut=`. Streams are **matched** first (year ±1, title tokens with no extras, right episode) and wrong ones dropped; then ranked by the preset (bitrate from size ÷ runtime, caps, cached, cut preference) |
 | `GET /presets` | The effective preset table: `slow` (1080p, ≤ 8 Mbps), `standard` (≤ 20), `fast` (≤ 45), `max` (no cap, cached remux first). "Auto" lives in the front end: it measures its link and sends `?max_mbps=` |
-| `GET /resume/{id}[/{s}/{e}]` · `PUT` `{positionMs, durationMs}` | Shared positions across front ends; Player writes on exit, reads on launch |
+| `GET /resume/{id}[/{s}/{e}]` · `PUT` `{positionMs, durationMs}` | `{}` when nothing is stored. Shared positions across front ends; Player writes on exit, reads on launch |
 | `GET /browse/catalogs` | The user's catalogs (from the meta/catalog addons' manifests) |
 | `GET /browse/catalog/{type}/{catalogId}?skip=N` | Items, with `inLibrary` and `resume` filled in |
 | `GET /browse/meta/{type}/{id}` | Full metadata |

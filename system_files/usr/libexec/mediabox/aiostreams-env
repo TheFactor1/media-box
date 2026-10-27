@@ -1,0 +1,10 @@
+#!/usr/bin/bash
+# ExecStartPre of aiostreams.service: writes SECRET_KEY once. AIOStreams encrypts stored configs
+# with it and it can never change afterwards, so later boots leave the file alone.
+set -euo pipefail
+
+f=/var/lib/aiostreams/env
+[[ -s $f ]] && exit 0
+umask 077
+printf 'SECRET_KEY=%s\n' "$(od -An -tx1 -N32 /dev/urandom | tr -d ' \n')" > "$f.tmp"
+mv "$f.tmp" "$f"

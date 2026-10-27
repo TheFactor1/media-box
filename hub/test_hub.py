@@ -8,6 +8,7 @@ import http.client
 import io
 import json
 import os
+import socket
 import sqlite3
 import tempfile
 import threading
@@ -66,9 +67,39 @@ STREAMS = {
 }
 
 
+AIO_PREFIX = '/stremio/u-1/enc-1'  # the fake AIOStreams user the setup page provisions
+
+
 class FakeAddon(BaseHTTPRequestHandler):
+    """A Stremio addon, and also a fake AIOStreams: templates, user creation, and the user's addon under AIO_PREFIX."""
+    created = []
+
+    def do_POST(self):
+        body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
+        if self.path != '/api/v1/user':
+            return self.send_error(404)
+        if body['config']['services'][0]['credentials']['apiKey'].startswith('FAIL'):
+            return self.reply({'success': False, 'error': {'code': 'X', 'message': 'Invalid torbox credentials'}, 'data': None}, 400)
+        FakeAddon.created.append(body)
+        self.reply({'success': True, 'detail': 'created', 'error': None, 'data': {'uuid': 'u-1', 'encryptedPassword': 'enc-1'}}, 201)
+
+    def reply(self, body, status=200):
+        data = json.dumps(body).encode()
+        self.send_response(status)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
     def do_GET(self):
-        p = self.path
+        p = self.path.removeprefix(AIO_PREFIX)
+        if p == '/api/v1/templates':
+            return self.reply({'success': True, 'error': None, 'data': [
+                {'metadata': {'id': 'other'}, 'config': {}},
+                {'metadata': {'id': 'builtin.debrid-starter'}, 'config': {
+                    'services': [{'id': 'realdebrid', 'credentials': {'apiKey': '<template_placeholder>'}}],
+                    'presets': [], 'formatter': {'id': 'prism'}, 'sortCriteria': {'global': []},
+                    'tmdbApiKey': '<template_placeholder>'}}]})
         if p == '/manifest.json':
             body = {'id': 'fake', 'version': '1.0.0', 'name': 'Fake', 'types': ['movie', 'series'], 'idPrefixes': ['tt'],
                     'resources': ['catalog', 'meta', {'name': 'stream', 'types': ['movie', 'series'], 'idPrefixes': ['tt']}],
@@ -102,6 +133,7 @@ class FakeAddon(BaseHTTPRequestHandler):
 class Fixture(unittest.TestCase):
     """A hub and its own fake addon per test class; `extra` is appended to hub.toml."""
     extra = ''
+    streams = True  # False: an unconfigured hub (no stream addon yet)
 
     @classmethod
     def setUpClass(cls):
@@ -111,9 +143,12 @@ class Fixture(unittest.TestCase):
         manifest = f'http://127.0.0.1:{cls.addon.server_port}/manifest.json'
         config = f'{cls.tmp.name}/hub.toml'
         with open(config, 'w') as f:
-            f.write(f'bind = "127.0.0.1"\nport = 0\npreset = "standard"\nmeta_addons = ["{manifest}"]\nstream_addons = ["{manifest}"]\n'
+            f.write(f'bind = "127.0.0.1"\nport = 0\ndiscovery_port = 0\npreset = "standard"\nmeta_addons = ["{manifest}"]\n'
+                    + (f'stream_addons = ["{manifest}"]\n' if cls.streams else '')
+                    + f'aiostreams_url = "http://127.0.0.1:{cls.addon.server_port}"\n'
                     f'new_catalog = {{addon = "{manifest}", type = "movie", id = "fresh"}}\n' + cls.extra)
         cls.server = hub.make_server(config, cls.tmp.name)
+        cls.hub = cls.server.RequestHandlerClass.hub
         threading.Thread(target=cls.server.serve_forever, daemon=True).start()
         cls.base = f'http://127.0.0.1:{cls.server.server_port}'
 
@@ -121,6 +156,7 @@ class Fixture(unittest.TestCase):
     def tearDownClass(cls):
         cls.server.shutdown()
         cls.server.server_close()
+        cls.server.beacon.close()
         cls.tmp.cleanup()
 
     def auth(self):
@@ -194,6 +230,7 @@ class HubTest(Fixture):
         self.call('PUT', '/resume/tt1', {'positionMs': 1, 'durationMs': 6000000, 'updatedAt': 1000})  # older: ignored
         self.assertEqual(self.get('/resume/tt1'), {'positionMs': 60000, 'durationMs': 6000000, 'updatedAt': 2000})
         self.assertEqual([i['id'] for i in self.get('/library?collection=continue')['items']], ['tt1'])
+        self.assertEqual(self.get('/resume/tt5'), {})  # nothing stored
         self.call('PUT', '/resume/tt9/1/1', {'positionMs': 2900000, 'durationMs': 3000000})
         nxt = self.get('/library?collection=next')['items']
         self.assertEqual(nxt[0]['nextEpisode'], {'s': 1, 'e': 2, 'title': 'Two'})
@@ -206,6 +243,30 @@ class HubTest(Fixture):
         # Configured catalog: newest year first, catalog order within a year, duplicates dropped, kept one marked.
         self.assertEqual([(i['id'], i['inLibrary']) for i in self.get('/new')['items']],
                          [('tt1', True), ('tt5', False), ('tt6', False)])
+
+    def test_7_beacon(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.settimeout(2)
+            beacon = ('127.0.0.1', self.server.beacon.getsockname()[1])
+            s.sendto(b'HELLO', beacon)
+            s.sendto(b'MEDIABOX?', beacon)  # only this one is answered
+            self.assertEqual(s.recvfrom(128)[0], f'MEDIABOX 1 {self.server.server_port} Media box'.encode())
+            s.settimeout(0.3)
+            with self.assertRaises(socket.timeout):
+                s.recvfrom(128)
+
+    def test_8_setup_locked_when_configured(self):
+        self.assertEqual(self.raw('GET', '/setup?n=anything')[0], 404)
+        self.assertEqual(self.raw('POST', '/setup/open')[0], 401)
+        status, opened, _ = self.raw('POST', '/setup/open', headers=self.auth())
+        nonce = opened['url'].split('n=')[1]
+        conn = http.client.HTTPConnection('127.0.0.1', self.server.server_port, timeout=30)
+        conn.request('GET', '/setup?n=' + nonce)
+        page = conn.getresponse()
+        self.assertEqual((page.status, page.getheader('Content-Type')), (200, 'text/html; charset=utf-8'))
+        self.assertIn(b'Your debrid', page.read())
+        conn.close()
+        self.assertEqual(self.raw('GET', '/setup?n=wrong')[0], 403)
 
     def test_6_unreachable(self):
         self.addon.shutdown()
@@ -308,13 +369,74 @@ class SecurityTest(Fixture):
         with tempfile.TemporaryDirectory() as d:
             config = os.path.join(d, 'hub.toml')
             with open(config, 'w') as f:
-                f.write('bind = "0.0.0.0"\nport = 0\n')
+                f.write('bind = "0.0.0.0"\nport = 0\ndiscovery_port = 0\n')
             with mock.patch('hub.security.public_addresses', return_value=['203.0.113.7']):
                 with self.assertRaises(SystemExit):
                     hub.make_server(config, d)
                 with open(config, 'a') as f:
                     f.write('allow_public = true\n')
-                hub.make_server(config, d).server_close()
+                server = hub.make_server(config, d)
+                server.server_close()
+                server.beacon.close()
+
+
+
+class SetupTest(Fixture):
+    """An unconfigured hub: nonce, provisioning against a fake AIOStreams, done, TV pairing."""
+    streams = False
+
+    def setup(self, body):
+        return self.raw('POST', '/setup', json.dumps({'n': self.nonce, **body}))
+
+    def test_1_nonce_required(self):
+        status, link, _ = self.raw('GET', '/setup/link')  # the TV asks from the box itself
+        self.assertEqual((status, link['until']), (200, None))  # unconfigured: open until done
+        SetupTest.nonce = link['url'].split('n=')[1]
+        self.assertEqual(self.raw('GET', '/setup')[0], 403)
+        self.assertEqual(self.raw('GET', '/setup?n=wrong')[0], 403)
+        self.assertEqual(self.raw('POST', '/setup', json.dumps({'action': 'test'}))[0], 403)
+        self.assertEqual(self.raw('GET', '/setup/info?n=' + self.nonce)[1]['configured'], False)
+
+    def test_2_provision(self):
+        self.assertFalse(self.setup({'action': 'test', 'provider': 'torbox', 'key': 'short'})[1]['ok'])
+        status, failed, _ = self.setup({'action': 'provision', 'provider': 'torbox', 'key': 'FAIL0123456789abcdef'})
+        self.assertEqual((status, failed['reason']), (502, 'Invalid torbox credentials'))  # shown, with the link path offered
+        status, done, _ = self.setup({'action': 'provision', 'provider': 'torbox', 'key': 'tb-0123456789abcdef'})
+        self.assertEqual(status, 200, done)
+        self.assertTrue(done['configureUrl'].endswith(AIO_PREFIX + '/configure'))
+        sent = FakeAddon.created[-1]
+        self.assertEqual(sent['config']['services'], [{'id': 'torbox', 'enabled': True, 'credentials': {'apiKey': 'tb-0123456789abcdef'}}])
+        self.assertNotIn('tmdbApiKey', sent['config'])
+        self.assertEqual(len(sent['password']), 12)
+        con = sqlite3.connect(os.path.join(self.tmp.name, 'hub.sqlite'))
+        rows = con.execute('SELECT value FROM settings').fetchall()
+        con.close()
+        self.assertFalse(any(b'enc-1' in v or b'tb-0123' in v for v, in rows))  # manifest URL encrypted, debrid key never stored
+        streams = self.get('/browse/streams/movie/tt1?preset=fast')['streams']
+        self.assertIn('http://cdn/4kweb', [s['url'] for s in streams])  # served through the provisioned addon
+
+    def test_3_speed_and_done(self):
+        self.assertEqual(self.setup({'action': 'internet', 'preset': 'fast'})[0], 200)
+        self.assertEqual(self.hub.preset, 'fast')
+        status, done, _ = self.setup({'action': 'done'})
+        self.assertEqual((status, len(done['words'])), (200, 6))
+
+    def test_4_tv_pairing(self):
+        status, req, _ = self.raw('POST', '/pair/request', json.dumps({'name': 'Living room'}))
+        self.assertEqual((status, len(req['code']), req['code'].isdigit()), (200, 6, True))
+        self.assertIn('/setup?n=' + self.nonce, req['setupUrl'])  # never paired yet: the TV shows it as a QR
+        self.assertEqual(self.raw('GET', '/pair/request/' + req['requestId'])[0], 202)  # pending
+        self.assertEqual(self.raw('GET', '/pair/requests')[0], 401)  # listing needs the setup page or a paired device
+        pending = self.raw('GET', '/pair/requests?n=' + self.nonce)[1]['requests']
+        self.assertEqual([(p['name'], p['code']) for p in pending], [('Living room', req['code'])])
+        self.assertEqual(self.raw('POST', '/pair/approve', json.dumps({'n': self.nonce, 'requestId': req['requestId']}))[0], 200)
+        status, got, _ = self.raw('GET', '/pair/request/' + req['requestId'])
+        self.assertEqual((status, 'Bearer ' + got['token']), (200, self.auth()['Authorization']))
+        self.assertEqual(self.raw('GET', '/pair/request/' + req['requestId'])[0], 404)  # handed out once
+        old = self.raw('POST', '/pair/request', json.dumps({'name': 'Bedroom'}))[1]
+        self.assertIsNone(old['setupUrl'])  # paired now: an unknown LAN device must not get the approving nonce
+        self.hub.pair_requests[old['requestId']]['created'] -= 601
+        self.assertEqual(self.raw('GET', '/pair/request/' + old['requestId'])[0], 410)
 
 
 if __name__ == '__main__':

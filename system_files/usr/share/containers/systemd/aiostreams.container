@@ -1,0 +1,19 @@
+[Unit]
+Description=AIOStreams (the box's own stream source, provisioned by the hub's setup page)
+PartOf=hub.target
+
+[Container]
+Image=ghcr.io/viren070/aiostreams:latest
+GlobalArgs=--storage-opt=additionalimagestore=/usr/lib/bootc/storage
+Network=host
+EnvironmentFile=/var/lib/aiostreams/env
+Environment=BASE_URL=http://127.0.0.1:3000
+Volume=/var/lib/aiostreams:/app/data:Z
+
+[Service]
+# bash explicitly, so the script needs no exec bit from build.sh.
+ExecStartPre=/usr/bin/bash /usr/libexec/mediabox/aiostreams-env
+Restart=on-failure
+
+[Install]
+WantedBy=hub.target

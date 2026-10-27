@@ -1,8 +1,17 @@
 # Hub config: non-secret settings only. Copy to /var/lib/hub/hub.toml (or point HUB_CONFIG at it).
 # Secrets live next to it in /var/lib/hub: `token` (pairing token) and `key` (encrypts the settings
-# table in hub.sqlite), both 0600. Back them up with the database or the settings are unreadable.
-# Every call except GET /health and pairing needs "Authorization: Bearer <token>"; a new device pairs
-# with POST /pair {words}, the six words the TV reads from GET /pair (on the box itself) while pairing is open.
+# table in hub.sqlite: stream addon links, the AIOStreams account), both 0600. Back them up with the
+# database or the settings are unreadable.
+#
+# First run: the TV shows a QR for http://<box>:8097/setup?n=<one-time nonce> (it reads the link from
+# GET /setup/link on the box itself). The phone page takes the debrid key, sets up streams, picks a speed.
+# The setup page answers only while no stream source is configured, or for 10 minutes after a paired
+# device calls POST /setup/open.
+#
+# Pairing a TV: every call except GET /health, pairing and the setup page needs "Authorization: Bearer <token>".
+#   Easy way: the TV calls POST /pair/request {name}, shows the 6-digit code, and polls GET /pair/request/<id>;
+#   approve it on the setup page (or from any paired device). Requests expire after 10 minutes.
+#   Headless way: type the six words from GET /pair (read on the box itself) into POST /pair {words}.
 
 # 0.0.0.0 because Player on the Android box reaches the hub over the LAN. On a box where only
 # local Kodi talks to it, "127.0.0.1" keeps it off the network.
@@ -10,6 +19,15 @@ bind = "0.0.0.0"
 port = 8097
 # The hub refuses to start if bind would listen on a public IP. Only for a deliberate exposure:
 # allow_public = true
+
+# LAN discovery: a UDP `MEDIABOX?` to this port (or broadcast) is answered with
+# `MEDIABOX 1 <port> <name>`. Nothing about the user is in the reply.
+name = "Media box"
+discovery_port = 8098
+
+# The AIOStreams instance "Set up for me" creates an account in, from that instance's own starter
+# template. The box runs its own at 127.0.0.1:3000; on the EliteMini, point this at the existing one.
+aiostreams_url = "http://127.0.0.1:3000"
 
 # Presets are named by the connection: slow, standard, fast, max (GET /presets lists them with their numbers).
 # Front ends pick one per call with ?preset=, and can cap it with ?max_mbps= ?max_res= ?cut= (a box on Wi-Fi
@@ -43,8 +61,8 @@ preset = "standard"
 meta_addons = ["https://v3-cinemeta.strem.io/manifest.json"]
 
 # Stream addons (e.g. your AIOStreams manifest URL) embed config tokens, so they are not kept here.
-# shortcut: until the setup page exists, list them here once; the hub imports them into its encrypted
-# store on start and logs a reminder to delete this line. None ship with the box.
+# The setup page stores them encrypted. A link listed here is imported once on start (then delete the
+# line; the hub logs a reminder). None ship with the box.
 # stream_addons = ["https://…/manifest.json"]
 
 # What GET /new shows. One table or a list of them:
