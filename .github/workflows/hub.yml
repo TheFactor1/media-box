@@ -1,0 +1,42 @@
+name: Hub tests and image
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ["hub/**", ".github/workflows/hub.yml"]
+  push:
+    branches: [main]
+    paths: ["hub/**", ".github/workflows/hub.yml"]
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/mediabox-hub
+
+jobs:
+  hub:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Test
+        run: python -I -m unittest discover -s hub -t .
+
+      - name: Lowercase image path
+        run: echo "IMAGE=$(echo '${{ env.IMAGE }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+
+      - name: Build image
+        run: podman build -f hub/Containerfile -t "$IMAGE:latest" -t "$IMAGE:${{ github.sha }}" hub
+
+      - name: Push
+        if: github.event_name != 'pull_request'
+        run: |
+          echo '${{ github.token }}' | podman login ghcr.io -u '${{ github.actor }}' --password-stdin
+          podman push "$IMAGE:latest"
+          podman push "$IMAGE:${{ github.sha }}"

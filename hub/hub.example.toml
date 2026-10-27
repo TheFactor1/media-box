@@ -1,0 +1,24 @@
+# Hub config. Copy to /var/lib/hub/hub.toml (or point HUB_CONFIG at it); mode 0600, since
+# stream addon URLs (AIOStreams) usually embed a config token.
+
+# 0.0.0.0 because Player on the Android box reaches the hub over the LAN. On a box where only
+# local Kodi talks to it, "127.0.0.1" keeps it off the network.
+bind = "0.0.0.0"
+port = 8097
+
+# best = remux, 4K, HDR, TrueHD/DTS-HD; balanced = 4K web-dl; saver = 1080p.
+# Within a preset the stream addon's own order wins. Front ends can override per call with ?preset=.
+preset = "balanced"
+
+# Catalog and metadata addons (Stremio manifest URLs), asked in this order.
+meta_addons = ["https://v3-cinemeta.strem.io/manifest.json"]
+
+# Stream addons, e.g. your AIOStreams manifest URL. None ship with the box.
+stream_addons = []
+
+# What GET /new shows. One table or a list of them:
+#   new_catalog = { addon = "https://…/manifest.json", type = "movie", id = "<catalog id>" }
+#   new_catalog = [ { addon = "…", type = "movie", id = "…" }, { addon = "…", type = "series", id = "…" } ]
+# Unset (the default): Cinemeta's movie and series "top" catalogs, kept to titles from this year
+# and last year, newest first. A catalog you name here is used as is (no year filter), newest year first.
+# new_catalog = { addon = "https://v3-cinemeta.strem.io/manifest.json", type = "movie", id = "top" }

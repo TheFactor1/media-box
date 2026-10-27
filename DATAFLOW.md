@@ -7,7 +7,7 @@ Companion to [PLAN.md](PLAN.md). Hub mode unless stated. Everything runs on the 
 |---|---|---|---|
 | Wizard (web app, incl. phone search + Keep this) | 80 | yes | Pairing code needed while unpaired |
 | Jellyfin | 8096 | yes | |
-| Resolver | 8097 | no (localhost) | `.strm` targets and Keep this; Kodi and the wizard call it locally |
+| Hub | 8097 | yes | Player on the onn calls it over the LAN; no auth yet (shortcut: LAN-trusted, add a pairing token before any box leaves the house) |
 | Kodi web server (Chorus + JSON-RPC) | 8080 | yes | Phone remote/keyboard; random per-box password seeded at first boot, shown as a QR on the status screen |
 | AIOStreams | — | outbound only | The user's instance: LAN (EliteMini), tailnet, or a hosted URL |
 | Tailscale / cloudflared | — | opt-in | Tailscale for video, a tunnel for the web pages |
@@ -99,7 +99,7 @@ Config: `/var/lib/hub/hub.toml` (addon manifest URLs, meta addon, preset); data:
 - `/var` backup: nightly `tar` of `/var/lib/*` minus `*/cache` and `*/metadata` to `/var/backups/mediabox`, keep 7.
 
 ## Security
-- LAN-reachable: Jellyfin, Kodi web server, the wizard. The resolver binds to localhost (nftables rule shipped in the image).
+- LAN-reachable: the hub (:8097, no auth yet; see Ports), Kodi web server, the wizard. Jellyfin only in the "real files" tier.
 - The wizard runs only while unpaired or after "Set up again" on the TV; the pairing code is shown on the TV, so physical access to the TV is the credential.
 - Provider keys never touch the box; they live in the user's AIOStreams. The box stores only the AIOStreams URL (which may embed a config token: `/var/lib/resolver`, 0600).
 - SSH: off by default; the wizard has an "Advanced → enable SSH with this public key" card.

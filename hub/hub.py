@@ -1,0 +1,564 @@
+"""Media box hub API: kept library, resume points, browse and best-stream picking over Stremio addons.
+
+Contract: DATAFLOW.md, "Hub API". Python 3.12 standard library only.
+Run: HUB_CONFIG=/var/lib/hub/hub.toml HUB_DATA=/var/lib/hub python -m hub.hub
+"""
+import json
+import os
+import re
+import sqlite3
+import sys
+import time
+import tomllib
+import traceback
+import urllib.parse
+import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+CINEMETA = 'https://v3-cinemeta.strem.io/manifest.json'
+STREAM_TTL = 600         # contract: stream cache per title 10 min
+MANIFEST_TTL = 3600
+DONE = 0.92              # contract: "continue" = resume point under 92 %
+IMDB = re.compile(r'tt\d+')
+
+
+class AddonError(Exception):
+    pass
+
+
+class HttpError(Exception):
+    def __init__(self, status, reason):
+        self.status, self.reason = status, reason
+
+
+def now_ms():
+    return int(time.time() * 1000)
+
+
+def host(url):
+    return urllib.parse.urlsplit(url).hostname or '?'
+
+
+def lst(x):
+    return x if isinstance(x, list) else []
+
+
+def fetch(url, timeout=10):
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'mediabox-hub/1', 'Accept': 'application/json'})
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            data = json.load(r)
+    except (OSError, ValueError) as e:  # URLError/HTTPError/timeouts are OSError, bad JSON is ValueError
+        # Only the host and error type: addon URLs can embed config tokens.
+        raise AddonError(f'{host(url)}: {type(e).__name__} {getattr(e, "code", "")}'.strip()) from None
+    if not isinstance(data, dict):
+        raise AddonError(f'{host(url)}: response is not a JSON object')
+    return data
+
+
+class Addon:
+    def __init__(self, url):
+        self.url, self.host = url, host(url)
+        self.base = url.removesuffix('/manifest.json')
+        self._manifest, self._at = None, 0
+
+    def manifest(self):
+        if self._manifest is None or time.time() - self._at > MANIFEST_TTL:
+            self._manifest, self._at = fetch(self.url), time.time()
+        return self._manifest
+
+    def supports(self, resource, type_, id_):
+        m = self.manifest()
+        for r in lst(m.get('resources')):
+            if isinstance(r, str):
+                name, types, prefixes = r, m.get('types'), m.get('idPrefixes')
+            elif isinstance(r, dict):
+                name, types, prefixes = r.get('name'), r.get('types', m.get('types')), r.get('idPrefixes', m.get('idPrefixes'))
+            else:
+                continue
+            if name == resource and (not types or type_ in types) and (not prefixes or id_.startswith(tuple(prefixes))):
+                return True
+        return False
+
+    def catalogs(self):
+        """[(catalog, extra names, required extra names)]; handles both `extra` and the legacy extraSupported/extraRequired."""
+        out = []
+        for c in lst(self.manifest().get('catalogs')):
+            if not isinstance(c, dict):
+                continue
+            extra = [e for e in lst(c.get('extra')) if isinstance(e, dict)]
+            names = {e.get('name') for e in extra} | set(lst(c.get('extraSupported')))
+            required = {e.get('name') for e in extra if e.get('isRequired')} | set(lst(c.get('extraRequired')))
+            out.append((c, names, required))
+        return out
+
+    def get(self, resource, type_, id_, extra=None):
+        q = lambda s: urllib.parse.quote(str(s), safe=':')
+        url = f'{self.base}/{resource}/{q(type_)}/{q(id_)}'
+        if extra:  # protocol: /{resource}/{type}/{id}/{k=v&k2=v2}.json, values percent-encoded
+            url += '/' + urllib.parse.urlencode(extra, quote_via=urllib.parse.quote)
+        return fetch(url + '.json')
+
+
+# ---- stream badges and ranking ----
+
+def first(text, table):
+    return next((label for label, rx in table if re.search(rx, text)), None)
+
+
+def every(text, table):
+    return [label for label, rx in table if re.search(rx, text)]
+
+
+RES = [('2160p', r'2160p|\b4k\b|\buhd\b'), ('1080p', r'1080p'), ('720p', r'720p'), ('480p', r'480p')]
+HDR = [('DV', r'\bdv\b|dolby.?vision|\bdovi\b'), ('HDR10+', r'hdr10\+|hdr10plus'),
+       ('HDR10', r'hdr10(?!\+|plus)|\bhdr\b'), ('HLG', r'\bhlg\b')]
+AUDIO = [('TrueHD', r'truehd'), ('Atmos', r'atmos'), ('DTS-HD', r'dts-?hd'), ('DTS:X', r'dts[:. -]?x\b'),
+         ('DD+', r'dd\+|\bddp|e-?ac-?3'), ('AAC', r'\baac\b')]
+SOURCE = [('remux', r'remux'), ('web-dl', r'web-?dl|web-?rip|\bweb\b'), ('bluray', r'blu-?ray|bdrip|brrip')]
+LOSSLESS = {'TrueHD', 'DTS-HD', 'DTS:X'}
+
+
+def badges(stream):
+    hints = stream.get('behaviorHints') if isinstance(stream.get('behaviorHints'), dict) else {}
+    text = ' '.join(str(stream.get(k) or '') for k in ('name', 'title', 'description')) + ' ' + str(hints.get('filename') or '')
+    text = text.casefold()
+    size = re.search(r'(\d+(?:[.,]\d+)?)\s*(gb|gib|mb|mib)\b', text)
+    gb = round(float(size[1].replace(',', '.')) / (1 if size[2].startswith('g') else 1024), 2) if size else None
+    if not gb and isinstance(hints.get('videoSize'), int):
+        gb = round(hints['videoSize'] / 2**30, 2)
+    # Cached markers: AIOStreams uses ⚡/⏳, Torrentio-style addons use [RD+] / [RD download].
+    cached = False if re.search(r'uncached|⏳|download\]', text) else True if re.search(r'⚡|\+\]|\bcached\b|\binstant\b', text) else None
+    return {'res': first(text, RES), 'hdr': every(text, HDR), 'audio': every(text, AUDIO),
+            'source': first(text, SOURCE), 'sizeGb': gb, 'cached': cached}
+
+
+PRESETS = {
+    'best': lambda b: (b['source'] == 'remux', b['res'] == '2160p', bool(b['hdr']), bool(LOSSLESS & set(b['audio']))),
+    'balanced': lambda b: (b['res'] == '2160p' and b['source'] == 'web-dl',),
+    'saver': lambda b: (b['res'] == '1080p',),
+}
+
+
+def rank(raw, preset):
+    """raw: [(addon host, stream dict)] in addon order. Python's sort is stable (also with reverse), so ties keep it."""
+    out = []
+    for addon, s in raw:
+        hints = s.get('behaviorHints') if isinstance(s.get('behaviorHints'), dict) else {}
+        proxy = hints.get('proxyHeaders') if isinstance(hints.get('proxyHeaders'), dict) else {}
+        out.append({'url': s.get('url') if isinstance(s.get('url'), str) else None,
+                    'headers': proxy.get('request') if isinstance(proxy.get('request'), dict) else {},
+                    'badges': badges(s), 'source': {'addon': addon, 'name': s.get('name')},
+                    'description': s.get('description') or s.get('title')})
+    cached = {True: 1, None: 0, False: -1}
+    return sorted(out, key=lambda x: (x['url'] is not None, cached[x['badges']['cached']], *PRESETS[preset](x['badges'])), reverse=True)
+
+
+# ---- metadata ----
+
+def to_item(meta):
+    if not isinstance(meta, dict):
+        raise AddonError('meta response has no meta object')
+    year = re.search(r'\d{4}', str(meta.get('year') or meta.get('releaseInfo') or ''))
+    runtime = re.search(r'\d+', str(meta.get('runtime') or ''))  # shortcut: reads "148 min" only, not "2h 28min"; parse h/m if an addon sends that
+    return {'id': meta.get('id'), 'type': meta.get('type'), 'title': meta.get('name'),
+            'year': int(year[0]) if year else None, 'runtimeMin': int(runtime[0]) if runtime else None,
+            'genres': lst(meta.get('genres') or meta.get('genre')), 'poster': meta.get('poster'),
+            'backdrop': meta.get('background'), 'logo': meta.get('logo'), 'overview': meta.get('description'),
+            'badges': None, 'inLibrary': False, 'keptAt': None, 'resume': None, 'nextEpisode': None}
+
+
+def episodes(meta):
+    """[[s, e, title]] in order, specials (season 0) left out."""
+    eps = []
+    for v in lst(meta.get('videos')):
+        if isinstance(v, dict) and isinstance(v.get('season'), int) and v['season'] > 0:
+            e = v.get('episode', v.get('number'))
+            if isinstance(e, int):
+                eps.append([v['season'], e, v.get('name') or v.get('title')])
+    return sorted(eps, key=lambda x: (x[0], x[1]))
+
+
+def done(r):
+    return r['durationMs'] > 0 and r['positionMs'] / r['durationMs'] >= DONE
+
+
+class Hub:
+    def __init__(self, config_path, data_dir):
+        cfg = {}
+        if os.path.exists(config_path):
+            with open(config_path, 'rb') as f:
+                cfg = tomllib.load(f)
+        self.port, self.bind = int(cfg.get('port', 8097)), cfg.get('bind', '0.0.0.0')
+        self.preset = cfg.get('preset', 'balanced')
+        if self.preset not in PRESETS:
+            sys.exit(f'hub.toml: preset must be one of {", ".join(PRESETS)}')
+        self.meta_addons = [Addon(u) for u in cfg.get('meta_addons', [CINEMETA])]
+        self.stream_addons = [Addon(u) for u in cfg.get('stream_addons', [])]
+        known = {a.url: a for a in self.meta_addons + self.stream_addons}
+        new = cfg.get('new_catalog')
+        new = [new] if isinstance(new, dict) else new
+        # Default: Cinemeta's all-time "top" lists, so only the year filter makes them "new".
+        self.new_recent_only = new is None
+        self.new = [(known.setdefault(c['addon'], Addon(c['addon'])), c['type'], c['id'])
+                    for c in new or [{'addon': CINEMETA, 'type': t, 'id': 'top'} for t in ('movie', 'series')]]
+        self.cache = {}  # shortcut: in memory, lost on restart and never pruned; fine for one household, move to sqlite if it grows
+        os.makedirs(data_dir, exist_ok=True)
+        self.db = os.path.join(data_dir, 'hub.sqlite')
+        self.sql('CREATE TABLE IF NOT EXISTS library(id TEXT PRIMARY KEY, type TEXT, item TEXT, videos TEXT, kept_at INTEGER)')
+        self.sql('CREATE TABLE IF NOT EXISTS resume(id TEXT, s INTEGER, e INTEGER, position_ms INTEGER,'
+                 ' duration_ms INTEGER, updated_at INTEGER, PRIMARY KEY(id, s, e))')
+
+    def sql(self, query, args=()):
+        con = sqlite3.connect(self.db, timeout=10)
+        try:
+            with con:
+                return con.execute(query, args).fetchall()
+        finally:
+            con.close()
+
+    # -- addons --
+
+    def meta(self, type_, id_):
+        errors = []
+        for a in self.meta_addons:
+            try:
+                if a.supports('meta', type_, id_):
+                    return a.get('meta', type_, id_).get('meta')
+            except AddonError as e:
+                errors.append(str(e))
+        raise AddonError('; '.join(errors) or f'no meta addon serves {type_} {id_}')
+
+    def streams(self, type_, vid):
+        hit = self.cache.get((type_, vid))
+        if hit and time.time() - hit[0] < STREAM_TTL:  # also the fallback when the addon is down
+            return hit[1]
+        if not self.stream_addons:
+            raise AddonError('no stream addons configured')
+        raw, errors = [], []
+        for a in self.stream_addons:
+            try:
+                if a.supports('stream', type_, vid):
+                    raw += [(a.host, s) for s in lst(a.get('stream', type_, vid).get('streams')) if isinstance(s, dict)]
+            except AddonError as e:
+                errors.append(str(e))
+        if len(errors) == len(self.stream_addons):
+            raise AddonError('; '.join(errors))
+        if raw:
+            self.cache[(type_, vid)] = (time.time(), raw)
+        return raw
+
+    def pick(self, type_, vid, preset):
+        best = next((s for s in rank(self.streams(type_, vid), preset) if s['url']), None)
+        if not best:
+            raise HttpError(404, 'no playable stream')
+        return best
+
+    def health(self):
+        out = []
+        for kind, addons in (('meta', self.meta_addons), ('stream', self.stream_addons)):
+            for a in addons:
+                try:
+                    fetch(a.url, timeout=3)
+                    out.append({'host': a.host, 'kind': kind, 'reachable': True})
+                except AddonError:
+                    out.append({'host': a.host, 'kind': kind, 'reachable': False})
+        return {'ok': True, 'addons': out}
+
+    # -- library and resume --
+
+    def annotate(self, items, videos=None):
+        """Fill inLibrary/keptAt/badges/resume/nextEpisode. `videos` maps id -> episodes for titles not in the library."""
+        # shortcut: reads the whole library and resume table per request; fine to a few thousand titles, query per id beyond that
+        lib = {r[0]: r for r in self.sql('SELECT id, item, videos, kept_at FROM library')}
+        res = {}
+        for id_, s, e, p, d, u in self.sql('SELECT * FROM resume ORDER BY updated_at DESC'):
+            res.setdefault(id_, []).append({'s': s, 'e': e, 'positionMs': p, 'durationMs': d, 'updatedAt': u})
+        for it in items:
+            row = lib.get(it['id'])
+            if row:
+                it.update(inLibrary=True, keptAt=row[3], badges=json.loads(row[1])['badges'])
+            rows = res.get(it['id'], [])
+            last = rows[0] if rows else None
+            it['resume'] = {k: last[k] for k in ('positionMs', 'durationMs', 'updatedAt')} if last else None
+            eps = json.loads(row[2]) if row else (videos or {}).get(it['id'], [])
+            if it['type'] == 'series' and eps:
+                # The episode to play next: the unfinished one, else the one after the last finished, else the first.
+                if last is None:
+                    nxt = eps[0]
+                else:
+                    i = next((i for i, x in enumerate(eps) if x[:2] == [last['s'], last['e']]), None)
+                    nxt = eps[i] if i is not None and not done(last) else eps[i + 1] if i is not None and i + 1 < len(eps) else None
+                it['nextEpisode'] = {'s': nxt[0], 'e': nxt[1], 'title': nxt[2]} if nxt else None
+        return items
+
+    def library(self, collection):
+        items = self.annotate([json.loads(r[0]) for r in self.sql('SELECT item FROM library ORDER BY kept_at DESC, rowid DESC')])
+        resuming = lambda i: i['resume'] and i['resume']['positionMs'] > 0 and not done(i['resume'])
+        match collection:
+            case None:
+                return items
+            case 'continue':
+                return sorted(filter(resuming, items), key=lambda i: i['resume']['updatedAt'], reverse=True)
+            case 'next':
+                nxt = [i for i in items if i['type'] == 'series' and i['nextEpisode'] and not resuming(i)]
+                return sorted(nxt, key=lambda i: (i['resume'] or {}).get('updatedAt', 0), reverse=True)
+            case 'movies' | 'shows':
+                want = 'movie' if collection == 'movies' else 'series'
+                return [i for i in items if i['type'] == want]
+        raise HttpError(400, 'collection must be continue, next, movies or shows')
+
+    def keep(self, body):
+        if not isinstance(body, dict) or not IMDB.fullmatch(str(body.get('id'))) or body.get('type') not in ('movie', 'series'):
+            raise HttpError(400, 'body must be {"id": "tt…", "type": "movie"|"series"}')
+        id_, type_ = body['id'], body['type']
+        if not self.sql('SELECT 1 FROM library WHERE id = ?', (id_,)):
+            meta = self.meta(type_, id_)
+            item, eps = to_item(meta), episodes(meta)
+            item.update(id=id_, type=type_)
+            vid = f'{id_}:{eps[0][0]}:{eps[0][1]}' if type_ == 'series' and eps else id_
+            try:
+                b = self.pick(type_, vid, self.preset)['badges']
+                item['badges'] = {k: b[k] for k in ('res', 'hdr', 'audio')}
+            except (AddonError, HttpError):
+                pass  # keep works without stream addons; badges stay null
+            self.sql('INSERT OR IGNORE INTO library VALUES (?, ?, ?, ?, ?)', (id_, type_, json.dumps(item), json.dumps(eps), now_ms()))
+        return self.annotate([json.loads(self.sql('SELECT item FROM library WHERE id = ?', (id_,))[0][0])])[0]
+
+    def put_resume(self, key, body):
+        ok = lambda v: isinstance(v, int) and not isinstance(v, bool) and v >= 0
+        if not isinstance(body, dict) or not ok(body.get('positionMs')) or not ok(body.get('durationMs')):
+            raise HttpError(400, 'body must be {"positionMs": int, "durationMs": int}')
+        updated = body.get('updatedAt', now_ms())  # optional so a front end that was offline can't overwrite newer progress
+        if not ok(updated):
+            raise HttpError(400, 'updatedAt must be epoch ms')
+        self.sql('INSERT INTO resume VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id, s, e) DO UPDATE SET'
+                 ' position_ms = excluded.position_ms, duration_ms = excluded.duration_ms, updated_at = excluded.updated_at'
+                 ' WHERE excluded.updated_at >= resume.updated_at', (*key, body['positionMs'], body['durationMs'], updated))
+        return self.get_resume(key)
+
+    def get_resume(self, key):
+        rows = self.sql('SELECT position_ms, duration_ms, updated_at FROM resume WHERE id = ? AND s = ? AND e = ?', key)
+        return dict(zip(('positionMs', 'durationMs', 'updatedAt'), rows[0])) if rows else None
+
+    # -- browse and search --
+
+    def catalogs(self):
+        out = []
+        for a in self.meta_addons:
+            try:
+                out += [{'addon': a.host, 'type': c.get('type'), 'id': c.get('id'), 'name': c.get('name')}
+                        for c, _, required in a.catalogs() if not required - {'skip'}]
+            except AddonError:
+                pass
+        return out
+
+    def catalog(self, type_, cid, skip):
+        for a in self.meta_addons:
+            try:
+                if any(c.get('type') == type_ and c.get('id') == cid for c, _, _ in a.catalogs()):
+                    metas = lst(a.get('catalog', type_, cid, {'skip': skip} if skip else None).get('metas'))
+                    return self.annotate([to_item(m) for m in metas if isinstance(m, dict)])
+            except AddonError:
+                continue
+        raise HttpError(404, f'no addon has catalog {type_}/{cid}')
+
+    def new_releases(self, skip):
+        items, seen, errors = [], set(), 0
+        year = time.localtime().tm_year
+        for addon, type_, cid in self.new:
+            try:
+                metas = lst(addon.get('catalog', type_, cid, {'skip': skip} if skip else None).get('metas'))
+            except AddonError:
+                errors += 1
+                continue
+            for m in metas:
+                if isinstance(m, dict) and m.get('id') not in seen:
+                    item = to_item(m)
+                    if not self.new_recent_only or (item['year'] or 0) >= year - 1:
+                        items.append(item)
+                        seen.add(m.get('id'))
+        if errors == len(self.new):
+            raise AddonError('no new_catalog addon answered')
+        # Stable sort: newest year first, the catalogs' own order within a year.
+        return self.annotate(sorted(items, key=lambda i: i['year'] or 0, reverse=True))
+
+    def search(self, q):
+        q = q.strip().casefold()
+        if not q:
+            raise HttpError(400, 'q is required')
+        lib = self.library(None)
+        title = lambda i: (i['title'] or '').casefold()
+        tiers = [lambda i: title(i).startswith(q),
+                 lambda i: any(w.startswith(q) for w in re.split(r'\W+', title(i))),
+                 lambda i: any(str(g).casefold() == q for g in i['genres'])]
+        out, seen = [], set()
+        for tier in tiers:
+            for i in lib:
+                if i['id'] not in seen and tier(i):
+                    out.append(i)
+                    seen.add(i['id'])
+        for a in self.meta_addons:
+            try:
+                for c, names, required in a.catalogs():
+                    if 'search' in names and not required - {'search'}:
+                        for m in lst(a.get('catalog', c.get('type'), c.get('id'), {'search': q}).get('metas')):
+                            if isinstance(m, dict) and m.get('id') not in seen:
+                                out.append(to_item(m))
+                                seen.add(m.get('id'))
+            except AddonError:
+                continue  # library results still come back when an addon is down
+        return self.annotate(out)
+
+    def subtitles(self, type_, vid):
+        out = []
+        for a in self.stream_addons + self.meta_addons:
+            try:
+                if a.supports('subtitles', type_, vid):
+                    out += [s for s in lst(a.get('subtitles', type_, vid).get('subtitles')) if isinstance(s, dict)]
+            except AddonError:
+                continue
+        return out
+
+
+def episode(se):
+    """[] -> (0, 0) for a movie; ['1', '3'] -> (1, 3)."""
+    if not se:
+        return 0, 0
+    if len(se) == 2 and all(x.isdigit() for x in se):
+        return int(se[0]), int(se[1])
+    raise HttpError(404, 'expected /{id}/{season}/{episode}')
+
+
+def skip(qs):
+    if not qs.get('skip', '0').isdigit():
+        raise HttpError(400, 'skip must be a number')
+    return int(qs.get('skip', '0'))
+
+
+def imdb(id_):
+    if not IMDB.fullmatch(id_):
+        raise HttpError(400, 'id must be an IMDb id (tt…)')
+    return id_
+
+
+class Handler(BaseHTTPRequestHandler):
+    hub: Hub
+    protocol_version = 'HTTP/1.1'
+
+    def do_GET(self): self.route('GET')
+    def do_HEAD(self): self.route('HEAD')  # Kodi probes .strm targets with HEAD before playing
+    def do_POST(self): self.route('POST')
+    def do_PUT(self): self.route('PUT')
+    def do_DELETE(self): self.route('DELETE')
+    def do_OPTIONS(self): self.route('OPTIONS')
+
+    def body(self):
+        try:
+            return json.loads(self.raw or b'null')
+        except ValueError:
+            raise HttpError(400, 'body is not JSON') from None
+
+    def route(self, method):
+        t0, u = time.monotonic(), urllib.parse.urlsplit(self.path)
+        headers, err = {}, ''
+        try:
+            # Read the body before routing so an early 4xx can't leave it in the keep-alive stream.
+            self.raw = self.rfile.read(int(self.headers.get('Content-Length') or 0))
+            parts = [urllib.parse.unquote(p) for p in u.path.split('/') if p]
+            qs = {k: v[-1] for k, v in urllib.parse.parse_qs(u.query).items()}
+            status, body, headers = self.dispatch('GET' if method == 'HEAD' else method, parts, qs)
+        except HttpError as e:
+            status, body = e.status, {'reason': e.reason}
+        except AddonError as e:
+            status, body = 503, {'reason': f'addon unreachable: {e}'}
+        except Exception as e:  # a bad addon response must never take the server down
+            tb = traceback.extract_tb(e.__traceback__)[-1]
+            status, body, err = 500, {'reason': type(e).__name__}, f' {type(e).__name__}@{tb.lineno}'
+        data = b'' if body is None and status != 200 else json.dumps(body).encode()
+        self.send_response(status)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        if method == 'OPTIONS':
+            self.send_header('Access-Control-Allow-Methods', 'GET, HEAD, POST, PUT, DELETE, OPTIONS')
+            self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        for k, v in headers.items():
+            self.send_header(k, v)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers()
+        if method != 'HEAD':
+            self.wfile.write(data)
+        # Our own paths carry no secrets; addon URLs are never logged (see fetch).
+        print(f'{self.client_address[0]} {method} {u.path} {status} {(time.monotonic() - t0) * 1000:.0f}ms{err}', flush=True)
+
+    def dispatch(self, method, parts, qs):
+        hub = self.hub
+        ok = lambda body: (200, body, {})
+        match [method, *parts]:
+            case ['OPTIONS', *_]:
+                return 204, None, {}
+            case ['GET', 'health']:
+                return ok(hub.health())
+            case ['GET', 'library']:
+                return ok({'items': hub.library(qs.get('collection'))})
+            case ['DELETE', 'library', id_]:
+                hub.sql('DELETE FROM library WHERE id = ?', (id_,))
+                return ok({'ok': True})
+            case ['POST', 'keep']:
+                return ok(hub.keep(self.body()))
+            case ['GET', 'play', id_, *se]:
+                s, e = episode(se)
+                preset = qs.get('preset', hub.preset)
+                if preset not in PRESETS:
+                    raise HttpError(400, 'preset must be best, balanced or saver')
+                best = hub.pick('series' if se else 'movie', f'{imdb(id_)}:{s}:{e}' if se else imdb(id_), preset)
+                if qs.get('json') == '1':
+                    return ok({k: best[k] for k in ('url', 'headers', 'badges', 'source')})
+                return 302, None, {'Location': best['url']}
+            case ['GET', 'resume', id_, *se]:
+                return ok(hub.get_resume((id_, *episode(se))))
+            case ['PUT', 'resume', id_, *se]:
+                return ok(hub.put_resume((id_, *episode(se)), self.body()))
+            case ['GET', 'browse', 'catalogs']:
+                return ok({'catalogs': hub.catalogs()})
+            case ['GET', 'new']:
+                return ok({'items': hub.new_releases(skip(qs))})
+            case ['GET', 'browse', 'catalog', type_, cid]:
+                return ok({'items': hub.catalog(type_, cid, skip(qs))})
+            case ['GET', 'browse', 'meta', type_, id_]:
+                meta = hub.meta(type_, id_)
+                item = to_item(meta)
+                eps = episodes(meta)
+                hub.annotate([item], {item['id']: eps})
+                return ok({**item, 'videos': [{'s': s, 'e': e, 'title': t} for s, e, t in eps]})
+            case ['GET', 'browse', 'streams' | 'subtitles' as what, type_, id_, *se]:
+                s, e = episode(se)
+                vid = f'{id_}:{s}:{e}' if se else id_
+                if what == 'subtitles':
+                    return ok({'subtitles': hub.subtitles(type_, vid)})
+                preset = qs.get('preset', hub.preset)
+                if preset not in PRESETS:
+                    raise HttpError(400, 'preset must be best, balanced or saver')
+                return ok({'streams': rank(hub.streams(type_, vid), preset)})
+            case ['GET', 'search']:
+                return ok({'items': hub.search(qs.get('q', ''))})
+        raise HttpError(404, 'no such call')
+
+    def log_message(self, *args):
+        pass  # route() prints its own single line per request
+
+
+def make_server(config_path, data_dir):
+    hub = Hub(config_path, data_dir)
+    handler = type('BoundHandler', (Handler,), {'hub': hub})
+    return ThreadingHTTPServer((hub.bind, hub.port), handler)
+
+
+def main():
+    server = make_server(os.environ.get('HUB_CONFIG', '/var/lib/hub/hub.toml'), os.environ.get('HUB_DATA', '/var/lib/hub'))
+    print(f'hub listening on {server.server_address[0]}:{server.server_address[1]}', flush=True)
+    server.serve_forever()
+
+
+if __name__ == '__main__':
+    main()
