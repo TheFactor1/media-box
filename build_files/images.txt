@@ -1,8 +1,0 @@
-docker.io/jellyfin/jellyfin:latest
-docker.io/fallenbagel/jellyseerr:latest
-lscr.io/linuxserver/sonarr:latest
-lscr.io/linuxserver/radarr:latest
-lscr.io/linuxserver/prowlarr:latest
-lscr.io/linuxserver/bazarr:latest
-ghcr.io/sirrobot01/decypharr:latest
-docker.io/nzbdav/nzbdav:alpha

@@ -5,8 +5,7 @@ After=mnt-debrid.service mnt-usenet.service
 
 [Container]
 Image=docker.io/jellyfin/jellyfin:latest
-# Image is embedded in the OS image; never pull at runtime.
-Pull=never
+GlobalArgs=--storage-opt=additionalimagestore=/usr/lib/bootc/storage
 Network=host
 AddDevice=/dev/dri
 Volume=/var/lib/jellyfin/config:/config:Z

@@ -14,17 +14,15 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=tmpfs,dst=/tmp \
     bash /ctx/build_files/build.sh
 
-# Embed the hub's container images so they update and roll back with the OS
-# (Phase 0 spike 7). Podman reads this store via additionalimagestores in
-# system_files/etc/containers/storage.conf.
-# The list lives in build_files/images.txt; every quadlet's Image= must be in it.
-RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
-    --mount=type=tmpfs,dst=/run/containers \
-    while read -r img; do \
-      skopeo copy "docker://$img" \
-        "containers-storage:[overlay@/usr/lib/containers/storage+/run/containers/storage]$img"; \
-    done < /ctx/build_files/images.txt \
-    && rm -rf /usr/lib/containers/storage/overlay/*/work \
-    && rm -f /usr/lib/containers/storage/*.lock /usr/lib/containers/storage/overlay/.has_mount_program
+# Logically bound images (spike 7): bootc pulls every image named by a quadlet
+# linked here into /usr/lib/bootc/storage during `bootc upgrade`, keeps the
+# rollback deployment's copies, and GCs the rest. Copying images into the OS
+# image at build time fails (lchown in the build's user namespace), and
+# Anaconda doesn't pull LBIs at install, so a fresh install pulls once on
+# first boot via Pull=missing; updates are atomic from then on.
+RUN mkdir -p /usr/lib/bootc/bound-images.d \
+    && for f in /usr/share/containers/systemd/*.container; do \
+         ln -s "$f" /usr/lib/bootc/bound-images.d/; \
+       done
 
 RUN bootc container lint

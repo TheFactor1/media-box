@@ -4,7 +4,7 @@ PartOf=hub.target
 
 [Container]
 Image=ghcr.io/sirrobot01/decypharr:latest
-Pull=never
+GlobalArgs=--storage-opt=additionalimagestore=/usr/lib/bootc/storage
 Network=host
 Environment=PUID=1000 PGID=1000 TZ=Etc/UTC
 Volume=/var/lib/decypharr:/app:Z

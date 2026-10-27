@@ -5,7 +5,7 @@ After=mnt-debrid.service mnt-usenet.service
 
 [Container]
 Image=lscr.io/linuxserver/radarr:latest
-Pull=never
+GlobalArgs=--storage-opt=additionalimagestore=/usr/lib/bootc/storage
 Network=host
 Environment=PUID=1000 PGID=1000 TZ=Etc/UTC
 Volume=/var/lib/radarr:/config:Z

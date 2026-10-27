@@ -18,7 +18,8 @@ Companion to [PLAN.md](PLAN.md). Hub mode unless stated. Everything runs on the 
 
 ## Filesystem
 ```
-/usr/lib/containers/storage       embedded container images (read-only, part of the OS image)
+/usr/lib/bootc/storage            bound container images, pulled and GC'd by bootc with each OS update
+/usr/lib/bootc/bound-images.d/    symlinks to the quadlets whose images bootc must keep
 /var/lib/<app>/                   each app's config and database (jellyfin, jellyseerr, sonarr, radarr, prowlarr, bazarr, decypharr, nzbdav)
 /var/lib/media/                   Kodi home ($HOME of user media): .kodi/
 /var/lib/mediabox/                wizard state, pairing code, mode flag, collected API keys (0600 root)

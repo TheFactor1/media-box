@@ -29,7 +29,7 @@ The installer wipes the target disk (see the kickstart in `iso.toml`).
 |---|---|
 | 2 Kodi GBM packaged | `podman build` fails at `dnf5 install kodi-gbm` if not |
 | 3 Boots to Kodi, no desktop | `systemctl status kodi` ; nothing on tty1 but Kodi |
-| 7 Embedded images | `podman images` shows jellyfin with no network; `systemctl status jellyfin`; still there after `bootc upgrade` + `bootc rollback` |
+| 7 Bound images | After the first `bootc upgrade`, `podman --storage-opt=additionalimagestore=/usr/lib/bootc/storage images` lists the stack with no network; `systemctl status jellyfin`; still there after `bootc rollback` |
 
 Everything else in Phase 0 (HDR, passthrough, usenet/debrid, remote) is done
 by hand on this image.
