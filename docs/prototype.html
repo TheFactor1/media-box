@@ -691,7 +691,9 @@ button.sv{cursor:pointer}
 .pf-tab.sel,.pf-tab.on{opacity:1}
 .pf-tab.sel::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:2px;border-radius:2px;background:var(--mblue,var(--accent));box-shadow:0 0 8px var(--mblue,var(--accent))}
 .pf-filt{margin-left:auto;display:inline-flex;align-items:center;gap:6px;padding:4px 0;border:0;background:none;color:var(--fg);opacity:.55;font:400 9.5px "Geist Mono",ui-monospace,monospace;letter-spacing:.18em;cursor:pointer;transition:opacity .2s ease}
-.pf-filt.on{opacity:1}
+.pf-filt.on,.pf-filt.sel{opacity:1}
+.pf-filt{position:relative}
+.pf-filt.sel::after{content:"";position:absolute;left:0;right:0;bottom:-4px;height:2px;border-radius:2px;background:var(--mblue,var(--accent));box-shadow:0 0 8px var(--mblue,var(--accent))}
 .pf-filt svg{width:10px;height:10px}
 .pf-whisper{display:flex;align-items:center;gap:10px}
 .pf-w,.pf-x{padding:2px 0;border:0;background:none;color:var(--muted);font:400 9px "Geist Mono",ui-monospace,monospace;letter-spacing:.16em;cursor:pointer}
@@ -746,8 +748,10 @@ button.sv{cursor:pointer}
 .rf-s.act,.rf-f.act,.rf-r.act{opacity:1}
 .rf-s.on,.rf-f.on,.rf-r.on{opacity:1;background:color-mix(in srgb,var(--fg) 6%,transparent);border-radius:4px}
 .rf-foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding:8px 0 14px}
-.rf-clear{padding:4px 0;border:0;background:none;color:var(--muted);font:400 8.5px "Geist Mono",ui-monospace,monospace;letter-spacing:.22em;cursor:pointer}
-.rf-clear.on{color:var(--fg);text-decoration:underline;text-underline-offset:3px}
+.rf-clear{padding:4px 0;border:0;background:none;color:var(--fg);opacity:.7;font:400 8.5px "Geist Mono",ui-monospace,monospace;letter-spacing:.22em;cursor:pointer}
+.rf-clear.live,.rf-clear.on{opacity:1}
+.rf-clear i{font-style:normal;color:var(--muted)}
+.rf-clear.live.on{text-decoration:underline;text-underline-offset:3px}
 .rf-done{padding:7px 22px;border:0;border-radius:999px;background:var(--fg);color:var(--bg);font:600 12px "Instrument Sans",system-ui,sans-serif;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}
 .rf-done.on{transform:scale(1.05);box-shadow:0 0 0 3px color-mix(in srgb,var(--fg) 25%,transparent)}
 [data-home="programme"] .bd{transition:opacity .9s ease}
@@ -1490,7 +1494,7 @@ function activate(el){
   else if(a==='pginfo'){const t=(progLast&&progLast.dataset.t)||pfList()[0];if(t){titleK=PCOLS[pf.c].k;go('title',t)}}
   else if(a==='pfc'){pf.c=+el.dataset.v;progLast=null;pfApply()}
   else if(a==='pfchip'){const k=el.dataset.k,v=k==='g'?el.dataset.v:+el.dataset.v;if(k==='s')pf.s=pf.s===v?-1:v;else pf[k]=pf[k].includes(v)?pf[k].filter(x=>x!==v):[...pf[k],v];pfApply()}
-  else if(a==='pfclear'){pf={c:pf.c,g:[],l:[],f:[],s:-1};pfApply()}
+  else if(a==='pfclear'){if(pfActive()){pf={c:pf.c,g:[],l:[],f:[],s:-1};pfApply()}}
   else if(a==='pfmore')openOv(`<div class="ov-box pf-ov pf-sheet" role="dialog" aria-label="Refine">${pfChips()}</div>`,'pf-side');
   else if(a==='everything'){stack.push({s:'home',id:titleId,k:titleK,f:el.dataset.id,lay});lay='rows';show('home')}
   else if(a==='pick')stPick(el);
@@ -1502,6 +1506,8 @@ function activate(el){
 }
 
 // ---------- input ----------
+let lpT=null,lpDone=false;
+document.addEventListener('keyup',e=>{if(e.key!=='Enter')return;if(lpT){clearTimeout(lpT);lpT=null;if(cur&&cur.classList.contains('pf-filt'))activate(cur)}lpDone=false});
 document.addEventListener('keydown',e=>{
   if(e.altKey||e.ctrlKey||e.metaKey)return;
   const inBar=e.target.closest&&e.target.closest('.bar');
@@ -1513,7 +1519,9 @@ document.addEventListener('keydown',e=>{
   const dir={ArrowUp:'u',ArrowDown:'d',ArrowLeft:'l',ArrowRight:'r'}[e.key];
   if(dir&&screen==='home'&&lay!=='rows'&&!ovOpen&&altKey(dir)){e.preventDefault();return}
   if(dir){e.preventDefault();move(dir)}
-  else if(e.key==='Enter'){if(inBar)return;e.preventDefault();activate(ovOpen&&!cur?null:cur)}
+  else if(e.key==='Enter'){if(inBar)return;e.preventDefault();
+    if(cur&&cur.classList.contains('pf-filt')&&!ovOpen){if(!e.repeat&&!lpT)lpT=setTimeout(()=>{lpT=null;lpDone=true;if(pfActive()){pf={c:pf.c,g:[],l:[],f:[],s:-1};pfApply();toast('Filters cleared.')}},550);return}
+    activate(ovOpen&&!cur?null:cur)}
   else if(e.key==='Backspace'||e.key==='Escape'){e.preventDefault();back()}
   else if(e.key==='h'||e.key==='H'){const fresh=screen==='home'&&!ovOpen&&lastInput-prevInput>2000;home();if(fresh)boot()}
 });
@@ -1849,13 +1857,14 @@ const ATTN=true; // Status has a debrid problem in this prototype
 const FUNNEL='<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M1 2h10L7.2 6.6V10L4.8 11V6.6Z" fill="currentColor"/></svg>';
 function pfTabs(){
   const on=[...pf.g,...pf.l.map(i=>LEN[i][0]),...pf.f.map(i=>FMT[i][0]),...(pf.s>=0?[SORTS[pf.s][0]]:[])],n=pfList().length;
-  return `<div class="pf-cols">${PCOLS.map((c,i)=>`<button class="f pf-tab${i===pf.c?' sel':''}" data-id="pf-c-${i}" data-act="pfc" data-v="${i}">${c.n}</button>`).join('')}<button class="f pf-filt" data-id="pf-filter" data-act="pfmore">${FUNNEL}FILTER</button></div>`
+  return `<div class="pf-cols">${PCOLS.map((c,i)=>`<button class="f pf-tab${i===pf.c?' sel':''}" data-id="pf-c-${i}" data-act="pfc" data-v="${i}">${c.n}</button>`).join('')}<button class="f pf-filt${pfActive()?' sel':''}" data-id="pf-filter" data-act="pfmore" aria-label="Filter (hold OK to clear)">${FUNNEL}FILTER${pfActive()?' · '+pfActive():''}</button></div>`
     +(on.length?`<div class="pf-whisper"><button class="f pf-w" data-id="pf-w" data-act="pfmore">${esc(on.join(' · ').toUpperCase())} · <b>${n} TITLE${n===1?'':'S'}</b></button><button class="f pf-x" data-id="pf-x" data-act="pfclear" aria-label="Clear filters">×</button></div>`:'');
 }
 const RF_ICON=['<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="4.5" width="16" height="11" rx="3"/><text x="10" y="12.4" text-anchor="middle">4K</text></svg>',
   '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.4"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4"/></svg>',
   '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 12.5q2-4.5 4 0t4 0 4 0 4 0"/><path d="M5 7.5q5-4 10 0" opacity=".6"/></svg>'];
 function pfCount(k,v){const st={...pf,g:[...pf.g],l:[...pf.l],f:[...pf.f]};if(k==='s')st.s=v;else if(!st[k].includes(v))st[k].push(v);return pfList(st).length}
+const pfActive=()=>pf.g.length+pf.l.length+pf.f.length+(pf.s>=0?1:0);
 function pfChips(){
   const any=pf.g.length||pf.l.length||pf.f.length||pf.s>=0,n=pfList().length;
   const genre=GENRES.map(g=>{const on=pf.g.includes(g),c=pfList({...pf,g:[g]}).length; /* titles of this genre in view; genres combine with OR */return `<button class="f rf-row${on?' act':''}${c||on?'':' skip'}" data-id="pf-g-${g}" data-act="pfchip" data-k="g" data-v="${g}"><span>${g}</span><i>${c}</i></button>`}).join('');
@@ -1864,7 +1873,7 @@ function pfChips(){
     <section class="rf-g"><p class="rf-lab">LENGTH</p><div class="rf-seg">${LEN.map((x,i)=>`<button class="f rf-s${pf.l.includes(i)?' act':''}" data-id="pf-l-${i}" data-act="pfchip" data-k="l" data-v="${i}">${x[0]}</button>`).join('')}</div></section>
     <section class="rf-g"><p class="rf-lab">FORMAT</p><div class="rf-fmt">${FMT.map((x,i)=>`<button class="f rf-f${pf.f.includes(i)?' act':''}" data-id="pf-f-${i}" data-act="pfchip" data-k="f" data-v="${i}">${RF_ICON[i]}<span>${x[0]}</span></button>`).join('')}</div></section>
     <section class="rf-g"><p class="rf-lab">SORT</p><div class="rf-sort">${SORTS.map((x,i)=>`<button class="f rf-r${pf.s===i?' act':''}" data-id="pf-s-${i}" data-act="pfchip" data-k="s" data-v="${i}"><b></b>${x[0]}</button>`).join('')}</div></section>
-    <footer class="rf-foot">${any?'<button class="f rf-clear" data-id="pf-clear" data-act="pfclear">CLEAR ALL</button>':'<span></span>'}<button class="f rf-done" data-id="rf-done" data-act="close">Done</button></footer>`;
+    <footer class="rf-foot"><button class="f rf-clear${any?' live':''}" data-id="pf-clear" data-act="pfclear">CLEAR ALL${any?` <i>· ${pfActive()}</i>`:''}</button><button class="f rf-done" data-id="rf-done" data-act="close">Done</button></footer>`;
 }
 const pgItem=(id,start)=>`<button class="f pg-i${start?' start':''}" data-id="pg-${id}" data-t="${id}" data-k="${esc(PCOLS[pf.c].k)}" data-act="open"><span class="pg-n">${esc(T[id].n)}</span><span class="pg-c">${facts(T[id],pf.c===1?1:undefined)}</span></button>`;
 function pgFlip(ids){
