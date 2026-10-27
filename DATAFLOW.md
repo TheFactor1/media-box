@@ -64,7 +64,8 @@ One small service (Python 3.12 stdlib + sqlite3, one container, port 8097) that 
 | `GET /new?skip=N` | **New releases from the user's catalogs**, not recently kept: the catalog named by `new_catalog` in `hub.toml` (default: Cinemeta's movie and series "top" catalogs filtered to the current and previous year, newest first), with `inLibrary` and `resume` filled in. A fresh box has a populated New tab on day one |
 | `POST /keep {id, type}` | Adds the title: metadata from the meta addon, best-stream badges from the stream addons, returns the item. Idempotent |
 | `DELETE /library/{id}` | Removes it |
-| `GET /play/{id}[/{s}/{e}]?preset=best\|balanced\|saver` | 302 to the best stream URL right now; `?json=1` returns `{url, headers, badges, source}` instead (Player uses this) |
+| `GET /play/{id}[/{s}/{e}]?preset=slow\|standard\|fast\|max` | 302 to the best stream URL right now; `?json=1` returns `{url, headers, badges, source}` instead (Player uses this). Overrides: `?max_mbps=`, `?max_res=`, `?cut=`. Streams are **matched** first (year ±1, title tokens with no extras, right episode) and wrong ones dropped; then ranked by the preset (bitrate from size ÷ runtime, caps, cached, cut preference) |
+| `GET /presets` | The effective preset table: `slow` (1080p, ≤ 8 Mbps), `standard` (≤ 20), `fast` (≤ 45), `max` (no cap, cached remux first). "Auto" lives in the front end: it measures its link and sends `?max_mbps=` |
 | `GET /resume/{id}[/{s}/{e}]` · `PUT` `{positionMs, durationMs}` | Shared positions across front ends; Player writes on exit, reads on launch |
 | `GET /browse/catalogs` | The user's catalogs (from the meta/catalog addons' manifests) |
 | `GET /browse/catalog/{type}/{catalogId}?skip=N` | Items, with `inLibrary` and `resume` filled in |

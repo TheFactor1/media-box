@@ -32,7 +32,7 @@ Target: step 1 to step 4 in under 10 minutes for someone who has their account d
    - Debrid: pick TorBox / Real-Debrid / AllDebrid, paste API key, "Test" button.
    - Usenet: provider host, port, SSL, username, password, connections. "Test" button.
    - Indexers: Prowlarr's own add-indexer UI embedded; the wizard adds nothing on its own.
-5. **Quality:** Best (remux, needs fast internet) / Balanced (4K web) / Bandwidth saver (1080p). One sentence each. Default Balanced.
+5. **Your internet:** Auto (the box measures) / Slow / Standard / Fast / Max, each with one sentence and its number ("Standard · up to 20 Mbps"). Default Auto. The box never asks about bitrates or codecs; the cut preference (Theatrical by default) is under Advanced.
 6. **Away from home:** "Watch outside the house?" Enables Tailscale, shows the login link. Default off.
 7. **Updates:** "Install updates overnight at 4 am" default on; "Tell me on the TV when it happens" default on.
 
