@@ -701,16 +701,55 @@ button.sv{cursor:pointer}
 .pf-x.on{text-decoration:none;border-color:var(--fg)}
 .pf-w b.tick{display:inline-block;animation:inD .3s cubic-bezier(.2,.7,.2,1)}
 /* filter panel: glass on the right third, the list stays visible and updates behind it */
-.ov.pf-side{place-items:stretch end;background:linear-gradient(90deg,transparent 50%,color-mix(in srgb,var(--bg) 45%,transparent));backdrop-filter:none;-webkit-backdrop-filter:none}
-.pf-side .pf-ov{width:300px;margin:0;padding:16px 22px 14px;gap:4px;border:0;border-radius:0;background:color-mix(in srgb,var(--bg) 55%,transparent);backdrop-filter:blur(18px) saturate(105%);-webkit-backdrop-filter:blur(18px) saturate(105%);box-shadow:inset 1px 0 0 var(--faint)}
-.pf-side .pf-ov h3{display:flex;align-items:baseline;justify-content:space-between;font-size:20px}
-.pf-ovn{font:400 9px "Geist Mono",ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-.pf-ov .pf-lab{margin:6px 0 1px}
-.pf-ov .pf-chip{padding:3px 8px;font-size:10px}
-.pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
-.pf-line{display:flex;flex-wrap:wrap;gap:5px}
-.pf-grid .pf-chip{justify-content:space-between}
-.pf-hint{margin-top:auto!important;font:400 8.5px "Geist Mono",ui-monospace,monospace!important;letter-spacing:.16em;text-transform:uppercase}
+/* Refine sheet: text-first, one glass layer */
+.ov.pf-side{place-items:stretch end;background:none;backdrop-filter:none;-webkit-backdrop-filter:none;animation:none}
+:root.rf-open .bd.show{opacity:.6}
+.pg-l{transition:transform .36s cubic-bezier(.2,.7,.2,1)}
+:root.rf-open .pg-l{transform:translateX(-24px)}
+.pf-side .pf-sheet{position:relative;width:38%;height:100%;margin:0;padding:18px 26px 0;display:flex;flex-direction:column;gap:0;border:0;border-radius:0;overflow:hidden;
+  background:color-mix(in srgb,var(--bg) 64%,transparent);backdrop-filter:blur(22px) saturate(105%);-webkit-backdrop-filter:blur(22px) saturate(105%);
+  box-shadow:inset 0 1px 0 color-mix(in srgb,var(--fg) 55%,transparent),-30px 0 60px color-mix(in srgb,var(--bg) 50%,transparent);animation:sheetIn .36s cubic-bezier(.2,.7,.2,1)}
+.ov.closing .pf-sheet{animation:sheetOut .3s cubic-bezier(.5,0,.75,0) forwards}
+@keyframes sheetIn{from{transform:translateX(100%)}}
+@keyframes sheetOut{to{transform:translateX(100%)}}
+.pf-sheet>*{animation:rfIn .4s cubic-bezier(.2,.7,.2,1) both}
+.pf-sheet>:nth-child(2){animation-delay:40ms}.pf-sheet>:nth-child(3){animation-delay:80ms}.pf-sheet>:nth-child(4){animation-delay:120ms}.pf-sheet>:nth-child(5){animation-delay:160ms}.pf-sheet>:nth-child(6){animation-delay:200ms}
+.pf-sheet.live>*{animation:none}
+@keyframes rfIn{from{opacity:0;transform:translateY(8px)}}
+.rf-h{padding-bottom:9px;border-bottom:1px solid var(--faint)}
+.pf-side .pf-sheet .rf-t{display:block;margin:0;font-family:var(--f-display);font-weight:var(--title-w);font-size:23px;line-height:1;letter-spacing:var(--title-track);text-transform:var(--title-case);color:var(--fg)}
+.pf-sheet .rf-n{margin:5px 0 0;font:400 11px "Geist Mono",ui-monospace,monospace;letter-spacing:.2em;color:var(--muted)}
+.pf-sheet .rf-n.tick{animation:inD .3s cubic-bezier(.2,.7,.2,1)}
+.rf-g{padding:6px 0 7px;border-bottom:1px solid var(--faint)}
+.pf-sheet .rf-lab{margin:0 0 4px;font:400 7.5px "Geist Mono",ui-monospace,monospace;letter-spacing:.28em;color:var(--muted)}
+.rf-genres{position:relative;display:grid;grid-template-columns:1fr 1fr;column-gap:12px}
+.rf-hl{position:absolute;left:0;top:0;z-index:0;border-radius:4px;background:color-mix(in srgb,var(--fg) 6%,transparent);opacity:0;pointer-events:none;transition:transform .25s cubic-bezier(.2,.7,.2,1),opacity .2s ease}
+.rf-hl.show{opacity:1}
+.rf-row{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:baseline;gap:6px;padding:1px 6px 1px 9px;border:0;background:none;color:var(--fg);opacity:.7;font:500 11.5px/1.3 "Instrument Sans",system-ui,sans-serif;text-align:left;cursor:pointer;transition:opacity .2s ease}
+.rf-row i{font:400 8.5px "Geist Mono",ui-monospace,monospace;font-style:normal;opacity:.6}
+.rf-row.act,.rf-row.on{opacity:1}
+.rf-row.act::before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:3px;border-radius:2px;background:var(--mblue,var(--accent))}
+.rf-row.skip{opacity:.35;cursor:default}
+.rf-seg{display:flex}
+.rf-s{position:relative;flex:1;padding:3px 0;border:0;border-left:1px solid var(--faint);background:none;color:var(--fg);opacity:.7;font:500 11.5px "Instrument Sans",system-ui,sans-serif;cursor:pointer}
+.rf-s:first-child{border-left:0}
+.rf-s.act::after{content:"";position:absolute;left:24%;right:24%;bottom:-3px;height:2px;border-radius:2px;background:var(--mblue,var(--accent))}
+.rf-fmt{display:flex;gap:4px}
+.rf-f{display:inline-flex;align-items:center;gap:6px;padding:3px 9px 3px 5px;border:0;background:none;color:var(--fg);opacity:.7;font:500 11.5px "Instrument Sans",system-ui,sans-serif;cursor:pointer}
+.rf-f svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.3;stroke-linecap:round}
+.rf-f svg text{fill:currentColor;stroke:none;font:600 6px "Geist Mono",monospace}
+.rf-f.act svg{color:var(--mblue,var(--accent));fill:color-mix(in srgb,var(--mblue,var(--accent)) 30%,transparent)}
+.rf-sort{display:flex;flex-direction:column;gap:1px}
+.rf-r{display:flex;align-items:center;gap:9px;padding:1px 6px;border:0;background:none;color:var(--fg);opacity:.7;font:500 11.5px/1.3 "Instrument Sans",system-ui,sans-serif;text-align:left;cursor:pointer}
+.rf-r b{flex:none;width:7px;height:7px;border-radius:50%;box-shadow:inset 0 0 0 1px var(--muted)}
+.rf-r.act b{background:var(--mblue,var(--accent));box-shadow:none}
+.rf-s.act,.rf-f.act,.rf-r.act{opacity:1}
+.rf-s.on,.rf-f.on,.rf-r.on{opacity:1;background:color-mix(in srgb,var(--fg) 6%,transparent);border-radius:4px}
+.rf-foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;padding:8px 0 14px}
+.rf-clear{padding:4px 0;border:0;background:none;color:var(--muted);font:400 8.5px "Geist Mono",ui-monospace,monospace;letter-spacing:.22em;cursor:pointer}
+.rf-clear.on{color:var(--fg);text-decoration:underline;text-underline-offset:3px}
+.rf-done{padding:7px 22px;border:0;border-radius:999px;background:var(--fg);color:var(--bg);font:600 12px "Instrument Sans",system-ui,sans-serif;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease}
+.rf-done.on{transform:scale(1.05);box-shadow:0 0 0 3px color-mix(in srgb,var(--fg) 25%,transparent)}
 [data-home="programme"] .bd{transition:opacity .9s ease}
 /* Tonight */
 .tn{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:14px;padding:0 28px}
@@ -1324,6 +1363,8 @@ function focus(el,noScroll,dir){
   const prev=cur;
   if(cur)cur.classList.remove('on');cur=el||null;if(!cur)return placeBlob();
   cur.classList.add('on');
+  {const hl=cur.classList.contains('rf-row')?cur.parentElement.querySelector('.rf-hl'):null;document.querySelectorAll('.rf-hl.show').forEach(h=>h!==hl&&h.classList.remove('show'));
+   if(hl){const first=!hl.dataset.p;if(first)hl.style.transition='none';hl.style.width=cur.offsetWidth+'px';hl.style.height=cur.offsetHeight+'px';hl.style.transform=`translate(${cur.offsetLeft}px,${cur.offsetTop}px)`;hl.classList.add('show');if(first){void hl.offsetWidth;hl.style.transition='';hl.dataset.p=1}}}
   const rowsEl=$('#rows'),rw0=cur.closest('.row');
   if(cur.closest('#s-home')){rowsEl.classList.toggle('focus-in',!!rw0);rowsEl.querySelectorAll('.row.cur').forEach(r=>r!==rw0&&r.classList.remove('cur'));if(rw0)rw0.classList.add('cur')}
   if(rw0&&!calm()&&document.documentElement.dataset.look==='pulse'&&rw0!==(prev&&prev.closest('.row'))){rw0.classList.remove('wave');void rw0.offsetWidth;rw0.classList.add('wave');setTimeout(()=>rw0.classList.remove('wave'),900)}
@@ -1343,7 +1384,7 @@ const blob=$('#blob');let blobT;
 function placeBlob(dir,settled){
   clearTimeout(blobT);
   if(!['mercury','nocturne','pulse'].includes(document.documentElement.dataset.look))return;
-  if(!cur||!cur.offsetParent||cur.matches('.pf-tab,.pf-filt,.pf-w,.pf-x,.pg-i,.mq-card,.ob-card,.sp,.rl-f,.dk-card,.dk-end,.tf-dial')||(screen==='home'&&lay==='store')){blob.classList.remove('show');return} // these layouts mark focus themselves
+  if(!cur||!cur.offsetParent||cur.matches('.rf-row,.rf-s,.rf-f,.rf-r,.rf-clear,.rf-done,.pf-tab,.pf-filt,.pf-w,.pf-x,.pg-i,.mq-card,.ob-card,.sp,.rl-f,.dk-card,.dk-end,.tf-dial')||(screen==='home'&&lay==='store')){blob.classList.remove('show');return} // these layouts mark focus themselves
   const t=cur.querySelector('.art')||cur,r=t.getBoundingClientRect(),sr=stage.getBoundingClientRect(),k=sr.width/800;
   const card=cur.classList.contains('card'),g=card?1.03:1,pad=card?3:2;
   const w=t.offsetWidth*g+pad*2,h=t.offsetHeight*g+pad*2;
@@ -1368,7 +1409,7 @@ function visibleInTrack(el){
 }
 function move(d){
   const scope=ovOpen?$('#ov'):scr();
-  const all=[...scope.querySelectorAll('.f')].filter(e=>!e.hidden&&e.offsetParent);
+  const all=[...scope.querySelectorAll('.f')].filter(e=>!e.hidden&&e.offsetParent&&!e.classList.contains('skip'));
   if(!cur||!all.includes(cur))return focus(all[0]);
   const a=cur.getBoundingClientRect(),acx=(a.left+a.right)/2,acy=(a.top+a.bottom)/2;
   const cand=all.filter(e=>e!==cur).map(e=>{const r=e.getBoundingClientRect();return{e,r,cx:(r.left+r.right)/2,cy:(r.top+r.bottom)/2}});
@@ -1406,11 +1447,14 @@ function zoom(el,reverse){
 }
 function wake(){const o=$('#ov');o.classList.remove('film');clearTimeout(npT);npT=setTimeout(()=>o.classList.add('film'),2500)}
 function openOv(html,cls=''){
-  const o=$('#ov');ovPrev=cur&&cur.dataset.id;o.className='ov '+cls;o.innerHTML=html;o.hidden=false;ovOpen=true;
-  focus(o.querySelector('.f'));
+  const o=$('#ov');clearTimeout(o._t);ovPrev=cur&&cur.dataset.id;o.className='ov '+cls;o.innerHTML=html;o.hidden=false;ovOpen=true;
+  document.documentElement.classList.toggle('rf-open',cls==='pf-side');
+  focus(o.querySelector('.f:not(.skip)'));
 }
 function closeOv(){
-  clearTimeout(npT);const o=$('#ov');o.hidden=true;o.innerHTML='';ovOpen=false;
+  clearTimeout(npT);const o=$('#ov');ovOpen=false;document.documentElement.classList.remove('rf-open');
+  const fin=()=>{o.hidden=true;o.innerHTML='';o.classList.remove('closing')};
+  if(o.classList.contains('pf-side')&&!calm()){o.classList.add('closing');o._t=setTimeout(fin,300)}else fin();
   focus(byId(ovPrev,scr()),true);
 }
 function play(id,badges){
@@ -1447,7 +1491,7 @@ function activate(el){
   else if(a==='pfc'){pf.c=+el.dataset.v;progLast=null;pfApply()}
   else if(a==='pfchip'){const k=el.dataset.k,v=k==='g'?el.dataset.v:+el.dataset.v;if(k==='s')pf.s=pf.s===v?-1:v;else pf[k]=pf[k].includes(v)?pf[k].filter(x=>x!==v):[...pf[k],v];pfApply()}
   else if(a==='pfclear'){pf={c:pf.c,g:[],l:[],f:[],s:-1};pfApply()}
-  else if(a==='pfmore')openOv(`<div class="ov-box pf-ov">${pfChips()}</div>`,'pf-side');
+  else if(a==='pfmore')openOv(`<div class="ov-box pf-ov pf-sheet" role="dialog" aria-label="Refine">${pfChips()}</div>`,'pf-side');
   else if(a==='everything'){stack.push({s:'home',id:titleId,k:titleK,f:el.dataset.id,lay});lay='rows';show('home')}
   else if(a==='pick')stPick(el);
   else if(a==='holdok'){if(el.classList.contains('flip'))el.classList.remove('flip');else play(el.dataset.t)}
@@ -1801,12 +1845,6 @@ function pfList(st=pf){
   let ids=PCOLS[st.c].ids.filter(id=>{const t=T[id];return(!st.g.length||st.g.includes(genreOf(t)))&&(!st.l.length||st.l.some(i=>LEN[i][1](rt(id))))&&st.f.every(i=>FMT[i][1](t))});
   return st.s>=0?[...ids].sort(SORTS[st.s][1]):ids;
 }
-function pfChip(k,v,label){
-  const on=k==='s'?pf.s===v:pf[k].includes(v),st={...pf,g:[...pf.g],l:[...pf.l],f:[...pf.f]};
-  if(k==='s')st.s=v;else if(!on)st[k].push(v);
-  const n=pfList(st).length;
-  return `<button class="f pf-chip${on?' act':''}${n?'':' zero'}" data-id="pf-${k}-${v}" data-act="pfchip" data-k="${k}" data-v="${v}">${label}<i>${n}</i></button>`;
-}
 const ATTN=true; // Status has a debrid problem in this prototype
 const FUNNEL='<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M1 2h10L7.2 6.6V10L4.8 11V6.6Z" fill="currentColor"/></svg>';
 function pfTabs(){
@@ -1814,11 +1852,19 @@ function pfTabs(){
   return `<div class="pf-cols">${PCOLS.map((c,i)=>`<button class="f pf-tab${i===pf.c?' sel':''}" data-id="pf-c-${i}" data-act="pfc" data-v="${i}">${c.n}</button>`).join('')}<button class="f pf-filt" data-id="pf-filter" data-act="pfmore">${FUNNEL}FILTER</button></div>`
     +(on.length?`<div class="pf-whisper"><button class="f pf-w" data-id="pf-w" data-act="pfmore">${esc(on.join(' · ').toUpperCase())} · <b>${n} TITLE${n===1?'':'S'}</b></button><button class="f pf-x" data-id="pf-x" data-act="pfclear" aria-label="Clear filters">×</button></div>`:'');
 }
+const RF_ICON=['<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="4.5" width="16" height="11" rx="3"/><text x="10" y="12.4" text-anchor="middle">4K</text></svg>',
+  '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.4"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4"/></svg>',
+  '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 12.5q2-4.5 4 0t4 0 4 0 4 0"/><path d="M5 7.5q5-4 10 0" opacity=".6"/></svg>'];
+function pfCount(k,v){const st={...pf,g:[...pf.g],l:[...pf.l],f:[...pf.f]};if(k==='s')st.s=v;else if(!st[k].includes(v))st[k].push(v);return pfList(st).length}
 function pfChips(){
   const any=pf.g.length||pf.l.length||pf.f.length||pf.s>=0,n=pfList().length;
-  return `<h3>Filter <span class="pf-ovn">${n} title${n===1?'':'s'}</span></h3><p class="pf-lab">GENRE</p><div class="pf-grid">${GENRES.map(g=>pfChip('g',g,g)).join('')}</div>
-    <p class="pf-lab">LENGTH</p><div class="pf-line">${LEN.map((x,i)=>pfChip('l',i,x[0])).join('')}</div><p class="pf-lab">FORMAT</p><div class="pf-line">${FMT.map((x,i)=>pfChip('f',i,x[0])).join('')}</div>
-    <p class="pf-lab">SORT</p><div class="pf-line">${SORTS.map((x,i)=>pfChip('s',i,x[0])).join('')}</div>${any?'<div class="pf-line"><button class="f pf-chip pf-clear" data-id="pf-clear" data-act="pfclear">Clear all ×</button></div>':''}<p class="pf-hint">OK toggles · Back closes</p>`;
+  const genre=GENRES.map(g=>{const on=pf.g.includes(g),c=pfList({...pf,g:[g]}).length; /* titles of this genre in view; genres combine with OR */return `<button class="f rf-row${on?' act':''}${c||on?'':' skip'}" data-id="pf-g-${g}" data-act="pfchip" data-k="g" data-v="${g}"><span>${g}</span><i>${c}</i></button>`}).join('');
+  return `<header class="rf-h"><span class="rf-t">Refine</span><p class="rf-n">${n} TITLE${n===1?'':'S'}</p></header>
+    <section class="rf-g"><p class="rf-lab">GENRE</p><div class="rf-genres"><span class="rf-hl"></span>${genre}</div></section>
+    <section class="rf-g"><p class="rf-lab">LENGTH</p><div class="rf-seg">${LEN.map((x,i)=>`<button class="f rf-s${pf.l.includes(i)?' act':''}" data-id="pf-l-${i}" data-act="pfchip" data-k="l" data-v="${i}">${x[0]}</button>`).join('')}</div></section>
+    <section class="rf-g"><p class="rf-lab">FORMAT</p><div class="rf-fmt">${FMT.map((x,i)=>`<button class="f rf-f${pf.f.includes(i)?' act':''}" data-id="pf-f-${i}" data-act="pfchip" data-k="f" data-v="${i}">${RF_ICON[i]}<span>${x[0]}</span></button>`).join('')}</div></section>
+    <section class="rf-g"><p class="rf-lab">SORT</p><div class="rf-sort">${SORTS.map((x,i)=>`<button class="f rf-r${pf.s===i?' act':''}" data-id="pf-s-${i}" data-act="pfchip" data-k="s" data-v="${i}"><b></b>${x[0]}</button>`).join('')}</div></section>
+    <footer class="rf-foot">${any?'<button class="f rf-clear" data-id="pf-clear" data-act="pfclear">CLEAR ALL</button>':'<span></span>'}<button class="f rf-done" data-id="rf-done" data-act="close">Done</button></footer>`;
 }
 const pgItem=(id,start)=>`<button class="f pg-i${start?' start':''}" data-id="pg-${id}" data-t="${id}" data-k="${esc(PCOLS[pf.c].k)}" data-act="open"><span class="pg-n">${esc(T[id].n)}</span><span class="pg-c">${facts(T[id],pf.c===1?1:undefined)}</span></button>`;
 function pgFlip(ids){
@@ -1840,11 +1886,11 @@ function pfApply(){
   const S=$('#s-alt'),fid=cur&&cur.dataset.id,inOv=ovOpen&&$('#ov .pf-ov'),ids=pfList();
   const bar=S.querySelector('.pf-bar');
   if(bar)bar.innerHTML=pfTabs();
-  if(inOv)$('#ov .pf-ov').innerHTML=pfChips();
+  if(inOv){const sh=$('#ov .pf-sheet');sh.classList.add('live');sh.innerHTML=pfChips();sh.querySelector('.rf-n').classList.add('tick')}
   pgFlip(ids);
   S.querySelectorAll('.pf-w b').forEach(n=>n.classList.add('tick')); // the count in the whisper line ticks when it changes
   setBd(ids[0]||null);
-  const sc=inOv?$('#ov'):S;focus(byId(fid,sc)||(inOv?sc.querySelector('.pf-chip'):pgBack()));
+  const sc=inOv?$('#ov'):S;focus(byId(fid,sc)||(inOv?sc.querySelector('.rf-done'):pgBack()));
 }
 const pgBack=()=>{const S=$('#s-alt');return progLast&&progLast.isConnected?progLast:S.querySelector('.pg-list .pg-i:not(.pf-leave)')||S.querySelector('.pf-filt')};
 
