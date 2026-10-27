@@ -871,6 +871,30 @@ button.sv{cursor:pointer}
 @keyframes hum{50%{opacity:.7}}
 .seg select:disabled{opacity:.4;cursor:not-allowed}
 
+/* ---------- Programme filter bar ---------- */
+.pf-bar{flex:none;padding:12px 0 0;display:flex;flex-direction:column;gap:4px}
+.pf-row{position:relative;display:flex;align-items:center;gap:6px;overflow:hidden;padding:5px 28px 7px;white-space:nowrap}
+.pg-l .pf-row{-webkit-mask:linear-gradient(90deg,#000 88%,transparent);mask:linear-gradient(90deg,#000 88%,transparent)} /* fade hints there is more to the right */
+.pf-pill{position:relative;flex:none;display:inline-flex;align-items:baseline;gap:6px;padding:6px 12px;border:1px solid var(--faint);border-radius:999px;background:none;color:var(--muted);font-family:var(--f-display);font-weight:var(--title-w);font-size:13px;letter-spacing:var(--title-track);cursor:pointer;transition:color .2s ease,border-color .2s ease}
+.pf-pill i,.pf-chip i{font-style:normal;font-family:var(--f-mono,var(--f-body));font-size:8px;letter-spacing:.1em;opacity:.75}
+.pf-pill.sel{color:var(--fg);border-color:var(--muted)}
+.pf-pill.sel::after{content:"";position:absolute;left:14px;right:14px;bottom:-5px;height:2px;border-radius:2px;background:var(--mblue,var(--accent));box-shadow:0 0 8px var(--mblue,var(--accent))}
+.pf-pill.on,.pf-chip.on,.pf-count.on{color:var(--fg)}
+.pf-lab{flex:none;margin-left:8px;font-family:var(--f-mono,var(--f-body));font-size:7.5px;letter-spacing:.2em;color:var(--muted);opacity:.75}
+.pf-chip,.pf-count{flex:none;display:inline-flex;align-items:baseline;gap:5px;padding:4px 9px;border:1px solid var(--faint);border-radius:999px;background:none;color:var(--muted);font-size:10.5px;cursor:pointer;transition:color .2s ease,background-color .2s ease}
+.pf-count{font-family:var(--f-mono,var(--f-body));font-size:8.5px;letter-spacing:.14em;color:var(--fg)}
+.pf-chip.act{background:color-mix(in srgb,var(--fg) 14%,transparent);color:var(--fg);border-color:var(--muted)}
+.pf-chip.act::before{content:"\2713";font-size:9px}
+.pf-chip.zero{opacity:.35}
+.pf-clear{border-style:dashed}
+.pf-count.tick{animation:inD .3s cubic-bezier(.2,.7,.2,1)}
+.pg-i.pf-enter{animation:inL .35s cubic-bezier(.2,.7,.2,1) both}
+.pg-i.pf-leave{animation:pfOut .2s ease forwards;pointer-events:none}
+@keyframes pfOut{to{opacity:0}}
+.pf-empty{margin:18px 0;color:var(--muted);font-size:12px}
+.pf-ov{width:540px}
+.pf-ov .pf-row{flex-wrap:wrap;overflow:visible;white-space:normal;padding:4px 0}
+
 /* ---------- Motion (all looks; Calm turns it into short fades) ---------- */
 @keyframes up{from{opacity:0;transform:translateY(10px)}}
 @keyframes rise{from{opacity:0;transform:translateY(24px)}}
@@ -1305,7 +1329,7 @@ function placeBlob(dir,settled){
   if(!settled)blobT=setTimeout(()=>placeBlob(null,true),850); // catch scrolls and entrance animations that move the target
 }
 function reveal(el){
-  const tr=el.parentElement.classList.contains('track')?el.parentElement:null;
+  const tr=el.parentElement.matches('.track,.pf-row')?el.parentElement:null;
   if(tr){const pad=28,l=el.offsetLeft,r=l+el.offsetWidth;
     if(l-pad<tr.scrollLeft)tr.scrollLeft=l-pad;else if(r+pad>tr.scrollLeft+tr.clientWidth)tr.scrollLeft=r+pad-tr.clientWidth;}
   const rows=$('#rows');
@@ -1394,8 +1418,12 @@ function activate(el){
   else if(a==='fix')openOv(`<div class="ov-box"><h3>${esc(el.dataset.h)}</h3><p>${esc(el.dataset.p)}</p>${qr(el.dataset.h.length*7)}<button class="f btn pri" data-id="ov-done" data-act="close">Done</button></div>`);
   else if(a==='close')closeOv();
   else if(a==='tplay')play(id);
-  else if(a==='pgplay')play((progLast||el).dataset.t||COLS[alt.col].ids[0]);
-  else if(a==='pginfo'){const t=(progLast&&progLast.dataset.t)||COLS[alt.col].ids[0];titleK=COLS[alt.col].k;go('title',t)}
+  else if(a==='pgplay'){const t=(progLast&&progLast.dataset.t)||pfList()[0];if(t)play(t)}
+  else if(a==='pginfo'){const t=(progLast&&progLast.dataset.t)||pfList()[0];if(t){titleK=PCOLS[pf.c].k;go('title',t)}}
+  else if(a==='pfc'){pf.c=+el.dataset.v;progLast=null;pfApply()}
+  else if(a==='pfchip'){const k=el.dataset.k,v=k==='g'?el.dataset.v:+el.dataset.v;if(k==='s')pf.s=pf.s===v?-1:v;else pf[k]=pf[k].includes(v)?pf[k].filter(x=>x!==v):[...pf[k],v];pfApply()}
+  else if(a==='pfclear'){pf={c:pf.c,g:[],l:[],f:[],s:-1};pfApply()}
+  else if(a==='pfmore')openOv(`<div class="ov-box pf-ov"><h3>Filter</h3><div class="pf-body">${pfBars()}</div><p>OK toggles · Back closes</p></div>`);
   else if(a==='everything'){stack.push({s:'home',id:titleId,k:titleK,f:el.dataset.id,lay});lay='rows';show('home')}
   else if(a==='pick')stPick(el);
   else if(a==='holdok'){if(el.classList.contains('flip'))el.classList.remove('flip');else play(el.dataset.t)}
@@ -1503,9 +1531,8 @@ function renderAlt(dir){
     A.innerHTML=tabs+`<div class="wl-grid vscroll">${COLS.map((x,ci)=>x.ids.map((id,i)=>`<button class="f card${ci===alt.col&&!i?' start':''}" data-id="wl-${ci}-${id}" data-c="${ci}"${i?'':' style="grid-column-start:1"'} data-t="${id}" data-k="${esc(x.k)}" data-act="tplay" aria-label="${esc(T[id].n)}">${art(T[id])}</button>`).join('')).join('')}</div><aside class="wl-panel glass" aria-live="polite"></aside>`;
     A.querySelector('.wl-grid').scrollTop=A.querySelector('.start').offsetTop-14;
   }else if(lay==='programme'){
-    progLast=null;
-    // the narrow column takes one collection switcher instead of five tabs
-    A.innerHTML=`<div class="pg-l"><div class="tabs"><button class="f tab sel" data-id="tab-${alt.col}" data-i="${alt.col}" data-act="tab">‹ ${c.n} ›</button></div><div class="pg-list vscroll">${ids.map((id,i)=>`<button class="f pg-i${i?'':' start'}" data-id="pg-${id}" data-t="${id}" data-k="${esc(c.k)}" data-act="open"><span class="pg-n">${esc(T[id].n)}</span><span class="pg-c">${facts(T[id],alt.col)}</span></button>`).join('')}</div></div>
+    progLast=null;const ids=pfList();if(ids[0])setBd(ids[0]);
+    A.innerHTML=`<div class="pg-l"><div class="pf-bar">${pfBars()}</div><div class="pg-list vscroll">${ids.map((id,i)=>pgItem(id,!i)).join('')||'<p class="pf-empty">Nothing matches. Clear a chip.</p>'}</div></div>
       <div class="pg-btns"><button class="f btn pri" data-id="pg-play" data-act="pgplay">Play</button><button class="f btn" data-id="pg-info" data-act="pginfo">Details</button></div>`;
   }else if(lay==='tonight'){
     setBd(null);
@@ -1595,7 +1622,7 @@ function altFocus(){
     S.querySelector('.rl-film').style.transform=`translateY(${225-cur.offsetTop-cur.offsetHeight/2}px)`;
     k.querySelector('.credits').innerHTML=lchips(t,sub(t.id,alt.col));k.querySelector('.ttl').textContent=t.n;k.querySelector('.syn').textContent=t.s;
   }
-  if(lay==='programme'&&cur.classList.contains('pg-i')){progLast=cur;setBd(cur.dataset.t)}
+  if(lay==='programme'){if(cur.classList.contains('pg-i')){progLast=cur;setBd(cur.dataset.t)}else if(cur.closest('.pf-ref'))pfRef=cur.dataset.id;else if(cur.closest('.pf-cols'))pfCol=cur.dataset.id}
   if(lay==='wall'){
     if(cur.dataset.c){alt.col=+cur.dataset.c;$('#s-alt').querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('sel',i===alt.col))}
     clearTimeout(dwellT);const p=$('.wl-panel'),g=$('.wl-grid');if(!p)return;
@@ -1647,7 +1674,14 @@ function altKey(d){
     renderAlt(d);focus(byId('mq',S));return true;
   }
   if(lay==='programme'){
-    if(d==='l'&&cur.closest('.pg-btns')){focus(progLast||S.querySelector('.pg-i'));return true}
+    const ref=cur.closest('.pf-ref'),col=cur.closest('.pf-cols');
+    if(ref||col){
+      if(d==='l'||d==='r'){const L=[...cur.parentElement.querySelectorAll('.f')],nx=L[L.indexOf(cur)+(d==='r'?1:-1)];if(nx)focus(nx);return true}
+      if(d==='u'){if(ref)focus(byId(pfCol,S)||S.querySelector('.pf-pill.sel'));return true}
+      focus(col?byId(pfRef,S)||S.querySelector('.pf-count'):pgBack());return true;
+    }
+    if(d==='u'&&cur.classList.contains('pg-i')&&cur===S.querySelector('.pg-list .pg-i:not(.pf-leave)')){focus(byId(pfRef,S)||S.querySelector('.pf-count'));return true}
+    if(d==='l'&&cur.closest('.pg-btns')){focus(pgBack());return true}
     if(d==='r'&&cur.classList.contains('pg-i')){focus(byId('pg-play',S));return true}
   }
   if(lay==='pages'&&(d==='l'||d==='r')){
@@ -1659,7 +1693,7 @@ function altKey(d){
 }
 function altBack(){
   if(lay==='store'){if(held)return stPut();const S=$('#s-alt');return focus(byId(`cs-${alt.b||0}-${alt.s||0}-0`,S)||S.querySelector('.cs'))}
-  if(lay==='programme'&&cur&&cur.closest('.pg-btns'))return focus(progLast||$('#s-alt .pg-i'));
+  if(lay==='programme'&&cur&&cur.closest('.pg-btns,.pf-bar'))return focus(pgBack());
   alt.idx=0;renderAlt();focus($('#s-alt .start'));
 }
 function setLayout(v){
@@ -1724,6 +1758,63 @@ function stKey(d){
   }else{s=Math.max(0,Math.min(rows(b).length-1,s+(d==='d'?1:-1)));i=Math.min(i,count(b,s)-1)}
   focus(byId(`cs-${b}-${s}-${i}`,S));return true;
 }
+
+// ---------- Programme filters: collections plus refine chips over one richer data model ----------
+const genreOf=t=>t.g.replace('Series · ','');
+const isShow=t=>/^Series/.test(t.g);
+const rt=id=>{const r=T[id].r,h=/(\d+) h/.exec(r),m=/(\d+) min/.exec(r);return /season/.test(r)?48:(h?h[1]*60:0)+(m?+m[1]:0)}; // full runtime; a series counts one episode
+const LEN=[['< 1 H',m=>m<60],['1–2 H',m=>m>=60&&m<=120],['2 H +',m=>m>120]];
+const FMT=[['4K',t=>t.b.includes('4K')],['HDR',t=>t.b.some(x=>/HDR|HLG/.test(x))],['Atmos',t=>t.b.some(x=>/Atmos/.test(x))]];
+const SORTS=[['Newest',(a,b)=>T[b].y-T[a].y],['A–Z',(a,b)=>T[a].n.localeCompare(T[b].n)],['Shortest',(a,b)=>rt(a)-rt(b)]];
+const ALLIDS=[...new Set([...CONT.map(c=>c[0]),...NEXT.map(c=>c[0]),...RECENT,...MOVIES,...POPULAR])];
+const PCOLS=[{n:'Continue',k:'Continue watching',ids:CONT.map(c=>c[0])},{n:'Next Up',k:'Next up',ids:NEXT.map(c=>c[0])},{n:'New',k:'Recently added',ids:RECENT},
+  {n:'Movies',k:'Movies',ids:MOVIES},{n:'Shows',k:'Shows',ids:ALLIDS.filter(id=>isShow(T[id]))},{n:'Browse',k:'Browse · Popular',ids:POPULAR}];
+const GENRES=[...new Set(ALLIDS.map(id=>genreOf(T[id])))].sort();
+let pf={c:0,g:[],l:[],f:[],s:-1},pfRef=null,pfCol=null;
+try{const v=JSON.parse(localStorage.getItem('mb-pf')||'null');if(v&&PCOLS[v.c])pf={c:v.c,g:v.g||[],l:v.l||[],f:v.f||[],s:v.s??-1}}catch(_){}
+function pfList(st=pf){
+  // OR within genre and length, AND within format
+  let ids=PCOLS[st.c].ids.filter(id=>{const t=T[id];return(!st.g.length||st.g.includes(genreOf(t)))&&(!st.l.length||st.l.some(i=>LEN[i][1](rt(id))))&&st.f.every(i=>FMT[i][1](t))});
+  return st.s>=0?[...ids].sort(SORTS[st.s][1]):ids;
+}
+function pfChip(k,v,label){
+  const on=k==='s'?pf.s===v:pf[k].includes(v),st={...pf,g:[...pf.g],l:[...pf.l],f:[...pf.f]};
+  if(k==='s')st.s=v;else if(!on)st[k].push(v);
+  const n=pfList(st).length;
+  return `<button class="f pf-chip${on?' act':''}${n?'':' zero'}" data-id="pf-${k}-${v}" data-act="pfchip" data-k="${k}" data-v="${v}">${label}<i>${n}</i></button>`;
+}
+function pfBars(){
+  const any=pf.g.length||pf.l.length||pf.f.length||pf.s>=0;
+  return `<div class="pf-row pf-cols">${PCOLS.map((c,i)=>`<button class="f pf-pill${i===pf.c?' sel':''}" data-id="pf-c-${i}" data-act="pfc" data-v="${i}">${c.n}<i>${pfList({...pf,c:i}).length}</i></button>`).join('')}</div>
+    <div class="pf-row pf-ref"><button class="f pf-count" data-id="pf-count" data-act="pfmore">${pfList().length} TITLE${pfList().length===1?'':'S'} ⋯</button><span class="pf-lab">GENRE</span>${GENRES.map(g=>pfChip('g',g,g)).join('')}<span class="pf-lab">LENGTH</span>${LEN.map((x,i)=>pfChip('l',i,x[0])).join('')}<span class="pf-lab">FORMAT</span>${FMT.map((x,i)=>pfChip('f',i,x[0])).join('')}<span class="pf-lab">SORT</span>${SORTS.map((x,i)=>pfChip('s',i,x[0])).join('')}${any?'<button class="f pf-chip pf-clear" data-id="pf-clear" data-act="pfclear">Clear ×</button>':''}</div>`;
+}
+const pgItem=(id,start)=>`<button class="f pg-i${start?' start':''}" data-id="pg-${id}" data-t="${id}" data-k="${esc(PCOLS[pf.c].k)}" data-act="open"><span class="pg-n">${esc(T[id].n)}</span><span class="pg-c">${facts(T[id],pf.c===1?1:undefined)}</span></button>`;
+function pgFlip(ids){
+  const L=$('#s-alt .pg-list');if(!L)return;
+  const anim=!calm(),old=new Map([...L.querySelectorAll('.pg-i:not(.pf-leave)')].map(el=>[el.dataset.t,el])),top=new Map();
+  old.forEach((el,id)=>top.set(id,el.offsetTop));
+  L.querySelector('.pf-empty')?.remove();
+  old.forEach((el,id)=>{if(ids.includes(id))return;if(el===progLast)progLast=null;
+    if(anim){el.style.cssText=`position:absolute;left:28px;right:28px;top:${top.get(id)}px`;el.classList.add('pf-leave');setTimeout(()=>el.remove(),220)}else el.remove()});
+  let k=0;
+  ids.forEach(id=>{let el=old.get(id);if(!el){const d=document.createElement('div');d.innerHTML=pgItem(id);el=d.firstChild;if(anim){el.classList.add('pf-enter');el.style.animationDelay=(k++*20)+'ms'}}L.appendChild(el)});
+  if(!ids.length)L.insertAdjacentHTML('beforeend','<p class="pf-empty">Nothing matches. Clear a chip.</p>');
+  // FLIP: items that stayed slide from where they were
+  if(anim)old.forEach((el,id)=>{if(!ids.includes(id))return;const dy=top.get(id)-el.offsetTop;if(!dy)return;
+    el.style.transition='none';el.style.transform=`translateY(${dy}px)`;void el.offsetWidth;el.style.transition='transform .28s cubic-bezier(.2,.7,.2,1)';el.style.transform=''});
+}
+function pfApply(){
+  try{localStorage.setItem('mb-pf',JSON.stringify(pf))}catch(_){}
+  const S=$('#s-alt'),fid=cur&&cur.dataset.id,inOv=ovOpen&&$('#ov .pf-ov'),ids=pfList();
+  const bar=S.querySelector('.pf-bar');
+  if(bar){const sl=[...bar.querySelectorAll('.pf-row')].map(r=>r.scrollLeft);bar.innerHTML=pfBars();bar.querySelectorAll('.pf-row').forEach((r,i)=>r.scrollLeft=sl[i])}
+  if(inOv)$('#ov .pf-body').innerHTML=pfBars();
+  pgFlip(ids);
+  S.querySelectorAll('.pf-count').forEach(n=>n.classList.add('tick')); // the count sits at the head of the list and ticks when it changes
+  setBd(ids[0]||null);
+  const sc=inOv?$('#ov'):S;focus(byId(fid,sc)||sc.querySelector('.pf-count'));
+}
+const pgBack=()=>{const S=$('#s-alt');return progLast&&progLast.isConnected?progLast:S.querySelector('.pg-list .pg-i:not(.pf-leave)')||S.querySelector('.pf-count')};
 
 // scale the 800x450 stage to the frame
 const tv=$('#tv');
