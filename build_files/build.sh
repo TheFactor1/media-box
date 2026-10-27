@@ -14,9 +14,6 @@ dnf5 install -y kodi libcec rclone fuse3 skopeo podman \
   intel-media-driver libva-intel-media-driver mesa-dri-drivers mesa-va-drivers-freeworld \
   plymouth plymouth-system-theme alsa-utils
 
-# Player runs as an unprivileged user with a logind session on tty1.
-useradd -u 1000 -M -d /var/lib/media -s /usr/sbin/nologin -G audio,video,render,input media
-
 systemctl set-default multi-user.target
 systemctl disable getty@tty1.service
 systemctl enable kodi.service podman.socket
