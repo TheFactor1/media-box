@@ -94,6 +94,17 @@ The idea that holds it together: debrid and usenet never stream to Kodi directly
 ### Decided 2026-10-27: Kodi is the engine, not Nuvio or Stremio
 Nuvio's official desktop has no Linux build; the NuvioLinux fork is a v0.1 alpha rendering mpv through a GL window. Stremio's Linux shell needs X11/Wayland. In both cases the player sits inside a window on a compositor, and no Linux compositor gives a windowed player HDR output or reliable TrueHD passthrough. Only a player that owns the display (Kodi on GBM) reaches the quality bar. What we want from Nuvio is its layout (→ skin) and its browse-anything model (→ Stremio-protocol addon), both of which fit inside Kodi.
 
+### Existing home server (EliteMini) services, sorted (from `docker ps`, 2026-10-27)
+| Bucket | Services | Why |
+|---|---|---|
+| **Box talks to it, stays on the EliteMini** | aiostreams, aiometadata (+redis), comet (+postgres), stremthru, mdblist-bridge | This *is* the Browse-anything backend: Stremio-protocol addons with TorBox + usenet and the health-check routing. The box's Browse row points at the AIOStreams manifest. Ship them as an optional "self-hosted browse" hub module later, for users without a server. |
+| **Already in the box's hub stack** | prowlarr, sabnzbd, flaresolverr | Prowlarr is there; add sabnzbd (the usenet download fallback) and flaresolverr (indexers behind Cloudflare) as quadlets. |
+| **Candidate hub module, later** | audiobookshelf | Audiobooks and podcasts on the TV ("Listen" row); Jellyfin does this badly. |
+| **Stays on the server, not a TV-box concern** | cwa, shelfmark (+ai/telegram/pairing relays, update, annas-archive-api), audiobooks-green-proxy, audiobooks-sync-guard, storyteller, ollama, cloudflared, filebrowser | Books, LLM, tunnel, file UI. The box reaches them over the LAN or tunnel if it ever needs to. |
+| **Replaced by the status screen / not for an appliance** | portainer, dozzle, beszel (+agent), uptime-kuma, scrutiny, watchtower-heartbeat | Ops tooling. beszel-agent and scrutiny's SMART data could feed the status screen later; the rest need docker.sock and have no place on a TV box. |
+
+Remote access: the server uses cloudflared (`*.mattshosted.com`); the box plan says Tailscale. Pick one per household in the wizard, not both.
+
 ### Upstream facts that shaped this (checked 2026-10-27)
 - **Real-Debrid** removed a large amount of cached content and added filename filtering in June 2026; many users moved to **TorBox**. That's why the debrid layer is Decypharr (multi-provider), not Zurg (RD-only). The wizard should present TorBox and RD as equals.
 - **NzbDAV** is still tagged alpha (image last updated 2026-05-27). **AltMount** is at v0.3.x, with FUSE read-ahead work and Stremio integration. Neither is "done," so usenet streaming has a download fallback.
