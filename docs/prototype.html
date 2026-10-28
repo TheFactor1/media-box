@@ -853,26 +853,57 @@ button.sv{cursor:pointer}
 .pg-clk{display:none}
 [data-look="space"] .sky b:is(:nth-of-type(1),:nth-of-type(3),:nth-of-type(4)){display:none}
 :root[data-look="space"][data-home="programme"][data-nav="hairline"] .sky{-webkit-mask:linear-gradient(180deg,transparent 36px,#000 60px);mask:linear-gradient(180deg,transparent 36px,#000 60px)}
-:root[data-look="space"][data-nav="hairline"] .alt-programme .pg-top{left:28px;right:28px;top:8px;height:28px;box-sizing:border-box;padding-top:9.4px;align-items:baseline;gap:0}
-:root[data-look="space"][data-nav="hairline"] .alt-programme .pg-top::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:rgba(255,255,255,.06)}
-:root[data-look="space"][data-nav="hairline"] .alt-programme .pg-mark{font:500 10px/1 "Orbitron","Helvetica Neue",sans-serif;letter-spacing:.08em;color:var(--fg);opacity:.85}
-:root[data-look="space"][data-nav="hairline"] .alt-programme .pg-att{margin-left:auto;display:inline-block;font:400 11px/1 "Geist Mono",ui-monospace,monospace;letter-spacing:.2em;color:var(--warn)}
-:root[data-look="space"][data-nav="hairline"] .alt-programme .pg-att::before{content:"";display:inline-block;margin:0 8px 0 0;vertical-align:.32em;width:5px;height:5px;border-radius:50%;background:var(--warn);box-shadow:0 0 6px color-mix(in srgb,var(--warn) 60%,transparent)}
-:root[data-look="space"][data-nav="hairline"] .alt-programme .pg-clk{display:block;margin-left:20px;font:400 11px/1 "Geist Mono",ui-monospace,monospace;letter-spacing:.12em;color:var(--fg);opacity:.85}
-:root[data-look="space"][data-nav="hairline"] .alt-programme .pg-mark+.pg-clk{margin-left:auto}
-:root[data-look="space"][data-nav="hairline"] .alt-programme .pf-bar{left:116px;right:auto;top:8px}
-:root[data-look="space"][data-nav="hairline"] .alt-programme .pf-bar::before{content:"";position:absolute;left:-14px;top:5px;width:1px;height:18px;background:rgba(255,255,255,.12);margin-left:-1px}
-:root[data-look="space"][data-nav="hairline"] .alt-programme .pf-cols{height:28px;box-sizing:border-box;align-items:baseline;gap:19px;padding-top:7.4px}
-:root[data-look="space"][data-nav="hairline"] .alt-programme :is(.pf-tab,.pf-filt){outline:0;padding:0;margin:0;opacity:.5}
-:root[data-look="space"][data-nav="hairline"] .alt-programme :is(.pf-tab,.pf-filt)::after{content:none}
-:root[data-look="space"][data-nav="hairline"] .alt-programme .pf-tab{font:500 13.5px/1 "Instrument Sans",system-ui,sans-serif;letter-spacing:.01em}
-:root[data-look="space"][data-nav="hairline"] .alt-programme .pf-filt{align-items:baseline;font:400 9.5px/1 "Geist Mono",ui-monospace,monospace;letter-spacing:.18em}
-:root[data-look="space"][data-nav="hairline"] .alt-programme :is(.pf-tab,.pf-filt).on{opacity:.85}
-:root[data-look="space"][data-nav="hairline"] .alt-programme :is(.pf-tab,.pf-filt).sel{opacity:1}
-:root[data-look="space"][data-nav="hairline"] .alt-programme .pf-srch svg{display:block;width:10px;height:10px;transform:translateY(.5px)}
-:root[data-look="space"][data-nav="hairline"] .alt-programme .nv-hi{display:block;top:26.5px;width:100px;height:2px;border-radius:2px;background:#9fd8ff;box-shadow:0 0 6px rgba(159,216,255,.35);transform:translateX(calc(var(--x) + 2px)) scaleX(var(--k4));transform-origin:0 0}
-:root[data-look="space"][data-nav="hairline"] .alt-programme .pg-l{top:62px}
-:root[data-look="space"][data-nav="hairline"] .alt-programme .sr{top:58px}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) .pg-top{left:28px;right:28px;top:8px;height:28px;box-sizing:border-box;padding-top:9.4px;align-items:baseline;gap:0}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) .pg-top::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:rgba(255,255,255,.06)}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) .pg-mark{font:500 10px/1 "Orbitron","Helvetica Neue",sans-serif;letter-spacing:.08em;color:var(--fg);opacity:.85}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) .pg-att{margin-left:auto;display:inline-block;font:400 11px/1 "Geist Mono",ui-monospace,monospace;letter-spacing:.2em;color:var(--warn)}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) .pg-att::before{content:"";display:inline-block;margin:0 8px 0 0;vertical-align:.32em;width:5px;height:5px;border-radius:50%;background:var(--warn);box-shadow:0 0 6px color-mix(in srgb,var(--warn) 60%,transparent)}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) .pg-clk{display:block;margin-left:20px;font:400 11px/1 "Geist Mono",ui-monospace,monospace;letter-spacing:.12em;color:var(--fg);opacity:.85}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) .pg-mark+.pg-clk{margin-left:auto}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) .pf-bar{left:116px;right:auto;top:8px}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) .pf-bar::before{content:"";position:absolute;left:-14px;top:5px;width:1px;height:18px;background:rgba(255,255,255,.12);margin-left:-1px}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) .pf-cols{height:28px;box-sizing:border-box;align-items:baseline;gap:19px;padding-top:7.4px}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) :is(.pf-tab,.pf-filt){outline:0;padding:0;margin:0;opacity:.5}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) :is(.pf-tab,.pf-filt)::after{content:none}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) .pf-tab{font:500 13.5px/1 "Instrument Sans",system-ui,sans-serif;letter-spacing:.01em}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) .pf-filt{align-items:baseline;font:400 9.5px/1 "Geist Mono",ui-monospace,monospace;letter-spacing:.18em}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) :is(.pf-tab,.pf-filt).on{opacity:.85}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) :is(.pf-tab,.pf-filt).sel{opacity:1}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) .pf-srch svg{display:block;width:10px;height:10px;transform:translateY(.5px)}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) .nv-hi{display:block;top:26.5px;width:100px;height:2px;border-radius:2px;background:#9fd8ff;box-shadow:0 0 6px rgba(159,216,255,.35);transform:translateX(calc(var(--x) + 2px)) scaleX(var(--k4));transform-origin:0 0}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) .pg-l{top:62px}
+:is(:root[data-look="space"][data-nav="hairline"] .alt-programme,:root[data-look="space"] .alt-shelf) .sr{top:58px}
+/* ---------- Shelf: posters first; header from Programme, rows/cards from Rows ---------- */
+.alt-shelf .pf-bar{position:absolute;left:28px;right:28px;top:30px;z-index:2;padding:0;gap:6px}
+:root[data-look="space"] .scr.alt-shelf .pf-cols{gap:11px}
+:root[data-look="space"] .alt-shelf .pf-cols .pf-tab{font-size:12.5px} /* one more tab than Programme: keeps FILTER clear of ATTENTION */
+.alt-shelf{--zoom:1.06;--lift:0px}
+.alt-shelf .card.on .art{outline-color:transparent;box-shadow:var(--glow),0 0 0 1.5px rgba(235,245,255,.82)}
+[data-look="space"][data-home="shelf"] .bd.show{opacity:.6}
+:root[data-home="shelf"][data-shelf="grid"] .bd.show{opacity:.24}
+:root[data-home="shelf"][data-shelf="grid"] .bd{-webkit-mask:linear-gradient(180deg,#000 30px,transparent 110px);mask:linear-gradient(180deg,#000 30px,transparent 110px)}
+:root[data-look="space"][data-home="shelf"] .sky{-webkit-mask:linear-gradient(180deg,transparent 36px,#000 60px);mask:linear-gradient(180deg,transparent 36px,#000 60px)}
+.sh-hero{position:absolute;left:28px;top:50px;width:50%;z-index:1;display:flex;flex-direction:column;gap:6px}
+.sh-hero.swap>:not(.btns){opacity:0}
+.sh-hero .syn{max-width:360px;min-height:2.9em}
+.sh-hero .btns{margin-top:2px}
+.sh-rows{position:absolute;left:0;right:0;top:206px;bottom:0;margin:0;overflow:hidden}
+.sh-rin{transition:transform .42s cubic-bezier(.2,.7,.2,1)}
+.sh-rows .card{width:84px}
+.sh-rows .track{padding:10px 28px 12px}
+.alt-shelf .sh-rows .row.cur{transform:translateY(-3px)}
+.alt-shelf .cap{display:block;font:400 7.5px/1.35 "Geist Mono",ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.alt-shelf .cap b{margin-bottom:1px;font:500 10.5px/1.3 "Instrument Sans",system-ui,sans-serif;letter-spacing:0;text-transform:none}
+.sh-body{position:absolute;left:0;right:0;top:56px;bottom:0;display:flex;flex-direction:column}
+.sh-cats{flex:none;display:flex;gap:20px;padding:2px 28px 0}
+.sh-cat{border:0;background:none;padding:2px 0;font:400 8.5px/1 "Geist Mono",ui-monospace,monospace;letter-spacing:.2em;text-transform:uppercase;color:var(--fg);opacity:.45;cursor:pointer;outline:0}
+.sh-cat.on{opacity:.85}
+.sh-cat.sel{opacity:1;color:#9fd8ff}
+.sh-grid{flex:1;min-height:0;overflow:hidden;position:relative;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:16px 16px;padding:12px 28px 40px;align-content:start;scroll-behavior:smooth}
+.sh-grid .card{width:auto}
+.alt-shelf .sh-grid .card{animation:none}
+.alt-shelf .sh-grid .card.pf-enter{animation:inD .3s cubic-bezier(.2,.7,.2,1) both}
+.sh-grid .pf-empty{grid-column:1/-1}
 /* Now playing: stars dim, the limb brightens */
 [data-look="space"] .stage:has(#ov.np:not([hidden])) .sky :is(.s1,.s2,.s3,b){opacity:.25}
 [data-look="space"] .stage:has(#ov.np:not([hidden])) .sky .limb{box-shadow:0 -1px 0 rgba(220,240,255,.95),0 -12px 46px rgba(140,200,255,.4)}
@@ -1373,7 +1404,7 @@ button.sv{cursor:pointer}
       <button id="mo-calm" data-mo="calm" aria-pressed="false">Calm</button>
     </div>
     <label class="seg" id="types" hidden><span class="seg-l">Type</span><select id="type-sel"><optgroup label="Mercury" id="tg-m"><option value="bricolage">Bricolage Grotesque</option><option value="syne">Syne</option><option value="serif">Instrument Serif</option><option value="unbounded">Unbounded</option><option value="shoulders">Big Shoulders</option><option value="anybody">Anybody Wide</option><option value="michroma">Michroma</option><option value="gloock">Gloock</option><option value="cormorant">Cormorant Garamond</option><option value="bodoni">Bodoni Moda</option><option value="dela">Dela Gothic One</option><option value="zilla">Zilla Slab</option><option value="familjen">Familjen Grotesk</option><option value="chakra">Chakra Petch</option></optgroup><optgroup label="Space" id="tg-s" hidden disabled><option value="sp-michroma">Michroma</option><option value="sp-jura">Jura</option><option value="sp-exo">Exo 2</option><option value="sp-saira">Saira</option><option value="sp-tektur">Tektur</option><option value="sp-rajdhani">Rajdhani</option><option value="sp-audiowide">Audiowide</option><option value="sp-orbitron">Orbitron</option></optgroup></select></label>
-    <label class="seg"><span class="seg-l">Layout</span><select id="lay-sel"><optgroup label="Layouts"><option value="rows">Rows</option><option value="marquee">Marquee</option><option value="wall">Wall</option><option value="programme">Programme</option><option value="tonight">Tonight</option><option value="pages">Pages</option></optgroup><optgroup label="Places"><option value="store">Store</option></optgroup><optgroup label="Unusual"><option value="orbit">Orbit</option><option value="spines">Spines</option><option value="reel">Reel</option><option value="deck">Deck</option><option value="timeframe">Timeframe</option></optgroup></select></label>
+    <label class="seg"><span class="seg-l">Layout</span><select id="lay-sel"><optgroup label="Recommended"><option value="shelf">Shelf</option></optgroup><optgroup label="Layouts"><option value="rows">Rows</option><option value="marquee">Marquee</option><option value="wall">Wall</option><option value="programme">Programme</option><option value="tonight">Tonight</option><option value="pages">Pages</option></optgroup><optgroup label="Places"><option value="store">Store</option></optgroup><optgroup label="Unusual"><option value="orbit">Orbit</option><option value="spines">Spines</option><option value="reel">Reel</option><option value="deck">Deck</option><option value="timeframe">Timeframe</option></optgroup></select></label>
     <label class="seg" id="navs" hidden><span class="seg-l">Nav</span><select id="nav-sel"><option value="hairline">Hairline</option><option value="nodes">Nodes</option><option value="capsule">Capsule</option><option value="rail">Rail</option><option value="hud">HUD</option><option value="sweep">Sweep</option><option value="chapter">Chapter</option><option value="constellation">Constellation</option><option value="bar">Bar</option><option value="dock">Dock</option></select></label>
     <div class="seg"><button id="go-idle">Go idle</button></div>
   </header>
@@ -1531,10 +1562,24 @@ const NEXT=[['copper-sky','S1 · E4 · The Dry Season'],['field-notes','S2 · E8
 const RECENT=['quiet-engines','map-rooms','blue-hour','cartographer','sixteen-bells','lowland','second-light'];
 const MOVIES=['atlas','dust-choir','kingfisher','last-tram','orchard-road','tin-moon','long-harbour','glass-orchard','salt-iron'];
 const POPULAR=['night-ferry','static-bloom','halfway-hill','kingfisher','marrow-street','glasshouse','signalman','red-kite','undertow'];
+// Shelf placeholder catalogue: enough posters for three-plus grid rows per tab
+const XMOV=['Iron Meadow','The Quiet Arrival','Northbound','Cinder Lake','The Long Field','Hollow Bay','Lamplighter','Ash and Amber','The Ninth Bell','Silver Ridge','A Room Upstairs','Driftwood','The Cold Shore','Wolf Season','Summer Static','The Orchard Thief','Low Country','Paper Planes','Blackwater Lane','The Last Signal','Foxglove','Morning Train','The Weather Station','Coastline','Stillwater','Rook and Raven','The Night Clerk','Bright Hollow','Under Pines','Glass Mountain'];
+const XSER=['The Lighthouse Keepers','Deep Field','Overtime','North Ward','The Archive','Long Shadows','Parish','Ridgeline','Second Shift','The Commune','Tidewater','Cold Files','Saltwater Kids','The Observatory','Small Town Radio','Pilot Boats','Ward Nine','Highland Line'];
+const XGEN=['Drama','Thriller','Mystery','Comedy','Sci-fi','Romance','Western','Documentary','Crime','Adventure','Animation','Horror'];
+const XSYN=['A quiet town keeps a loud secret.','Two strangers share a long drive north.','Nobody remembers who built the tower.','One winter, one house, too many guests.','The signal repeats every night at 3:12.','A map arrives with one road missing.'];
+const XM=[],XSR=[];
+[[XMOV,XM,0],[XSER,XSR,1]].forEach(([names,out,ser])=>names.forEach((n,i)=>{const id=n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');if(T[id])return;const j=i+ser*7;
+  T[id]={id,n,y:String(2018+j%9),g:(ser?'Series · ':'')+XGEN[(j*5)%XGEN.length],r:ser?`${1+i%4} season${i%4?'s':''}`:`${1+i%2} h ${5+(i*13)%55} min`,h1:String((j*47+20)%360),h2:String((j*47+170)%360),b:BADGES['ABCD'[j%4]],s:XSYN[j%XSYN.length]};out.push(id)}));
+const XC=XM.slice(0,6).flatMap((m,i)=>[m,XSR[i]]),XU=XSR.slice(4,18),XN=[...XM.slice(6,12),...XSR.slice(12,17)],XMV=XM.slice(12,21);
 const GRID=['night-ferry','static-bloom','halfway-hill','marrow-street','kingfisher','glasshouse','signalman','quiet-engines','red-kite','undertow','second-light','saltmarsh','tin-moon','long-division'];
 const LIB=new Set([...CONT.map(c=>c[0]),...NEXT.map(c=>c[0]),...RECENT,...MOVIES]);
 const PROG=Object.fromEntries(CONT.map(c=>[c[0],c[2]]));
 const EP=Object.fromEntries(NEXT.map(c=>[c[0],c[1]]));
+const PRC=Object.fromEntries(CONT.map(c=>[c[0],c[1]]));
+{const XEP=['Low Tide','The Crossing','Small Hours','Night Shift','Static','Open Water','Fault Line','Homecoming'];
+ XC.forEach((id,i)=>{PRC[id]=.12+(i*.17)%.78;const left=`${8+(i*11)%50} min left`;PROG[id]=/^Series/.test(T[id].g)?`S${1+i%3} · E${2+i%6} · ${left}`:left});
+ XU.forEach((id,i)=>{EP[id]=`S${1+i%3} · E${2+i%7} · ${XEP[i%XEP.length]}`});
+ [...XC,...XU,...XN,...XMV].forEach(id=>LIB.add(id))}
 
 // Requested: each card walks Looking -> Fetching -> Downloading -> Ready on a timer, then loops; one is parked in Stuck.
 const reqs=[{id:'north-quiet',t:0},{id:'ember-county',t:6},{id:'low-tide',t:13},{id:'paper-lanterns',t:23},{id:'ninth-winter',stuck:true}];
@@ -1677,7 +1722,7 @@ function back(){
   const fromTitle=screen==='title';
   if(p){titleK=p.k;if(p.lay)lay=p.lay;show(p.s,p.id,p.f);if(fromTitle&&cur&&cur.classList.contains('card'))zoom(cur,true)}else if(screen!=='home')show('home');else if(lay!=='rows')altBack();
 }
-function home(){if(ovOpen)closeOv();stack=[];pgSearch=false;document.documentElement.classList.remove('sr-on');lay=layPref;alt={col:0,idx:0,page:0};show('home')}
+function home(){if(ovOpen)closeOv();stack=[];pgSearch=false;shTab=-1;shLast=null;document.documentElement.classList.remove('sr-on');lay=layPref;alt={col:0,idx:0,page:0};show('home')}
 
 // ---------- focus + spatial navigation ----------
 function focus(el,noScroll,dir){
@@ -1811,6 +1856,11 @@ function activate(el){
   else if(a==='tplay')play(id);
   else if(a==='pgplay'){const t=(progLast&&progLast.dataset.t)||pfList()[0];if(t)play(t)}
   else if(a==='pginfo'){const t=(progLast&&progLast.dataset.t)||pfList()[0];if(t){titleK=PCOLS[pf.c].k;go('title',t)}}
+  else if(a==='pfc'&&lay==='shelf'){shTab=pf.c=+el.dataset.v;shGo()}
+  else if(a==='shhome'){shTab=-1;shGo()}
+  else if(a==='shcat'){shCat=+el.dataset.v;shGo('sh-cat-'+shCat)}
+  else if(a==='shplay'){if(shHeroId)play(shHeroId)}
+  else if(a==='shinfo'){if(shHeroId){titleK=shHeroK;go('title',shHeroId)}}
   else if(a==='pfc'){pf.c=+el.dataset.v;progLast=null;if(pgSearch){pgSearch=false;document.documentElement.classList.remove('sr-on');try{localStorage.setItem('mb-pf',JSON.stringify(pf))}catch(_){}renderAlt();focus(byId('pf-c-'+pf.c,$('#s-alt')))}else pfApply()}
   else if(a==='search')openSearch();
   else if(a==='srk')srType(el.dataset.v);
@@ -1841,7 +1891,7 @@ document.addEventListener('keydown',e=>{
   const dir={ArrowUp:'u',ArrowDown:'d',ArrowLeft:'l',ArrowRight:'r'}[e.key];
   if(dir&&screen==='home'&&lay!=='rows'&&!ovOpen&&altKey(dir)){e.preventDefault();return}
   if(dir){e.preventDefault();move(dir)}
-  else if(e.key==='/'&&!inBar&&screen==='home'&&lay==='programme'&&!ovOpen&&!pgSearch){e.preventDefault();openSearch()}
+  else if(e.key==='/'&&!inBar&&screen==='home'&&isPG()&&!ovOpen&&!pgSearch){e.preventDefault();openSearch()}
   else if(e.key==='Enter'){if(inBar)return;e.preventDefault();
     if(cur&&cur.classList.contains('pf-filt')&&!ovOpen){if(!e.repeat&&!lpT)lpT=setTimeout(()=>{lpT=null;lpDone=true;if(pfActive()){pf={c:pf.c,g:[],l:[],f:[],s:-1};pfApply();toast('Filters cleared.')}},550);return}
     activate(ovOpen&&!cur?null:cur)}
@@ -1887,7 +1937,7 @@ function syncType(look){
 }
 $('#type-sel').onchange=e=>setType(e.target.value);
 syncType(document.documentElement.dataset.look);
-$('#look-sel').onchange=e=>setLook(e.target.value);
+$('#look-sel').onchange=e=>{const v=e.target.value;setLook(v);if(v==='space'&&layPref!=='shelf')setLayout('shelf');else if(v!=='space'&&layPref==='shelf')setLayout('rows')}; // Shelf is Space's home
 
 // boot-in: logo, then hero rises and rows cascade (about 2 s)
 function boot(){
@@ -1919,6 +1969,7 @@ setMotion(mo==='full'||mo==='calm'?mo:matchMedia('(prefers-reduced-motion: reduc
 // ---------- Home layouts: same data, different structure ----------
 const COLS=[{n:'Continue Watching',k:'Continue watching',ids:CONT.map(c=>c[0])},{n:'Next Up',k:'Next up',ids:NEXT.map(c=>c[0])},
   {n:'Recently Added',k:'Recently added',ids:RECENT},{n:'Movies',k:'Movies',ids:MOVIES},{n:'Browse: Popular',k:'Browse · Popular',ids:POPULAR}];
+let shTab=-1,shCat=0,shLast=null,shHeroId=null,shHeroK='',shSwapT;
 let layPref='rows',lay='rows',alt={col:0,idx:0,page:0},progLast=null,dwellT;
 const scr=()=>screen==='home'&&lay!=='rows'?$('#s-alt'):$('#s-'+screen);
 const sub=(id,ci)=>ci===1?EP[id]:(PROG[id]||EP[id]); // in Next Up, show the episode rather than the resume point
@@ -1937,6 +1988,10 @@ function renderAlt(dir){
     // one continuous wall of every collection; the tabs jump to a collection's first poster
     A.innerHTML=tabs+`<div class="wl-grid vscroll">${COLS.map((x,ci)=>x.ids.map((id,i)=>`<button class="f card${ci===alt.col&&!i?' start':''}" data-id="wl-${ci}-${id}" data-c="${ci}"${i?'':' style="grid-column-start:1"'} data-t="${id}" data-k="${esc(x.k)}" data-act="tplay" aria-label="${esc(T[id].n)}">${art(T[id])}</button>`).join('')).join('')}</div><aside class="wl-panel glass" aria-live="polite"></aside>`;
     A.querySelector('.wl-grid').scrollTop=A.querySelector('.start').offsetTop-14;
+  }else if(lay==='shelf'){
+    document.documentElement.dataset.shelf=shTab<0?'home':'grid';shHeroId=null;
+    A.innerHTML=`<div class="pg-top"><span class="pg-mark">mediabox</span>${ATTN?'<span class="pg-att">ATTENTION</span>':''}<span class="pg-clk">${$('#clock').textContent}</span></div><div class="pf-bar">${pfTabs()}</div>`+(pgSearch?srHtml():shTab<0?shHome():`<div class="sh-body">${shGrid()}</div>`);
+    const st=A.querySelector('.sh-rows .card,.sh-grid .card');if(st){st.classList.add('start');if(shTab<0)shHeroSet(st.dataset.t,st.dataset.k);else setBd(st.dataset.t)}else setBd(null);
   }else if(lay==='programme'){
     progLast=null;const ids=pfList();if(ids[0]&&!pgSearch)setBd(ids[0]);
     A.innerHTML=`<div class="pg-top"><span class="pg-mark">mediabox</span>${ATTN?'<span class="pg-att">ATTENTION</span>':''}<span class="pg-clk">${$('#clock').textContent}</span></div><div class="pf-bar">${pfTabs()}</div>${pgSearch?srHtml():`<div class="pg-l"><div class="pg-list vscroll">${ids.map((id,i)=>pgItem(id,!i)).join('')||'<p class="pf-empty">Nothing matches. Clear a chip.</p>'}</div></div>
@@ -2029,7 +2084,8 @@ function altFocus(){
     S.querySelector('.rl-film').style.transform=`translateY(${225-cur.offsetTop-cur.offsetHeight/2}px)`;
     k.querySelector('.credits').innerHTML=lchips(t,sub(t.id,alt.col));k.querySelector('.ttl').textContent=t.n;k.querySelector('.syn').textContent=t.s;
   }
-  if(lay==='programme'){if(cur.classList.contains('sr-k'))srLast=cur.dataset.id;else if(pgSearch&&cur.closest('.sr-r')&&cur.dataset.t)setBd(cur.dataset.t);if(cur.classList.contains('pg-i')){progLast=cur;setBd(cur.dataset.t)}else if(cur.closest('.pf-ref'))pfRef=cur.dataset.id;else if(cur.closest('.pf-cols'))pfCol=cur.dataset.id;navSync()}
+  if(lay==='shelf')shFocus();
+  if(isPG()){if(cur.classList.contains('sr-k'))srLast=cur.dataset.id;else if(pgSearch&&cur.closest('.sr-r')&&cur.dataset.t)setBd(cur.dataset.t);if(cur.classList.contains('pg-i')){progLast=cur;setBd(cur.dataset.t)}else if(cur.closest('.pf-ref'))pfRef=cur.dataset.id;else if(cur.closest('.pf-cols'))pfCol=cur.dataset.id;navSync()}
   if(lay==='wall'){
     if(cur.dataset.c){alt.col=+cur.dataset.c;$('#s-alt').querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('sel',i===alt.col))}
     clearTimeout(dwellT);const p=$('.wl-panel'),g=$('.wl-grid');if(!p)return;
@@ -2080,7 +2136,8 @@ function altKey(d){
     if(d==='l'||d==='r')alt.idx=(alt.idx+(d==='r'?1:-1)+m)%m;else{alt.col=(alt.col+(d==='d'?1:-1)+n)%n;alt.idx=0}
     renderAlt(d);focus(byId('mq',S));return true;
   }
-  if(lay==='programme'&&pgSearch){
+  if(lay==='shelf'&&shKey(d))return true;
+  if(isPG()&&pgSearch){
     if(cur.classList.contains('sr-k'))return srKey(d);
     if(cur.classList.contains('sr-rec')){
       if(d==='u')focus(byId('sr-k-sp',S));
@@ -2116,7 +2173,8 @@ function altKey(d){
 }
 function altBack(){
   if(lay==='store'){if(held)return stPut();const S=$('#s-alt');return focus(byId(`cs-${alt.b||0}-${alt.s||0}-0`,S)||S.querySelector('.cs'))}
-  if(lay==='programme'&&pgSearch){if(cur&&cur.closest('.sr-r'))return focus(byId(srLast,$('#s-alt'))||$('#s-alt .sr-k'));return closeSearch()}
+  if(lay==='shelf'&&!pgSearch)return shBack();
+  if(isPG()&&pgSearch){if(cur&&cur.closest('.sr-r'))return focus(byId(srLast,$('#s-alt'))||$('#s-alt .sr-k'));return closeSearch()}
   if(lay==='programme'&&cur&&cur.closest('.pg-btns,.pf-bar'))return focus(pgBack());
   if(lay==='programme'&&['rail','dock'].includes(navMode())&&cur&&cur.closest('.pg-l'))return focus(byId(pfCol,$('#s-alt'))||$('#s-alt .pf-tab.sel')); // Back reaches the side or bottom nav
   alt.idx=0;renderAlt();focus($('#s-alt .start'));
@@ -2124,7 +2182,9 @@ function altBack(){
 function setLayout(v){
   pgSearch=false;document.documentElement.classList.remove('sr-on');
   layPref=lay=v;$('#lay-sel').value=v;try{localStorage.setItem('mb-lay',v)}catch(_){}
-  if(v!=='rows'&&v!=='store'&&!['mercury','space'].includes(document.documentElement.dataset.look))setLook('mercury');
+  if(v==='shelf'&&document.documentElement.dataset.look!=='space')setLook('space');
+  else if(v!=='rows'&&v!=='store'&&!['mercury','space'].includes(document.documentElement.dataset.look))setLook('mercury');
+  shTab=-1;shLast=null;
   navVis();
   alt={col:0,idx:0,page:0};if(screen==='home'){stack=[];show('home')}
 }
@@ -2193,15 +2253,19 @@ const rt=id=>{const r=T[id].r,h=/(\d+) h/.exec(r),m=/(\d+) min/.exec(r);return /
 const LEN=[['< 1 H',m=>m<60],['1–2 H',m=>m>=60&&m<=120],['2 H +',m=>m>120]];
 const FMT=[['4K',t=>t.b.includes('4K')],['HDR',t=>t.b.some(x=>/HDR|HLG/.test(x))],['Atmos',t=>t.b.some(x=>/Atmos/.test(x))]];
 const SORTS=[['Newest',(a,b)=>T[b].y-T[a].y],['A–Z',(a,b)=>T[a].n.localeCompare(T[b].n)],['Shortest',(a,b)=>rt(a)-rt(b)]];
-const ALLIDS=[...new Set([...CONT.map(c=>c[0]),...NEXT.map(c=>c[0]),...RECENT,...MOVIES,...POPULAR])];
-const PCOLS=[{n:'Continue',k:'Continue watching',ids:CONT.map(c=>c[0])},{n:'Next Up',k:'Next up',ids:NEXT.map(c=>c[0])},{n:'New',k:'Recently added',ids:RECENT},
-  {n:'Movies',k:'Movies',ids:MOVIES},{n:'Shows',k:'Shows',ids:ALLIDS.filter(id=>isShow(T[id]))},{n:'Browse',k:'Browse · Popular',ids:POPULAR}];
+const ALLIDS=[...new Set([...CONT.map(c=>c[0]),...NEXT.map(c=>c[0]),...RECENT,...MOVIES,...POPULAR,...XM,...XSR])];
+const PCOLS=[{n:'Continue',k:'Continue watching',ids:[...CONT.map(c=>c[0]),...XC]},{n:'Next Up',k:'Next up',ids:[...NEXT.map(c=>c[0]),...XU]},{n:'New',k:'Recently added',ids:[...RECENT,...XN]},
+  {n:'Movies',k:'Movies',ids:[...MOVIES,...XMV]},{n:'Shows',k:'Shows',ids:ALLIDS.filter(id=>isShow(T[id]))},{n:'Browse',k:'Browse · Popular',ids:POPULAR}];
+const MOVPOOL=ALLIDS.filter(id=>!isShow(T[id])),SHOWPOOL=ALLIDS.filter(id=>isShow(T[id])),rot=(a,n)=>[...a.slice(n),...a.slice(0,n)];
+const CATS=[{n:'Popular · Movies',ids:[...new Set([...POPULAR.filter(id=>!isShow(T[id])),...rot(MOVPOOL,5)])].slice(0,18)},{n:'Popular · Shows',ids:rot(SHOWPOOL,2).slice(0,18)},
+  {n:'Trending',ids:rot(ALLIDS,11).slice(0,18)},{n:'Top Rated',ids:rot(MOVPOOL,23).slice(0,18)}];
 const GENRES=[...new Set(ALLIDS.map(id=>genreOf(T[id])))].sort();
 let pf={c:0,g:[],l:[],f:[],s:-1},pfRef=null,pfCol=null;
 try{const v=JSON.parse(localStorage.getItem('mb-pf')||'null');if(v&&PCOLS[v.c])pf={c:v.c,g:v.g||[],l:v.l||[],f:v.f||[],s:v.s??-1}}catch(_){}
 function pfList(st=pf){
+  if(lay==='shelf'&&st.c<2)return PCOLS[st.c].ids; // Shelf: no filters on Continue and Next Up
   // OR within genre and length, AND within format
-  let ids=PCOLS[st.c].ids.filter(id=>{const t=T[id];return(!st.g.length||st.g.includes(genreOf(t)))&&(!st.l.length||st.l.some(i=>LEN[i][1](rt(id))))&&st.f.every(i=>FMT[i][1](t))});
+  let ids=(lay==='shelf'&&st.c===5?CATS[shCat].ids:PCOLS[st.c].ids).filter(id=>{const t=T[id];return(!st.g.length||st.g.includes(genreOf(t)))&&(!st.l.length||st.l.some(i=>LEN[i][1](rt(id))))&&st.f.every(i=>FMT[i][1](t))});
   return st.s>=0?[...ids].sort(SORTS[st.s][1]):ids;
 }
 const ATTN=true; // Status has a debrid problem in this prototype
@@ -2211,10 +2275,10 @@ const NV_XY=[[8,30],[60,10],[114,36],[168,14],[224,40],[272,18]]; // constellati
 const NV_IC=['<circle cx="8" cy="8" r="6"/><path d="M6.7 5.6v4.8L10.4 8z"/>','<path d="M3.5 4v8l6-4z"/><path d="M12.2 4v8"/>','<path d="M8 2.5l1.4 4.1L13.5 8l-4.1 1.4L8 13.5l-1.4-4.1L2.5 8l4.1-1.4z"/>',
   '<rect x="2.5" y="3.5" width="11" height="9" rx="1.5"/><path d="M5.5 3.5v9M10.5 3.5v9M2.5 8h3M10.5 8h3"/>','<rect x="2.5" y="3" width="11" height="8" rx="1.5"/><path d="M6 13.3h4"/>',
   '<rect x="2.5" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="9" y="2.5" width="4.5" height="4.5" rx="1"/><rect x="2.5" y="9" width="4.5" height="4.5" rx="1"/><rect x="9" y="9" width="4.5" height="4.5" rx="1"/>'].map(p=>`<svg viewBox="0 0 16 16" aria-hidden="true">${p}</svg>`);
-function navMode(){const r=document.documentElement.dataset;return r.look==='space'&&r.nav||'hairline'}
+function navMode(){const r=document.documentElement.dataset;return lay!=='shelf'&&r.look==='space'&&r.nav||'hairline'}
 let nvLast=null,nvI=-1;
 function navSync(){
-  const S=$('#s-alt'),C=lay==='programme'&&S&&S.querySelector('.pf-cols');if(!C)return;
+  const S=$('#s-alt'),C=isPG()&&S&&S.querySelector('.pf-cols');if(!C)return;
   const nv=navMode(),inC=!!(cur&&C.contains(cur)),tabs=[...C.querySelectorAll('[data-act="pfc"]')];
   const a=inC?(cur.dataset.act==='pfc'?cur:null):(pgSearch?null:tabs[pf.c]),i=a?tabs.indexOf(a):pf.c;
   C.classList.toggle('nv-open',inC);
@@ -2232,7 +2296,8 @@ function navSync(){
   nvI=i;
   // the one moving element: follows focus inside the nav, otherwise rests on the chosen collection
   const H=C.querySelector('.nv-hi'),any=!['capsule','dock'].includes(nv);
-  const t=nv==='hairline'?(pgSearch?C.querySelector('.pf-srch'):tabs[pf.c]):inC&&(any||cur.dataset.act==='pfc')?cur:(pgSearch?(any?C.querySelector('.pf-srch'):null):tabs[pf.c]);
+  const selT=lay==='shelf'&&shTab<0?C.querySelector('[data-act="shhome"]'):tabs[pf.c];
+  const t=nv==='hairline'?(inC?cur:pgSearch?C.querySelector('.pf-srch'):selT):inC&&(any||cur.dataset.act==='pfc')?cur:(pgSearch?(any?C.querySelector('.pf-srch'):null):tabs[pf.c]);
   H.classList.toggle('nv-off',!t);if(!t)return;
   const q={x:t.offsetLeft,y:t.offsetTop,w:t.offsetWidth,h:t.offsetHeight},bw=H.offsetWidth||1;
   const set=r=>{H.style.setProperty('--k4',(r.w-4)/bw);H.style.setProperty('--x',r.x+'px');H.style.setProperty('--y',r.y+'px');H.style.setProperty('--cx',r.x+r.w/2+'px');H.style.setProperty('--cy',r.y+r.h/2+'px');H.style.setProperty('--k',r.w/bw)};
@@ -2248,10 +2313,74 @@ function navSync(){
 function setNav(v){document.documentElement.dataset.nav=v;$('#nav-sel').value=v;try{localStorage.setItem('mb-nav',v)}catch(_){}navSync();requestAnimationFrame(navSync)}
 function navVis(){$('#navs').hidden=!(document.documentElement.dataset.look==='space'&&$('#lay-sel').value==='programme')}
 $('#nav-sel').onchange=e=>setNav(e.target.value);
+// ---------- Shelf ----------
+function isPG(){return lay==='programme'||lay==='shelf'}
+const shNoFilt=()=>lay==='shelf'&&shTab<2;
+const epf=s=>s&&s.replace(/S(\d+) · E(\d+)/,(m,a,b)=>`S${a.padStart(2,'0')}E${b.padStart(2,'0')}`); // S1 · E3 -> S01E03
+const shK=()=>shTab===5?'Browse · '+CATS[shCat].n:PCOLS[shTab].k;
+function shItem(id,c,key,k){const t=T[id];return card(id,k,key,{prog:c===0?PRC[id]:null,sub:epf(c===0?PROG[id]:c===1?EP[id]:`${t.y} · ${genreOf(t)}`)})}
+function shHome(){
+  const rows=[0,1,2].map(c=>row(PCOLS[c].n,'',PCOLS[c].ids.map(id=>shItem(id,c,'sh'+c,PCOLS[c].k)).join(''),'sh'+c))
+    .concat(CATS.map((x,j)=>row(x.n,'',x.ids.map(id=>shItem(id,9,'sc'+j,'Browse · '+x.n)).join(''),'sc'+j)));
+  return `<div class="sh-hero"><p class="kick"></p><h1 class="ttl"></h1><p class="meta"></p><p class="syn"></p><div class="btns"><button class="f btn pri sh-play" data-id="sh-play" data-act="shplay">Play</button><button class="f btn" data-id="sh-info" data-act="shinfo">Details</button></div></div><div class="sh-rows rows"><div class="sh-rin">${rows.join('')}</div></div>`;
+}
+function shGrid(){
+  const ids=pfList();
+  return (shTab===5?`<div class="sh-cats">${CATS.map((x,j)=>`<button class="f sh-cat${j===shCat?' sel':''}" data-id="sh-cat-${j}" data-act="shcat" data-v="${j}">${x.n}</button>`).join('')}</div>`:'')
+    +`<div class="sh-grid vscroll">${ids.map(id=>shItem(id,shTab,'sg',shK())).join('')||'<p class="pf-empty">Nothing matches. Clear a filter.</p>'}</div>`;
+}
+function shGo(fid){pgSearch=false;document.documentElement.classList.remove('sr-on');shLast=null;renderAlt();const S=$('#s-alt');focus(byId(fid,S)||S.querySelector('.pf-cols .pf-tab.sel'))}
+function shHeroSet(id,k){
+  if(id===shHeroId)return;shHeroId=id;shHeroK=k;setBd(id);
+  const H=$('#s-alt .sh-hero');if(!H)return;
+  const fill=()=>{const t=T[id];H.querySelector('.kick').textContent=k;H.querySelector('.ttl').textContent=t.n;H.querySelector('.meta').innerHTML=credits(t,epf(PROG[id]));H.querySelector('.syn').textContent=t.s;H.querySelector('.sh-play').textContent=PROG[id]?'Resume':'Play';H.classList.remove('swap')};
+  clearTimeout(shSwapT);if(calm()||!H.querySelector('.ttl').textContent)return fill();
+  H.classList.add('swap');shSwapT=setTimeout(fill,160);
+}
+function shFocus(){
+  const S=$('#s-alt');if(!cur.dataset.t||!cur.closest('.sh-rows,.sh-grid'))return;
+  shLast=cur.dataset.id;
+  if(shTab>=0)return setBd(cur.dataset.t);
+  shHeroSet(cur.dataset.t,cur.dataset.k);
+  const rw=cur.closest('.row'),R=S.querySelector('.sh-rows');
+  R.querySelectorAll('.row.cur').forEach(r=>r!==rw&&r.classList.remove('cur'));rw.classList.add('cur');
+  R.firstChild.style.transform=`translateY(${-rw.offsetTop}px)`; // the focused row sits just under the hero
+}
+function shKey(d){
+  const S=$('#s-alt'),col=cur.closest('.pf-cols'),ref=cur.closest('.pf-whisper'),tab=()=>S.querySelector('.pf-cols .pf-tab.sel')||S.querySelector('.pf-tab');
+  if(col||ref){
+    if(d==='l'||d==='r'){const L=[...cur.parentElement.querySelectorAll('.f')],nx=L[L.indexOf(cur)+(d==='r'?1:-1)];if(nx)focus(nx);return true}
+    if(d==='u'){if(ref)focus(tab());return true}
+    focus(pgSearch?byId(srLast,S)||S.querySelector('.sr-k'):col&&S.querySelector('.pf-w')||(shTab<0&&col?S.querySelector('.sh-play'):null)||pgBack());return true;
+  }
+  if(pgSearch)return false;
+  if(cur.closest('.sh-hero')){
+    if(d==='l'||d==='r')move(d,cur.parentElement);else if(d==='u')focus(tab());
+    else{const l=byId(shLast,S);focus(l&&l.closest('.sh-rows')?l:S.querySelector('.sh-rows .card'))}
+    return true;
+  }
+  const b=cur;move(d,S.querySelector('.sh-rows,.sh-body'));
+  if(cur===b&&d==='u')focus(S.querySelector('.pf-w')||tab());
+  return true;
+}
+function shBack(){const S=$('#s-alt');if(cur&&cur.closest('.pf-bar')){if(shTab>=0){shTab=-1;shGo('pf-home')}return}focus(S.querySelector('.pf-cols .pf-tab.sel'))}
+function shFlip(ids){
+  const G=$('#s-alt .sh-grid');if(!G)return;
+  const anim=!calm(),old=new Map([...G.querySelectorAll('.card')].map(el=>[el.dataset.t,el])),pos=new Map();
+  old.forEach((el,id)=>pos.set(id,[el.offsetLeft,el.offsetTop]));
+  G.querySelector('.pf-empty')?.remove();
+  old.forEach((el,id)=>{if(!ids.includes(id))el.remove()});
+  let k=0;
+  ids.forEach(id=>{let el=old.get(id);if(!el){const d=document.createElement('div');d.innerHTML=shItem(id,shTab,'sg',shK());el=d.firstChild;if(anim){el.classList.add('pf-enter');el.style.animationDelay=(k++*18)+'ms'}}G.appendChild(el)});
+  if(!ids.length)G.insertAdjacentHTML('beforeend','<p class="pf-empty">Nothing matches. Clear a filter.</p>');
+  // FLIP: posters that stayed slide from where they were
+  if(anim)old.forEach((el,id)=>{if(!ids.includes(id))return;const[x,y]=pos.get(id),dx=x-el.offsetLeft,dy=y-el.offsetTop;if(!dx&&!dy)return;
+    el.style.transition='none';el.style.transform=`translate(${dx}px,${dy}px)`;void el.offsetWidth;el.style.transition='transform .28s cubic-bezier(.2,.7,.2,1)';el.style.transform=''});
+}
 function pfTabs(){
   const on=[...pf.g,...pf.l.map(i=>LEN[i][0]),...pf.f.map(i=>FMT[i][0]),...(pf.s>=0?[SORTS[pf.s][0]]:[])],n=pfList().length;
-  return `<div class="pf-cols"><button class="f pf-tab pf-srch${pgSearch?' sel':''}" data-id="pf-srch" data-act="search" aria-label="Search">${MAG}<span class="nv-l nv-sl">Search</span></button>${PCOLS.map((c,i)=>`<button class="f pf-tab${i===pf.c&&!pgSearch?' sel':''}" data-id="pf-c-${i}" data-act="pfc" data-v="${i}" style="--nx:${NV_XY[i][0]}px;--ny:${NV_XY[i][1]}px"><i class="nv-ic">${NV_IC[i]}</i><span class="nv-l">${c.n}</span><sup class="nv-n">${p2(pfList({...pf,c:i}).length)}</sup></button>`).join('')}<button class="f pf-filt${pfActive()?' sel':''}" data-id="pf-filter" data-act="pfmore" aria-label="Filter (hold OK to clear)">${FUNNEL}<span class="nv-l nv-ft">FILTER${pfActive()?' · '+pfActive():''}</span></button><span class="nv-hi" aria-hidden="true"></span></div><div class="nv-x" aria-hidden="true"><span class="nv-big"></span><span class="nv-idx"></span><span class="nv-leg"></span><span class="nv-clk"></span><i class="nv-rule"></i><svg class="nv-cst" viewBox="0 0 280 48">${NV_XY.slice(1).map(([x,y],i)=>`<line x1="${NV_XY[i][0]}" y1="${NV_XY[i][1]}" x2="${x}" y2="${y}"/>`).join('')}</svg></div>`
-    +(on.length?`<div class="pf-whisper"><button class="f pf-w" data-id="pf-w" data-act="pfmore">${esc(on.join(' · ').toUpperCase())} · <b>${n} TITLE${n===1?'':'S'}</b></button><button class="f pf-x" data-id="pf-x" data-act="pfclear" aria-label="Clear filters">×</button></div>`:'');
+  return `<div class="pf-cols"><button class="f pf-tab pf-srch${pgSearch?' sel':''}" data-id="pf-srch" data-act="search" aria-label="Search">${MAG}<span class="nv-l nv-sl">Search</span></button>${lay==='shelf'?`<button class="f pf-tab${shTab<0&&!pgSearch?' sel':''}" data-id="pf-home" data-act="shhome">Home</button>`:''}${PCOLS.map((c,i)=>`<button class="f pf-tab${i===pf.c&&!pgSearch&&!(lay==='shelf'&&shTab<0)?' sel':''}" data-id="pf-c-${i}" data-act="pfc" data-v="${i}" style="--nx:${NV_XY[i][0]}px;--ny:${NV_XY[i][1]}px"><i class="nv-ic">${NV_IC[i]}</i><span class="nv-l">${c.n}</span><sup class="nv-n">${p2(pfList({...pf,c:i}).length)}</sup></button>`).join('')}${shNoFilt()?'':`<button class="f pf-filt${pfActive()?' sel':''}" data-id="pf-filter" data-act="pfmore" aria-label="Filter (hold OK to clear)">${FUNNEL}<span class="nv-l nv-ft">FILTER${pfActive()?' · '+pfActive():''}</span></button>`}<span class="nv-hi" aria-hidden="true"></span></div><div class="nv-x" aria-hidden="true"><span class="nv-big"></span><span class="nv-idx"></span><span class="nv-leg"></span><span class="nv-clk"></span><i class="nv-rule"></i><svg class="nv-cst" viewBox="0 0 280 48">${NV_XY.slice(1).map(([x,y],i)=>`<line x1="${NV_XY[i][0]}" y1="${NV_XY[i][1]}" x2="${x}" y2="${y}"/>`).join('')}</svg></div>`
+    +(on.length&&!shNoFilt()?`<div class="pf-whisper"><button class="f pf-w" data-id="pf-w" data-act="pfmore">${esc(on.join(' · ').toUpperCase())} · <b>${n} TITLE${n===1?'':'S'}</b></button><button class="f pf-x" data-id="pf-x" data-act="pfclear" aria-label="Clear filters">×</button></div>`:'');
 }
 const RF_ICON=['<svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="4.5" width="16" height="11" rx="3"/><text x="10" y="12.4" text-anchor="middle">4K</text></svg>',
   '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="3.4"/><path d="M10 2.5v2M10 15.5v2M2.5 10h2M15.5 10h2M4.7 4.7l1.4 1.4M13.9 13.9l1.4 1.4M4.7 15.3l1.4-1.4M13.9 6.1l1.4-1.4"/></svg>',
@@ -2289,12 +2418,12 @@ function pfApply(){
   const bar=S.querySelector('.pf-bar');
   if(bar)bar.innerHTML=pfTabs();
   if(inOv){const sh=$('#ov .pf-sheet');sh.classList.add('live');sh.innerHTML=pfChips();sh.querySelector('.rf-n').classList.add('tick')}
-  pgFlip(ids);
+  pgFlip(ids);shFlip(ids);
   S.querySelectorAll('.pf-w b').forEach(n=>n.classList.add('tick')); // the count in the whisper line ticks when it changes
   setBd(ids[0]||null);
   const sc=inOv?$('#ov'):S;focus(byId(fid,sc)||(inOv?sc.querySelector('.rf-done'):pgBack()));
 }
-const pgBack=()=>{const S=$('#s-alt');return progLast&&progLast.isConnected?progLast:S.querySelector('.pg-list .pg-i:not(.pf-leave)')||S.querySelector('.pf-filt')};
+const pgBack=()=>{const S=$('#s-alt');if(lay==='shelf')return byId(shLast,S)||S.querySelector('.sh-rows .card,.sh-grid .card,.sh-cat')||S.querySelector('.pf-tab.sel');return progLast&&progLast.isConnected?progLast:S.querySelector('.pg-list .pg-i:not(.pf-leave)')||S.querySelector('.pf-filt')};
 
 // ---------- Programme search: a d-pad letter grid on the left, live results on the right ----------
 const MAG='<svg viewBox="0 0 14 14" aria-hidden="true"><circle cx="6" cy="6" r="4.2"/><path d="M9.2 9.2L12.5 12.5"/></svg>';
@@ -2374,6 +2503,7 @@ clock();setInterval(clock,20000);
 let saved='cinema';try{saved=localStorage.getItem('mb-look')||'cinema'}catch(_){}
 setLook([...$('#look-sel').options].some(o=>o.value===saved)?saved:'cinema');
 {let l=null;try{l=localStorage.getItem('mb-lay')}catch(_){}if([...$('#lay-sel').options].some(o=>o.value===l)){layPref=lay=l;$('#lay-sel').value=l}}
+try{if(document.documentElement.dataset.look==='space'&&!localStorage.getItem('mb-shelf')){localStorage.setItem('mb-shelf','1');layPref=lay='shelf';$('#lay-sel').value='shelf';localStorage.setItem('mb-lay','shelf')}}catch(_){} // once: Shelf becomes Space's default
 {let v=null;try{v=localStorage.getItem('mb-nav')}catch(_){}setNav([...$('#nav-sel').options].some(o=>o.value===v)?v:'hairline');navVis()}
 renderHome();setHero(heroId,heroK,true);show('home');boot();
 </script>
