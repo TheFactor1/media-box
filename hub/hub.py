@@ -19,14 +19,15 @@ import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import onboarding, ranking, security
+from . import onboarding, ranking, security, shelves
 
 CINEMETA = 'https://v3-cinemeta.strem.io/manifest.json'
 with open(os.path.join(os.path.dirname(__file__), 'setup.html'), 'rb') as _f:
     SETUP_HTML = _f.read()
-# CSP allows exactly the page's own inline script, not 'unsafe-inline'.
+# CSP allows exactly the page's own inline script, not 'unsafe-inline'. Browsers hash it after turning CRLF into LF,
+# so a CRLF checkout (Windows git) must be hashed the same way or the page's script is blocked.
 SETUP_SCRIPT = "'sha256-%s'" % security.base64.b64encode(security.hashlib.sha256(
-    re.search(rb'<script>(.*?)</script>', SETUP_HTML, re.S)[1]).digest()).decode()
+    re.search(rb'<script>(.*?)</script>', SETUP_HTML, re.S)[1].replace(b'\r\n', b'\n')).digest()).decode()
 STREAM_TTL = 600         # contract: stream cache per title 10 min
 MANIFEST_TTL = 3600
 META_TTL = 86400
@@ -83,10 +84,10 @@ class CheckedRedirect(urllib.request.HTTPRedirectHandler):
 OPENER = urllib.request.build_opener(CheckedRedirect)
 
 
-def fetch(url, timeout=10):
+def fetch(url, timeout=10, headers=None):
     try:
         check_url(url)
-        req = urllib.request.Request(url, headers={'User-Agent': 'mediabox-hub/1', 'Accept': 'application/json'})
+        req = urllib.request.Request(url, headers={'User-Agent': 'mediabox-hub/1', 'Accept': 'application/json', **(headers or {})})
         with OPENER.open(req, timeout=timeout) as r:
             buf, end = bytearray(), time.monotonic() + 3 * timeout  # `timeout` is per read; this caps a slow drip
             while chunk := r.read(65536):
@@ -220,6 +221,9 @@ class Hub:
                     for c in new or [{'addon': CINEMETA, 'type': t, 'id': 'top'} for t in ('movie', 'series')]]
         self.meta_cache = {}
         self.new_cache = (0, None)
+        self.catalog_cache = {}  # shortcut: per page, never pruned; bounded by catalogs x pages read
+        self.tmdb_base = cfg.get('tmdb_base', 'https://api.themoviedb.org/3')  # only tests point this elsewhere
+        shelves.init(self)
         self.cache = {}  # shortcut: in memory, lost on restart and never pruned; fine for one household, move to sqlite if it grows
         self.limits = {'play': security.Bucket(10, 10), 'setup': security.Bucket(10, 10), 'health': security.Bucket(1, 5),
                        'pair': security.Bucket(5 / 60, 5), 'pair/request': security.Bucket(3 / 60, 3)}
@@ -536,12 +540,21 @@ class Hub:
                 pass
         return out
 
+    def catalog_metas(self, addon, type_, cid, skip):
+        """One catalog page, cached 10 min: Home rows and smart collections read the same pages over and over."""
+        key = (addon.host, type_, cid, skip)
+        hit = self.catalog_cache.get(key)
+        if hit and time.time() - hit[0] < STREAM_TTL:
+            return hit[1]
+        metas = [m for m in lst(addon.get('catalog', type_, cid, {'skip': skip} if skip else None).get('metas')) if isinstance(m, dict)]
+        self.catalog_cache[key] = (time.time(), metas)
+        return metas
+
     def catalog(self, type_, cid, skip):
         for a in self.meta_addons:
             try:
                 if any(c.get('type') == type_ and c.get('id') == cid for c, _, _ in a.catalogs()):
-                    metas = lst(a.get('catalog', type_, cid, {'skip': skip} if skip else None).get('metas'))
-                    return self.annotate([to_item(m) for m in metas if isinstance(m, dict)])
+                    return self.annotate([to_item(m) for m in self.catalog_metas(a, type_, cid, skip)])
             except AddonError:
                 continue
         raise HttpError(404, f'no addon has catalog {type_}/{cid}')
@@ -649,6 +662,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self): self.route('POST')
     def do_PUT(self): self.route('PUT')
     def do_DELETE(self): self.route('DELETE')
+    def do_PATCH(self): self.route('PATCH')
     def do_OPTIONS(self): self.route('OPTIONS')
 
     def body(self):
@@ -679,7 +693,9 @@ class Handler(BaseHTTPRequestHandler):
             public = method == 'OPTIONS' or mp in (['GET', 'health'], ['GET', 'pair'], ['POST', 'pair'], ['POST', 'pair', 'request'],
                                                     ['GET', 'pair', 'requests'], ['POST', 'pair', 'approve']) \
                 or mp[:3] == ['GET', 'pair', 'request'] or (parts[:1] == ['setup'] and mp != ['POST', 'setup', 'open'])
-            if not public and not self.hub.authorized(self.headers.get('Authorization')):
+            # The setup page has no token; its nonce (in a header) also opens the Home rows and collections calls.
+            page = parts[:1] in (['shelves'], ['shelf'], ['collections']) and self.hub.setup_ok(self.headers.get('X-Setup-Nonce'))
+            if not public and not page and not self.hub.authorized(self.headers.get('Authorization')):
                 headers = {'WWW-Authenticate': 'Bearer'}
                 raise HttpError(401, 'pair this device first: send Authorization: Bearer <token>')
             status, body, headers = self.dispatch(mp[0], parts, qs)
@@ -699,8 +715,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', origin)
         self.send_header('Vary', 'Origin')
         if method == 'OPTIONS':
-            self.send_header('Access-Control-Allow-Methods', 'GET, HEAD, POST, PUT, DELETE, OPTIONS')
-            self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+            self.send_header('Access-Control-Allow-Methods', 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS')
+            self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Setup-Nonce')
         for k, v in headers.items():
             self.send_header(k, v)
         if 'Content-Type' not in headers:
@@ -764,7 +780,8 @@ class Handler(BaseHTTPRequestHandler):
             case ['GET', 'setup', 'info']:
                 hub.require_setup(qs.get('n'))
                 return ok({'presets': hub.presets, 'default': hub.preset, 'providers': onboarding.PROVIDERS,
-                           'configured': bool(hub.stream_addons), 'aiostreams': host(hub.aiostreams_url)})
+                           'configured': bool(hub.stream_addons), 'aiostreams': host(hub.aiostreams_url),
+                           'tmdb': bool(hub.setting('tmdb_api_key'))})
             case ['POST', 'setup']:
                 body = self.body()
                 hub.require_setup(body.get('n') if isinstance(body, dict) else None)
@@ -794,6 +811,26 @@ class Handler(BaseHTTPRequestHandler):
                 return ok({'catalogs': hub.catalogs()})
             case ['GET', 'presets']:
                 return ok({'default': hub.preset, 'presets': hub.presets, 'aliases': ranking.ALIASES})
+            case ['GET', 'shelves']:
+                return ok({'shelves': shelves.get_shelves(hub)})
+            case ['PUT', 'shelves']:
+                return ok({'shelves': shelves.put_shelves(hub, self.body())})
+            case ['GET', 'shelf', sid]:
+                return ok(shelves.shelf(hub, sid, skip(qs)))
+            case ['GET', 'collections']:
+                return ok({'collections': shelves.list_collections(hub)})
+            case ['POST', 'collections']:
+                return ok(shelves.create_collection(hub, self.body()))
+            case ['PATCH', 'collections', cid]:
+                return ok(shelves.patch_collection(hub, cid, self.body()))
+            case ['DELETE', 'collections', cid]:
+                return ok(shelves.delete_collection(hub, cid))
+            case ['POST', 'collections', cid, 'items']:
+                return ok(shelves.add_item(hub, cid, self.body()))
+            case ['DELETE', 'collections', cid, 'items', item]:
+                return ok(shelves.remove_item(hub, cid, item))
+            case ['GET', 'franchise', id_]:
+                return ok(shelves.franchise_for(hub, id_))
             case ['GET', 'new']:
                 return ok({'items': hub.new_releases(skip(qs))})
             case ['GET', 'browse', 'catalog', type_, cid]:

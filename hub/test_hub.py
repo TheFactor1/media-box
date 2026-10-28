@@ -37,6 +37,8 @@ METAS = {'tt1': movie('tt1', 'Drama Club'), 'tt3': movie('tt3', 'The Last Drama'
                             {'id': 'tt9:1:1', 'season': 1, 'episode': 1, 'name': 'One'},
                             {'id': 'tt9:0:1', 'season': 0, 'episode': 1, 'name': 'Special'}]},
          'tt0468569': {'id': 'tt0468569', 'type': 'movie', 'name': 'The Dark Knight', 'year': 2008, 'runtime': '152 min'},
+         'tt0372784': {'id': 'tt0372784', 'type': 'movie', 'name': 'Batman Begins', 'year': 2005},
+         'tt1345836': {'id': 'tt1345836', 'type': 'movie', 'name': 'The Dark Knight Rises', 'year': 2012},
          'tt7': {'id': 'tt7', 'type': 'series', 'name': 'Lost Things', 'runtime': '40 min',
                  'videos': [{'id': 'tt7:1:1', 'season': 1, 'episode': 1}, {'id': 'tt7:1:2', 'season': 1, 'episode': 2, 'runtime': '50 min'}]}}
 TT1_STREAMS = [
@@ -69,11 +71,21 @@ STREAMS = {
 
 
 AIO_PREFIX = '/stremio/u-1/enc-1'  # the fake AIOStreams user the setup page provisions
+TMDB = {  # a fake TMDB under /3: The Dark Knight's collection, parts out of order, one without an IMDb id
+    '/3/find/tt0468569': {'movie_results': [{'id': 155}]},
+    '/3/movie/155': {'belongs_to_collection': {'id': 263, 'name': 'The Dark Knight Collection'}},
+    '/3/collection/263': {'name': 'The Dark Knight Collection', 'parts': [
+        {'id': 49026, 'release_date': '2012-07-16'}, {'id': 272, 'release_date': '2005-06-10'},
+        {'id': 155, 'release_date': '2008-07-14'}, {'id': 999, 'release_date': '2020-01-01'}]},
+    '/3/movie/272/external_ids': {'imdb_id': 'tt0372784'}, '/3/movie/155/external_ids': {'imdb_id': 'tt0468569'},
+    '/3/movie/49026/external_ids': {'imdb_id': 'tt1345836'}, '/3/movie/999/external_ids': {'imdb_id': None},
+}
 
 
 class FakeAddon(BaseHTTPRequestHandler):
     """A Stremio addon, and also a fake AIOStreams: templates, user creation, and the user's addon under AIO_PREFIX."""
     created = []
+    tmdb_calls = []
 
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
@@ -96,6 +108,10 @@ class FakeAddon(BaseHTTPRequestHandler):
 
     def do_GET(self):
         p = self.path.removeprefix(AIO_PREFIX)
+        if p.startswith('/3/'):
+            path, _, query = p.partition('?')
+            FakeAddon.tmdb_calls.append((path, urllib.parse.parse_qs(query)))
+            return self.reply(TMDB[path]) if path in TMDB else self.send_error(404)
         if p.startswith('/redirect?to='):  # a hostile addon bouncing the hub somewhere else
             self.send_response(302)
             self.send_header('Location', urllib.parse.unquote(p.split('=', 1)[1]))
@@ -164,7 +180,8 @@ class Fixture(unittest.TestCase):
                     + (f'stream_addons = ["{manifest}"]\n' if cls.streams else '')
                     + f'aiostreams_url = "http://127.0.0.1:{cls.addon.server_port}"\n'
                     f'new_catalog = [{{addon = "{manifest}", type = "movie", id = "fresh"}},'
-                    f' {{addon = "{manifest}", type = "movie", id = "fresh2"}}]\n' + cls.extra)
+                    f' {{addon = "{manifest}", type = "movie", id = "fresh2"}}]\n'
+                    + cls.extra.format(addon=f'http://127.0.0.1:{cls.addon.server_port}'))
         cls.server = hub.make_server(config, cls.tmp.name)
         cls.hub = cls.server.RequestHandlerClass.hub
         threading.Thread(target=cls.server.serve_forever, daemon=True).start()
@@ -534,6 +551,74 @@ class SetupTest(Fixture):
         self.assertIsNone(old['setupUrl'])  # paired now: an unknown LAN device must not get the approving nonce
         self.hub.pair_requests[old['requestId']]['created'] -= 601
         self.assertEqual(self.raw('GET', '/pair/request/' + old['requestId'])[0], 410)
+
+
+
+class ShelfTest(Fixture):
+    """Home rows, collections and franchises. The fake addon lists one catalog (movie/top)."""
+    extra = 'tmdb_base = "{addon}/3"\n'
+
+    def shelves(self):
+        return self.get('/shelves')['shelves']
+
+    def test_1_default_shelves(self):
+        for id_ in ('tt1', 'tt3', 'tt4'):
+            self.call('POST', '/keep', {'id': id_, 'type': 'movie'})
+        self.assertEqual([(s['id'], s['title'], s['hidden']) for s in self.shelves()],
+                         [('continue', 'Continue watching', False), ('next', 'Next up', False), ('new', 'New', False),
+                          ('catalog:127.0.0.1:movie:top', 'Top · Movies', False)])
+        self.assertEqual([i['id'] for i in self.get('/shelf/catalog:127.0.0.1:movie:top')['items']], ['tt1', 'tt5'])
+
+    def test_2_reorder_and_hide_persist(self):
+        rows = self.shelves()[::-1]
+        rows[1]['hidden'], rows[0]['title'] = True, 'Popular'
+        self.assertEqual(self.call('PUT', '/shelves', rows)[0], 200)
+        self.assertEqual([(s['id'], s['title'], s['hidden']) for s in self.shelves()],
+                         [('catalog:127.0.0.1:movie:top', 'Popular', False), ('new', 'New', True),
+                          ('next', 'Next up', False), ('continue', 'Continue watching', False)])
+        self.assertEqual(self.call('PUT', '/shelves', [{'kind': 'builtin', 'ref': 'nope'}])[0], 400)
+
+    def test_3_manual_collection(self):
+        status, col = self.call('POST', '/collections', {'title': 'Faves', 'kind': 'manual'})
+        self.assertEqual(self.shelves()[-1]['id'], 'collection:' + col['id'])  # appears as a Home row
+        self.call('POST', f'/collections/{col["id"]}/items', {'id': 'tt5'})  # not kept: type found via the meta addon
+        self.call('POST', f'/collections/{col["id"]}/items', {'id': 'tt1'})
+        items = self.get(f'/shelf/collection:{col["id"]}')['items']
+        self.assertEqual([(i['id'], i['title'], i['inLibrary']) for i in items], [('tt5', 'Dramaland', False), ('tt1', 'Drama Club', True)])
+        self.assertEqual(self.call('DELETE', f'/collections/{col["id"]}/items/tt5')[0], 200)
+        self.assertEqual([i['id'] for i in self.get(f'/shelf/collection:{col["id"]}')['items']], ['tt1'])
+        self.assertEqual(self.call('DELETE', f'/collections/{col["id"]}')[0], 200)
+        self.assertNotIn('collection:' + col['id'], [s['id'] for s in self.shelves()])
+
+    def test_4_smart_collection(self):
+        status, col = self.call('POST', '/collections', {'title': 'Comedies', 'kind': 'smart', 'filter': {'genres': ['comedy'], 'sort': 'az'}})
+        # library (tt1, tt3) plus the catalog (tt5), A-Z
+        self.assertEqual([i['title'] for i in self.get(f'/shelf/collection:{col["id"]}')['items']], ['Drama Club', 'Dramaland', 'The Last Drama'])
+        status, drama = self.call('POST', '/collections', {'title': 'Drama', 'kind': 'smart', 'filter': {'genres': ['Drama'], 'type': 'movie'}})
+        self.assertEqual([i['id'] for i in self.get(f'/shelf/collection:{drama["id"]}')['items']], ['tt4'])
+        self.assertEqual(self.call('POST', f'/collections/{drama["id"]}/items', {'id': 'tt1'})[0], 409)
+        self.assertEqual(self.call('POST', '/collections', {'title': 'X', 'kind': 'smart', 'filter': {'length': ['forever']}})[0], 400)
+
+    def test_5_franchise_needs_a_key(self):
+        self.assertEqual(self.call('GET', '/franchise/tt0468569')[0], 404)
+        self.assertEqual(FakeAddon.tmdb_calls, [])  # no key, no TMDB call
+
+    def test_6_franchise_with_key(self):
+        nonce = self.call('POST', '/setup/open')[1]['url'].split('n=')[1]
+        key = '0123456789abcdef0123456789abcdef'
+        self.assertEqual(self.raw('POST', '/setup', json.dumps({'n': nonce, 'action': 'tmdb', 'key': key}))[0], 200)
+        f = self.get('/franchise/tt0468569')
+        self.assertEqual((f['title'], f['collectionId']), ('The Dark Knight Collection', 263))
+        self.assertEqual([(p['id'], p['title']) for p in f['parts']],  # by release; the part with no IMDb id is left out
+                         [('tt0372784', 'Batman Begins'), ('tt0468569', 'The Dark Knight'), ('tt1345836', 'The Dark Knight Rises')])
+        self.assertTrue(all(q.get('api_key') == [key] for _, q in FakeAddon.tmdb_calls))
+        rows = self.shelves() + [{'kind': 'franchise', 'ref': 263, 'title': 'The Dark Knight Trilogy'}]
+        self.call('PUT', '/shelves', rows)
+        self.assertEqual(len(self.get('/shelf/franchise:263')['items']), 3)
+        self.assertEqual(self.raw('GET', '/shelves', headers={'X-Setup-Nonce': nonce})[0], 200)  # the setup page edits rows
+        self.assertEqual(self.raw('GET', '/shelves')[0], 401)
+        self.raw('POST', '/setup', json.dumps({'n': nonce, 'action': 'tmdb', 'key': ''}))
+        self.assertEqual(self.call('GET', '/franchise/tt0468569')[0], 404)  # key removed: even the cached answer stops
 
 
 if __name__ == '__main__':

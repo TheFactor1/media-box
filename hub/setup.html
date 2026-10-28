@@ -36,7 +36,7 @@
   .chips input { position: absolute; opacity: 0; }
   .chips label:has(input:checked) { border-color: var(--blue); color: var(--blue); }
   .chips label:has(input:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
-  input[type=text], input[type=password], input[type=url] {
+  input[type=text], input[type=password], input[type=url], input[type=number] {
     width: 100%; padding: 13px 14px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0,0,0,.35);
     color: var(--fg); font: inherit; }
   input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
@@ -56,12 +56,23 @@
          border-bottom: 1px solid var(--line); }
   .req b { font-size: 20px; letter-spacing: .08em; }
   .hidden { display: none; }
+  .rows { list-style: none; margin: 0 0 12px; padding: 0; }
+  .rows li { display: flex; gap: 6px; align-items: center; padding: 6px; margin-bottom: 6px; border: 1px solid var(--line);
+             border-radius: 10px; background: var(--glass); }
+  .rows li.drag { border-color: var(--blue); }
+  .rows li.off input { color: var(--muted); text-decoration: line-through; }
+  .rows input[type=text] { flex: 1; min-width: 0; padding: 9px 10px; }
+  .handle { touch-action: none; cursor: grab; padding: 10px 8px; border: 0; background: none; color: var(--muted); }
+  .tog { padding: 9px 10px; font-size: 14px; font-weight: 500; min-width: 74px; }
+  .chips.three { grid-template-columns: 1fr 1fr 1fr; }
+  .sub { color: var(--muted); font-size: 13px; margin: 14px 0 6px; }
+  .card b { display: block; margin-bottom: 4px; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
 <main>
-  <div class="steps" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+  <div class="steps" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
 
   <section id="s0" aria-labelledby="h0">
     <h1 id="h0">Your debrid</h1>
@@ -94,12 +105,49 @@
   </section>
 
   <section id="s3" aria-labelledby="h3">
-    <h1 id="h3">Done</h1>
+    <h1 id="h3">Home rows</h1>
+    <p class="lead">The rows every TV shows on Home. Drag ⋮⋮ to reorder (or use the arrow keys on it), type to rename, tap Shown to hide.</p>
+    <ul class="rows" id="rows" aria-label="Home rows"></ul>
+    <div class="row"><button id="addCol" type="button">+ Collection</button><button id="addCat" type="button">+ Catalog</button></div>
+    <div class="card hidden" id="catForm"><p class="msg" id="catNone">Every catalog is already on Home.</p><div id="catList"></div></div>
+    <div class="card hidden" id="colForm">
+      <input id="colTitle" type="text" maxlength="80" placeholder="Name, e.g. Friday films" aria-label="Collection name">
+      <p class="sub">Kind</p>
+      <label class="opt"><input type="radio" name="ckind" value="manual" checked>
+        <span>Manual<small>You add titles to it from the TV.</small></span></label>
+      <label class="opt"><input type="radio" name="ckind" value="smart">
+        <span>Smart<small>Fills itself from your library and catalogs.</small></span></label>
+      <div id="smart" class="hidden">
+        <p class="sub">Type</p><div class="chips three" id="fType" role="radiogroup" aria-label="Type"></div>
+        <p class="sub">Genres</p><div class="chips three" id="fGenres" role="group" aria-label="Genres"></div>
+        <p class="sub">Length</p><div class="chips three" id="fLength" role="group" aria-label="Length"></div>
+        <p class="sub">Format</p><div class="chips three" id="fFormat" role="group" aria-label="Format"></div>
+        <p class="sub">Years</p>
+        <div class="row"><input id="fFrom" type="number" min="1900" max="2100" placeholder="From" aria-label="From year">
+          <input id="fTo" type="number" min="1900" max="2100" placeholder="To" aria-label="To year"></div>
+        <p class="sub">Order</p><div class="chips three" id="fSort" role="radiogroup" aria-label="Order"></div>
+      </div>
+      <div class="row"><button id="colCancel" type="button">Cancel</button><button class="go" id="colCreate" type="button">Create</button></div>
+    </div>
+    <div class="card">
+      <b>Franchise collections (TMDB key)</b>
+      <p class="msg">Optional. With your free TMDB key, a film can show its whole series, like The Dark Knight Trilogy, and you can pin it as a row. Without a key the box never contacts TMDB.</p>
+      <input id="tmdbKey" type="password" autocomplete="off" spellcheck="false" placeholder="TMDB API key" aria-label="TMDB API key">
+      <div class="row"><button id="tmdbSave" type="button">Save key</button></div>
+      <p class="msg" id="mT" role="status"></p>
+    </div>
+    <div class="row"><button id="back3" type="button">Back</button><button class="go" id="next3" type="button">Continue</button></div>
+    <p class="msg" id="m3" role="status"></p>
+  </section>
+
+  <section id="s4" aria-labelledby="h4">
+    <h1 id="h4">Done</h1>
     <p class="lead">Now connect your TVs. If a TV shows a pairing code, approve it here.</p>
     <div class="card" id="reqs"><p class="msg" id="noreq">Waiting for a TV… (open the app on the TV and choose Pair)</p></div>
     <p class="lead">No code on the TV? Type these six words on it instead:</p>
     <div class="words" id="words" aria-label="Pairing words"></div>
-    <p class="msg" id="m3" role="status"></p>
+    <div class="row"><button id="editRows" type="button">Edit Home rows</button></div>
+    <p class="msg" id="m4" role="status"></p>
   </section>
 </main>
 <script>
@@ -123,7 +171,8 @@
     document.querySelectorAll('section').forEach((s, k) => s.classList.toggle('on', k === i));
     document.querySelectorAll('.steps span').forEach((s, k) => s.classList.toggle('on', k <= i));
     const h = $('h' + i); h.tabIndex = -1; h.focus();
-    if (i === 3) finish();
+    if (i === 3) loadRows();
+    if (i === 4) finish();
   }
   const provider = () => (document.querySelector('input[name=prov]:checked') || {}).value;
   const source = () => document.querySelector('input[name=src]:checked').value;
@@ -172,7 +221,7 @@
       const j = await call('POST', '/setup', { action: 'done' });
       $('words').replaceChildren(...(j.words || []).map(w => { const s = document.createElement('span'); s.textContent = w; return s; }));
       poll();
-    } catch (e) { say('m3', e.message, 'warn'); }
+    } catch (e) { say('m4', e.message, 'warn'); }
   }
   async function poll() {
     try {
@@ -184,13 +233,124 @@
         const b = document.createElement('button'); b.type = 'button'; b.className = 'go'; b.style.flex = '0'; b.textContent = 'Approve';
         b.onclick = async () => { busy(b, true);
           try { await call('POST', '/pair/approve', { requestId: r.requestId }); d.textContent = r.name + ' is paired.'; }
-          catch (e) { say('m3', e.message, 'warn'); busy(b, false); } };
+          catch (e) { say('m4', e.message, 'warn'); busy(b, false); } };
         d.append(t, b); return d;
       });
       $('reqs').replaceChildren(...(rows.length ? rows : [$('noreq')]));
       setTimeout(poll, 2000);
-    } catch (e) { say('m3', 'Setup has closed. Open it again from the TV to pair more.', ''); }
+    } catch (e) { say('m4', 'Setup has closed. Open it again from the TV to pair more.', ''); }
   }
+
+  // ---- Home rows: the same /shelves and /collections calls the TVs use, authorised by this page's nonce ----
+  async function api(method, path, body) {
+    const r = await fetch(path, { method, body: body === undefined ? undefined : JSON.stringify(body),
+                                  headers: { 'Content-Type': 'application/json', 'X-Setup-Nonce': n } });
+    const j = await r.json().catch(() => ({ reason: 'The box did not answer. Is it still on?' }));
+    if (!r.ok) throw new Error(j.reason || ('Error ' + r.status));
+    return j;
+  }
+  let rows = [];
+  async function loadRows() {
+    try { rows = (await api('GET', '/shelves')).shelves; drawRows(); } catch (e) { say('m3', e.message, 'warn'); }
+  }
+  // The page's list is the truth while editing; saves go out one at a time, in order, each with the latest list.
+  let saving = Promise.resolve();
+  function saveRows() {
+    rows = [...$('rows').children].map(li => rows.find(r => r.id === li.dataset.id));
+    const snapshot = JSON.parse(JSON.stringify(rows));
+    saving = saving.then(() => api('PUT', '/shelves', snapshot)).then(() => say('m3', 'Saved.', 'ok'))
+      .catch(e => { say('m3', e.message, 'warn'); loadRows(); });
+  }
+  function drawRows() {
+    $('rows').replaceChildren(...rows.map(r => {
+      const li = document.createElement('li'); li.dataset.id = r.id;
+      const h = document.createElement('button'); h.type = 'button'; h.className = 'handle'; h.textContent = '⋮⋮';
+      h.setAttribute('aria-label', 'Move ' + r.title + '; arrow keys move it up or down');
+      const t = document.createElement('input'); t.type = 'text'; t.value = r.title; t.maxLength = 80; t.setAttribute('aria-label', 'Row name');
+      t.onchange = () => { r.title = t.value.trim() || r.title; t.value = r.title; saveRows(); };
+      const v = document.createElement('button'); v.type = 'button'; v.className = 'tog';
+      const paint = () => { v.textContent = r.hidden ? 'Hidden' : 'Shown'; v.setAttribute('aria-pressed', String(!r.hidden)); li.classList.toggle('off', r.hidden); };
+      v.onclick = () => { r.hidden = !r.hidden; paint(); saveRows(); drawCatalogs(); };
+      paint(); li.append(h, t, v); return li;
+    }));
+    drawCatalogs();
+  }
+  // Pointer drag (touch and mouse; HTML5 drag-and-drop does nothing on phones) plus arrow keys on the handle.
+  let dragging = null;
+  $('rows').addEventListener('pointerdown', e => {
+    const h = e.target.closest('.handle'); if (!h) return;
+    dragging = h.closest('li'); dragging.classList.add('drag'); h.setPointerCapture(e.pointerId); e.preventDefault();
+  });
+  $('rows').addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const over = document.elementFromPoint(e.clientX, e.clientY)?.closest('#rows li');
+    if (over && over !== dragging) {
+      const box = over.getBoundingClientRect();
+      $('rows').insertBefore(dragging, e.clientY < box.top + box.height / 2 ? over : over.nextSibling);
+    }
+  });
+  const drop = () => { if (!dragging) return; dragging.classList.remove('drag'); dragging = null; saveRows(); };
+  $('rows').addEventListener('pointerup', drop);
+  $('rows').addEventListener('pointercancel', drop);
+  $('rows').addEventListener('keydown', e => {
+    const h = e.target.closest('.handle'); if (!h || !['ArrowUp', 'ArrowDown'].includes(e.key)) return;
+    const li = h.closest('li'), sib = e.key === 'ArrowUp' ? li.previousElementSibling : li.nextElementSibling;
+    if (!sib) return;
+    e.preventDefault(); $('rows').insertBefore(li, e.key === 'ArrowUp' ? sib : sib.nextSibling); h.focus(); saveRows();
+  });
+
+  function drawCatalogs() {
+    const off = rows.filter(r => r.kind === 'catalog' && r.hidden);
+    $('catNone').classList.toggle('hidden', off.length > 0);
+    $('catList').replaceChildren(...off.map(r => {
+      const d = document.createElement('div'); d.className = 'req';
+      const t = document.createElement('span'); t.textContent = r.title;
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Add';
+      b.onclick = () => { r.hidden = false; rows = rows.filter(x => x !== r).concat(r); drawRows(); saveRows(); };
+      d.append(t, b); return d;
+    }));
+  }
+  $('addCat').onclick = () => { $('catForm').classList.toggle('hidden'); $('colForm').classList.add('hidden'); };
+  $('addCol').onclick = () => { $('colForm').classList.toggle('hidden'); $('catForm').classList.add('hidden'); $('colTitle').focus(); };
+  $('colCancel').onclick = () => $('colForm').classList.add('hidden');
+  document.querySelectorAll('input[name=ckind]').forEach(i => i.onchange = () =>
+    $('smart').classList.toggle('hidden', document.querySelector('input[name=ckind]:checked').value !== 'smart'));
+  function chips(el, name, type, opts, checked) {
+    el.replaceChildren(...opts.map(([v, label]) => {
+      const l = document.createElement('label'), i = document.createElement('input');
+      i.type = type; i.name = name; i.value = v; i.checked = v === checked; l.append(i, label); return l;
+    }));
+  }
+  const picked = name => [...document.querySelectorAll('input[name=' + name + ']:checked')].map(i => i.value);
+  chips($('fType'), 'ftype', 'radio', [['', 'Any'], ['movie', 'Movies'], ['series', 'Shows']], '');
+  chips($('fGenres'), 'fgenre', 'checkbox', ['Action', 'Adventure', 'Animation', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Family',
+    'Fantasy', 'History', 'Horror', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War', 'Western'].map(g => [g, g]));
+  chips($('fLength'), 'flen', 'checkbox', [['under1h', '< 1 h'], ['1to2h', '1–2 h'], ['over2h', '2 h +']]);
+  chips($('fFormat'), 'ffmt', 'checkbox', [['4K', '4K'], ['HDR', 'HDR'], ['Atmos', 'Atmos']]);
+  chips($('fSort'), 'fsort', 'radio', [['newest', 'Newest'], ['az', 'A–Z'], ['shortest', 'Shortest']], 'newest');
+  $('colCreate').onclick = async () => {
+    const title = $('colTitle').value.trim(), kind = document.querySelector('input[name=ckind]:checked').value;
+    if (!title) return say('m3', 'Give the collection a name.', 'warn');
+    const body = { title, kind };
+    if (kind === 'smart') {
+      const f = { genres: picked('fgenre'), length: picked('flen'), format: picked('ffmt'), sort: picked('fsort')[0] || 'newest' };
+      const type = picked('ftype')[0]; if (type) f.type = type;
+      const years = {}; if ($('fFrom').value) years.from = +$('fFrom').value; if ($('fTo').value) years.to = +$('fTo').value;
+      if (Object.keys(years).length) f.years = years;
+      body.filter = f;
+    }
+    try { await saving; await api('POST', '/collections', body); $('colForm').classList.add('hidden'); $('colTitle').value = '';
+          say('m3', title + ' is on Home now.', 'ok'); loadRows(); }
+    catch (e) { say('m3', e.message, 'warn'); }
+  };
+  $('tmdbSave').onclick = async () => {
+    try { const j = await call('POST', '/setup', { action: 'tmdb', key: $('tmdbKey').value.trim() });
+          $('tmdbKey').value = ''; say('mT', j.tmdb ? 'Key saved. Franchises are on.' : 'Key removed. The box will not contact TMDB.', 'ok'); }
+    catch (e) { say('mT', e.message, 'warn'); }
+  };
+  $('back3').onclick = () => show(2);
+  $('next3').onclick = () => show(4);
+  $('editRows').onclick = () => show(3);
 
   (async () => {
     try { info = await call('GET', '/setup/info'); }
@@ -212,7 +372,8 @@
       const s = document.createElement('span'); s.textContent = name; const sm = document.createElement('small'); sm.textContent = sub;
       s.append(sm); l.append(i, s); return l;
     }));
-    show(info.configured ? 3 : 0);  // already set up (e.g. opened to approve a TV): straight to pairing
+    if (info.tmdb) $('tmdbKey').placeholder = 'Key saved; enter a new one to replace it';
+    show(info.configured ? 4 : 0);  // already set up (e.g. opened to approve a TV): straight to pairing
   })();
 })();
 </script>

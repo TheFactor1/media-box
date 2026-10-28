@@ -150,6 +150,14 @@ def handle(hub, body, public_host):
         if choice != 'auto':
             hub.preset = choice
         return {'ok': True}
+    if action == 'tmdb':  # optional: franchise collections. Empty clears it.
+        if not key:
+            hub.sql("DELETE FROM settings WHERE name = 'tmdb_api_key'")
+            return {'ok': True, 'tmdb': False}
+        if not re.fullmatch(r'[0-9a-f]{32}|eyJ[\w.-]{20,1000}', key):
+            raise ValueError('that is not a TMDB API key (32 characters) or read access token (starts with eyJ)')
+        hub.set_setting('tmdb_api_key', key)
+        return {'ok': True, 'tmdb': True}
     if action == 'done':
         return hub.finish_setup()
     raise ValueError('unknown setup step')
