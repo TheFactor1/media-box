@@ -849,6 +849,30 @@ button.sv{cursor:pointer}
 :root[data-look="space"][data-nav="dock"] .alt-programme :is(.pf-srch,.pf-filt).on{box-shadow:inset 0 0 0 1px rgba(159,216,255,.6),0 0 12px rgba(159,216,255,.25)}
 :root[data-look="space"][data-nav="dock"] .alt-programme .nv-hi{display:block;top:5px;width:34px;height:34px;border-radius:12px;background:rgba(159,216,255,.15);box-shadow:inset 0 1px 0 rgba(230,245,255,.4),inset 0 0 0 1px rgba(159,216,255,.3);transform:translateX(var(--x))}
 :root[data-look="space"][data-nav="dock"] .alt-programme .nv-open .nv-hi{width:70px;height:46px;background:rgba(159,216,255,.24);box-shadow:inset 0 1px 0 rgba(235,248,255,.55),inset 0 0 0 1px rgba(159,216,255,.55),0 0 18px rgba(159,216,255,.25)}
+/* Hairline header (Space): one calm band; wordmark | search + tabs ... attention, clock */
+.pg-clk{display:none}
+[data-look="space"] .sky b:is(:nth-of-type(1),:nth-of-type(3),:nth-of-type(4)){display:none}
+:root[data-look="space"][data-home="programme"][data-nav="hairline"] .sky{-webkit-mask:linear-gradient(180deg,transparent 36px,#000 60px);mask:linear-gradient(180deg,transparent 36px,#000 60px)}
+:root[data-look="space"][data-nav="hairline"] .alt-programme .pg-top{left:28px;right:28px;top:8px;height:28px;box-sizing:border-box;padding-top:9.4px;align-items:baseline;gap:0}
+:root[data-look="space"][data-nav="hairline"] .alt-programme .pg-top::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:rgba(255,255,255,.06)}
+:root[data-look="space"][data-nav="hairline"] .alt-programme .pg-mark{font:500 10px/1 "Orbitron","Helvetica Neue",sans-serif;letter-spacing:.08em;color:var(--fg);opacity:.85}
+:root[data-look="space"][data-nav="hairline"] .alt-programme .pg-att{margin-left:auto;display:inline-block;font:400 11px/1 "Geist Mono",ui-monospace,monospace;letter-spacing:.2em;color:var(--warn)}
+:root[data-look="space"][data-nav="hairline"] .alt-programme .pg-att::before{content:"";display:inline-block;margin:0 8px 0 0;vertical-align:.32em;width:5px;height:5px;border-radius:50%;background:var(--warn);box-shadow:0 0 6px color-mix(in srgb,var(--warn) 60%,transparent)}
+:root[data-look="space"][data-nav="hairline"] .alt-programme .pg-clk{display:block;margin-left:20px;font:400 11px/1 "Geist Mono",ui-monospace,monospace;letter-spacing:.12em;color:var(--fg);opacity:.85}
+:root[data-look="space"][data-nav="hairline"] .alt-programme .pg-mark+.pg-clk{margin-left:auto}
+:root[data-look="space"][data-nav="hairline"] .alt-programme .pf-bar{left:116px;right:auto;top:8px}
+:root[data-look="space"][data-nav="hairline"] .alt-programme .pf-bar::before{content:"";position:absolute;left:-14px;top:5px;width:1px;height:18px;background:rgba(255,255,255,.12);margin-left:-1px}
+:root[data-look="space"][data-nav="hairline"] .alt-programme .pf-cols{height:28px;box-sizing:border-box;align-items:baseline;gap:19px;padding-top:7.4px}
+:root[data-look="space"][data-nav="hairline"] .alt-programme :is(.pf-tab,.pf-filt){outline:0;padding:0;margin:0;opacity:.5}
+:root[data-look="space"][data-nav="hairline"] .alt-programme :is(.pf-tab,.pf-filt)::after{content:none}
+:root[data-look="space"][data-nav="hairline"] .alt-programme .pf-tab{font:500 13.5px/1 "Instrument Sans",system-ui,sans-serif;letter-spacing:.01em}
+:root[data-look="space"][data-nav="hairline"] .alt-programme .pf-filt{align-items:baseline;font:400 9.5px/1 "Geist Mono",ui-monospace,monospace;letter-spacing:.18em}
+:root[data-look="space"][data-nav="hairline"] .alt-programme :is(.pf-tab,.pf-filt).on{opacity:.85}
+:root[data-look="space"][data-nav="hairline"] .alt-programme :is(.pf-tab,.pf-filt).sel{opacity:1}
+:root[data-look="space"][data-nav="hairline"] .alt-programme .pf-srch svg{display:block;width:10px;height:10px;transform:translateY(.5px)}
+:root[data-look="space"][data-nav="hairline"] .alt-programme .nv-hi{display:block;top:26.5px;width:100px;height:2px;border-radius:2px;background:#9fd8ff;box-shadow:0 0 6px rgba(159,216,255,.35);transform:translateX(calc(var(--x) + 2px)) scaleX(var(--k4));transform-origin:0 0}
+:root[data-look="space"][data-nav="hairline"] .alt-programme .pg-l{top:62px}
+:root[data-look="space"][data-nav="hairline"] .alt-programme .sr{top:58px}
 /* Now playing: stars dim, the limb brightens */
 [data-look="space"] .stage:has(#ov.np:not([hidden])) .sky :is(.s1,.s2,.s3,b){opacity:.25}
 [data-look="space"] .stage:has(#ov.np:not([hidden])) .sky .limb{box-shadow:0 -1px 0 rgba(220,240,255,.95),0 -12px 46px rgba(140,200,255,.4)}
@@ -1915,7 +1939,7 @@ function renderAlt(dir){
     A.querySelector('.wl-grid').scrollTop=A.querySelector('.start').offsetTop-14;
   }else if(lay==='programme'){
     progLast=null;const ids=pfList();if(ids[0]&&!pgSearch)setBd(ids[0]);
-    A.innerHTML=`<div class="pg-top"><span class="pg-mark">mediabox</span>${ATTN?'<span class="pg-att">ATTENTION</span>':''}</div><div class="pf-bar">${pfTabs()}</div>${pgSearch?srHtml():`<div class="pg-l"><div class="pg-list vscroll">${ids.map((id,i)=>pgItem(id,!i)).join('')||'<p class="pf-empty">Nothing matches. Clear a chip.</p>'}</div></div>
+    A.innerHTML=`<div class="pg-top"><span class="pg-mark">mediabox</span>${ATTN?'<span class="pg-att">ATTENTION</span>':''}<span class="pg-clk">${$('#clock').textContent}</span></div><div class="pf-bar">${pfTabs()}</div>${pgSearch?srHtml():`<div class="pg-l"><div class="pg-list vscroll">${ids.map((id,i)=>pgItem(id,!i)).join('')||'<p class="pf-empty">Nothing matches. Clear a chip.</p>'}</div></div>
       <div class="pg-btns"><button class="f btn pri" data-id="pg-play" data-act="pgplay">Play</button><button class="f btn" data-id="pg-info" data-act="pginfo">Details</button></div>`}`;
   }else if(lay==='tonight'){
     setBd(null);
@@ -2208,10 +2232,10 @@ function navSync(){
   nvI=i;
   // the one moving element: follows focus inside the nav, otherwise rests on the chosen collection
   const H=C.querySelector('.nv-hi'),any=!['capsule','dock'].includes(nv);
-  const t=inC&&(any||cur.dataset.act==='pfc')?cur:(pgSearch?(any?C.querySelector('.pf-srch'):null):tabs[pf.c]);
+  const t=nv==='hairline'?(pgSearch?C.querySelector('.pf-srch'):tabs[pf.c]):inC&&(any||cur.dataset.act==='pfc')?cur:(pgSearch?(any?C.querySelector('.pf-srch'):null):tabs[pf.c]);
   H.classList.toggle('nv-off',!t);if(!t)return;
   const q={x:t.offsetLeft,y:t.offsetTop,w:t.offsetWidth,h:t.offsetHeight},bw=H.offsetWidth||1;
-  const set=r=>{H.style.setProperty('--x',r.x+'px');H.style.setProperty('--y',r.y+'px');H.style.setProperty('--cx',r.x+r.w/2+'px');H.style.setProperty('--cy',r.y+r.h/2+'px');H.style.setProperty('--k',r.w/bw)};
+  const set=r=>{H.style.setProperty('--k4',(r.w-4)/bw);H.style.setProperty('--x',r.x+'px');H.style.setProperty('--y',r.y+'px');H.style.setProperty('--cx',r.x+r.w/2+'px');H.style.setProperty('--cy',r.y+r.h/2+'px');H.style.setProperty('--k',r.w/bw)};
   if(!H.dataset.p){H.style.transition='none';set(nvLast||q);void H.offsetWidth;H.style.transition='';H.dataset.p=1}
   clearTimeout(H._t);
   if(nv==='sweep'&&nvLast&&nvLast.x!==q.x&&!calm()){
@@ -2344,7 +2368,7 @@ function cst(){
 // scale the 800x450 stage to the frame
 const tv=$('#tv');
 new ResizeObserver(()=>stage.style.setProperty('--s',tv.clientWidth/800)).observe(tv);
-const clock=()=>{document.querySelectorAll('.nv-clk').forEach(e=>e.textContent=$('#clock').textContent);$('#clock').textContent=$('#amb-clock').textContent=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hour12:false})};
+const clock=()=>{$('#clock').textContent=$('#amb-clock').textContent=new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',hour12:false});document.querySelectorAll('.nv-clk,.pg-clk').forEach(e=>e.textContent=$('#clock').textContent)};
 clock();setInterval(clock,20000);
 
 let saved='cinema';try{saved=localStorage.getItem('mb-look')||'cinema'}catch(_){}
