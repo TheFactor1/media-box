@@ -4,7 +4,7 @@
 [[customizations.user]]
 name = "admin"
 groups = ["wheel"]
-key = "ssh-ed25519 REPLACE_WITH_YOUR_PUBLIC_KEY"
+key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN2jAmCpV+XvBlLwL7I/dX6fj5NCOkFB4CRV4wbtF/J+ matth@DESKTOP-MFBFQOF"
 
 [customizations.installer.kickstart]
 contents = """
