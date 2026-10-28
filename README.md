@@ -29,7 +29,7 @@ sudo podman run --rm --privileged --security-opt label=type:unconfined_t \
   -v ./disk_config/iso.toml:/config.toml:ro -v ./output:/output \
   -v /var/lib/containers/storage:/var/lib/containers/storage \
   quay.io/centos-bootc/bootc-image-builder:latest \
-  --type anaconda-iso --config /config.toml localhost/media-box:latest
+  --type anaconda-iso --rootfs btrfs --config /config.toml localhost/media-box:latest
 ```
 
 The installer wipes the target disk (see the kickstart in `iso.toml`).

@@ -38,7 +38,7 @@ jobs:
             -v ./output:/output \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
             quay.io/centos-bootc/bootc-image-builder:latest \
-            --type anaconda-iso --config /config.toml "$IMAGE:latest"
+            --type anaconda-iso --rootfs btrfs --config /config.toml "$IMAGE:latest"
 
       - uses: actions/upload-artifact@v4
         if: github.event_name != 'pull_request'

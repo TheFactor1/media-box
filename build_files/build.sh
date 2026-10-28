@@ -47,6 +47,11 @@ for id in repository.jellyfin.kodi plugin.video.jellyfin script.module.{requests
 done
 grep -q '>plugin.video.jellyfin</addon>' /usr/share/kodi/system/addon-manifest.xml
 
+# Hub, discovery beacon, AIOStreams (Adjust sources) and Kodi's web remote must be reachable on the LAN.
+if command -v firewall-offline-cmd >/dev/null; then
+  firewall-offline-cmd --add-port=8097/tcp --add-port=8098/udp --add-port=3000/tcp --add-port=8080/tcp
+fi
+
 systemctl set-default multi-user.target
 systemctl disable getty@tty1.service
 systemctl enable kodi.service podman.socket

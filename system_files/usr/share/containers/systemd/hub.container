@@ -3,7 +3,6 @@ Description=Hub API (library, resume, browse, best stream)
 PartOf=hub.target
 
 [Container]
-# shortcut: no published image yet; build hub/Containerfile and push to this name before the first image build
 Image=ghcr.io/thefactor1/mediabox-hub:latest
 GlobalArgs=--storage-opt=additionalimagestore=/usr/lib/bootc/storage
 Network=host
