@@ -75,6 +75,15 @@ One small service (Python 3.12 stdlib + sqlite3, one container, port 8097) that 
 | `GET /browse/streams/{type}/{id}[/{s}/{e}]` | Ranked streams with parsed badges; same ranking `/play` uses |
 | `GET /search?q=` | Library first (title start, then any word, then genre), then catalog search via the addons |
 
+**Shelves and collections** (2026-10-28):
+| Call | Does |
+|---|---|
+| `GET /shelves` · `PUT /shelves` | The Home row list, in order: `[{id, kind: builtin\|catalog\|collection\|franchise, ref, title, hidden}]`. `builtin` refs: `continue`, `next`, `new`, `recent`. `catalog` ref: `{addon host, type, id}` from `/browse/catalogs`. Default on first run: continue, next, new, then every catalog. Shared by every paired box |
+| `GET /shelf/{id}?skip=N` | The row's items, browse-shaped with `inLibrary`/`resume` |
+| `GET /collections` · `POST /collections {title, kind: manual\|smart, filter?}` · `PATCH /collections/{id}` · `DELETE /collections/{id}` | User collections. `smart` filter = the Refine fields (genres, length, format, years, type) evaluated over library + catalogs |
+| `POST /collections/{id}/items {id}` · `DELETE /collections/{id}/items/{itemId}` | Add/remove a title in a manual collection |
+| `GET /franchise/{id}` | The TMDB collection a film belongs to (`{title, parts[] item-shaped, ordered by release}`), only if a TMDB key is configured in setup; otherwise 404. Cached 7 days |
+
 Item shape, everywhere: `{id (imdb tt…), type (movie|series), title, year, runtimeMin, genres[], poster, backdrop, logo, overview, badges {res, hdr, audio}, inLibrary, keptAt, resume {positionMs, durationMs, updatedAt} | null, nextEpisode {s, e, title} | null}`.
 
 Config: `/var/lib/hub/hub.toml` (addon manifest URLs, meta addon, preset); data: `/var/lib/hub/hub.sqlite`. Stream cache per title 10 min. Addon unreachable → `/play` serves the cached URL if any, else 503 with `{reason}`.
