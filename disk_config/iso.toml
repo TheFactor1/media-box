@@ -8,6 +8,7 @@ network --bootproto=dhcp --activate
 zerombr
 clearpart --all --initlabel
 autopart --type=btrfs --nohome
+rootpw --lock
 user --name=admin --groups=wheel --lock
 sshkey --username=admin "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN2jAmCpV+XvBlLwL7I/dX6fj5NCOkFB4CRV4wbtF/J+ matth@DESKTOP-MFBFQOF"
 reboot
