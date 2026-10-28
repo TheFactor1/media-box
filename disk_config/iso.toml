@@ -1,11 +1,6 @@
 # bootc-image-builder config for the anaconda-iso output.
-# Admin account for SSH during the Phase 0 spikes. Put your public key here;
-# password login stays off.
-[[customizations.user]]
-name = "admin"
-groups = ["wheel"]
-key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN2jAmCpV+XvBlLwL7I/dX6fj5NCOkFB4CRV4wbtF/J+ matth@DESKTOP-MFBFQOF"
-
+# The builder refuses [[customizations.user]] alongside custom kickstart, so the admin
+# account for the Phase 0 spikes lives in the kickstart: SSH key only, no password.
 [customizations.installer.kickstart]
 contents = """
 text
@@ -13,5 +8,13 @@ network --bootproto=dhcp --activate
 zerombr
 clearpart --all --initlabel
 autopart --type=btrfs --nohome
+user --name=admin --groups=wheel --lock
+sshkey --username=admin "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN2jAmCpV+XvBlLwL7I/dX6fj5NCOkFB4CRV4wbtF/J+ matth@DESKTOP-MFBFQOF"
 reboot
+
+%post
+# The account has no password, so sudo must not ask for one.
+echo 'admin ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/admin
+chmod 0440 /etc/sudoers.d/admin
+%end
 """
