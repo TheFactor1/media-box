@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Template: build-skin.py fills the two markers from the Estuary it builds on (same deps, same resolutions). -->
+<addon id="skin.mediabox" version="0.1.0+estuary.@ESTUARY_VERSION@" name="Mediabox" provider-name="Mediabox, on Estuary by phil65 and Ichabod Fletchman">
+	<requires>
+@ESTUARY_REQUIRES@
+	</requires>
+	<extension point="xbmc.gui.skin" debugging="false">
+@ESTUARY_RES@
+	</extension>
+	<extension point="xbmc.addon.metadata">
+		<platform>all</platform>
+		<summary lang="en_GB">Mediabox: Kodi's Estuary skin with the Mediabox Home in the Space look</summary>
+		<description lang="en_GB">Built on Estuary (Kodi's default skin, by phil65 and Ichabod Fletchman; GPL-2.0, artwork CC BY-SA 4.0), copied from the installed Kodi at build time. Mediabox adds its own Home, colours, fonts (Orbitron, Instrument Sans, Geist Mono; SIL OFL 1.1, see fonts/) and textures; every other window is Estuary's.</description>
+		<license>CC BY-SA 4.0, GNU GENERAL PUBLIC LICENSE Version 2.0 (Estuary, LICENSE.txt); SIL OFL 1.1 (fonts/)</license>
+		<source>https://github.com/xbmc/skin.estuary/</source>
+		<assets>
+			<icon>resources/icon.png</icon>
+			<fanart>resources/fanart.jpg</fanart>
+		</assets>
+	</extension>
+</addon>

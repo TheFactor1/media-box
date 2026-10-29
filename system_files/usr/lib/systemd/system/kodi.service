@@ -20,7 +20,7 @@ Environment=HOME=/var/lib/media
 ExecStartPre=/usr/libexec/mediabox/kodi-seed
 # Without this Kodi tries PulseAudio, then PipeWire, before ALSA (PlatformLinux.cpp).
 ExecStart=/usr/bin/kodi --windowing=gbm --audio-backend=alsa
-Restart=on-abort
+Restart=always
 RestartSec=2
 
 [Install]

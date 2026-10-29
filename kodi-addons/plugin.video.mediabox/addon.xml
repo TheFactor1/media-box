@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Mediabox: the Kodi side of the hub (DATAFLOW.md "Hub API"). Python 3, Kodi 22 "Piers" (xbmc.python 3.1.1). -->
+<addon id="plugin.video.mediabox" name="Mediabox" version="0.1.0" provider-name="Mediabox">
+    <requires>
+        <import addon="xbmc.python" version="3.0.0"/>
+    </requires>
+    <extension point="xbmc.python.pluginsource" library="default.py">
+        <provides>video</provides>
+    </extension>
+    <!-- Publishes the Home shelves, tracks resume points, shows the first-run setup QR. -->
+    <extension point="xbmc.service" library="service.py"/>
+    <extension point="xbmc.addon.metadata">
+        <summary lang="en_GB">Your library, catalogs and best stream, from the box's hub</summary>
+        <description lang="en_GB">Browses the hub's shelves, library and catalogs and plays the best stream it picks. No sources are shipped; the hub uses the user's own addons.</description>
+        <platform>all</platform>
+        <!-- The project has no licence file yet; the bundled QR encoder keeps its own (MIT, header of qrcodegen.py). -->
+        <license>Mediabox project; resources/lib/qrcodegen.py MIT (Project Nayuki)</license>
+    </extension>
+</addon>

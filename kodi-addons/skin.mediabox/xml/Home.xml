@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Mediabox Home: the prototype's Shelf layout in the Space look (docs/prototype.html, Look = Space, Layout = Shelf).
+     One-band header with the tabs; Home = hero + poster rows (one per hub shelf); every other tab = a poster grid
+     of the plugin's path. Rows and their titles come from plugin.video.mediabox's service (Window(Home) properties). -->
+<window>
+	<defaultcontrol always="true">5000</defaultcontrol>
+	<backgroundcolor>FF05070F</backgroundcolor>
+	<onload condition="String.IsEmpty(Window(Home).Property(mbtab))">SetProperty(mbtab,home,home)</onload>
+	<controls>
+		<include>MbBackground</include>
+
+		<!-- Hero: the focused title, or the first row's first title while the tabs have focus. -->
+		<control type="group">
+			<left>74</left><top>124</top>
+			<visible>String.IsEqual(Window(Home).Property(mbtab),home)</visible>
+			<control type="group">
+				<visible>ControlGroup(5000).HasFocus</visible>
+				<include content="MbHeroInfo"><param name="c" value="ListItem"/></include>
+			</control>
+			<control type="group">
+				<visible>!ControlGroup(5000).HasFocus + Integer.IsGreater(Container(5001).NumItems,0)</visible>
+				<include content="MbHeroInfo"><param name="c" value="Container(5001).ListItem"/></include>
+			</control>
+			<control type="group">
+				<visible>!ControlGroup(5000).HasFocus + !Integer.IsGreater(Container(5001).NumItems,0) + Integer.IsGreater(Container(5002).NumItems,0)</visible>
+				<include content="MbHeroInfo"><param name="c" value="Container(5002).ListItem"/></include>
+			</control>
+			<control type="group">
+				<visible>!ControlGroup(5000).HasFocus + !Integer.IsGreater(Container(5001).NumItems,0) + !Integer.IsGreater(Container(5002).NumItems,0)</visible>
+				<include content="MbHeroInfo"><param name="c" value="Container(5003).ListItem"/></include>
+			</control>
+		</control>
+
+		<!-- Rows: one per shelf, empty ones collapse. -->
+		<control type="grouplist" id="5000">
+			<left>0</left><top>486</top><width>1920</width><height>714</height>
+			<orientation>vertical</orientation>
+			<itemgap>4</itemgap>
+			<usecontrolcoords>true</usecontrolcoords>
+			<onup>9000</onup>
+			<scrolltime tween="cubic" easing="out">300</scrolltime>
+			<visible>String.IsEqual(Window(Home).Property(mbtab),home)</visible>
+			<include content="MbRow"><param name="n" value="1"/><param name="nn" value="01"/><param name="id" value="5001"/></include>
+			<include content="MbRow"><param name="n" value="2"/><param name="nn" value="02"/><param name="id" value="5002"/></include>
+			<include content="MbRow"><param name="n" value="3"/><param name="nn" value="03"/><param name="id" value="5003"/></include>
+			<include content="MbRow"><param name="n" value="4"/><param name="nn" value="04"/><param name="id" value="5004"/></include>
+			<include content="MbRow"><param name="n" value="5"/><param name="nn" value="05"/><param name="id" value="5005"/></include>
+			<include content="MbRow"><param name="n" value="6"/><param name="nn" value="06"/><param name="id" value="5006"/></include>
+			<include content="MbRow"><param name="n" value="7"/><param name="nn" value="07"/><param name="id" value="5007"/></include>
+			<include content="MbRow"><param name="n" value="8"/><param name="nn" value="08"/><param name="id" value="5008"/></include>
+			<include content="MbRow"><param name="n" value="9"/><param name="nn" value="09"/><param name="id" value="5009"/></include>
+			<include content="MbRow"><param name="n" value="10"/><param name="nn" value="10"/><param name="id" value="5010"/></include>
+			<include content="MbRow"><param name="n" value="11"/><param name="nn" value="11"/><param name="id" value="5011"/></include>
+			<include content="MbRow"><param name="n" value="12"/><param name="nn" value="12"/><param name="id" value="5012"/></include>
+		</control>
+
+		<!-- Grid: every tab other than Home. -->
+		<control type="panel" id="6000">
+			<left>60</left><top>110</top><width>1800</width><height>1090</height>
+			<orientation>vertical</orientation>
+			<onup>9000</onup>
+			<onleft>noop</onleft>
+			<onright>noop</onright>
+			<scrolltime tween="cubic" easing="out">260</scrolltime>
+			<preloaditems>2</preloaditems>
+			<visible>!String.IsEqual(Window(Home).Property(mbtab),home)</visible>
+			<content target="videos">$VAR[MbTabPath]</content>
+			<itemlayout width="257" height="420">
+				<include content="MbCard"><param name="list" value="6000"/></include>
+			</itemlayout>
+			<focusedlayout width="257" height="420">
+				<include content="MbCard"><param name="list" value="6000"/><param name="focused" value="true"/></include>
+			</focusedlayout>
+		</control>
+		<control type="label">
+			<left>74</left><top>160</top><width>1200</width><height>40</height>
+			<font>mb_ui</font>
+			<textcolor>mb_muted</textcolor>
+			<label>Nothing here yet. Keep something from Browse, or ask for it on your phone.</label>
+			<visible>!String.IsEqual(Window(Home).Property(mbtab),home) + !Integer.IsGreater(Container(6000).NumItems,0) + !Container(6000).IsUpdating</visible>
+		</control>
+
+		<!-- Header band: mark, tabs, attention, clock. -->
+		<control type="image">
+			<left>74</left><top>83</top><width>1772</width><height>1</height>
+			<texture colordiffuse="10FFFFFF">mediabox/white.png</texture>
+		</control>
+		<control type="label">
+			<left>74</left><top>0</top><width>260</width><height>84</height>
+			<aligny>center</aligny>
+			<font>mb_display_s</font>
+			<textcolor>D8EEF3FF</textcolor>
+			<label>mediabox</label>
+		</control>
+		<control type="image">
+			<left>268</left><top>30</top><width>1</width><height>26</height>
+			<texture colordiffuse="20FFFFFF">mediabox/white.png</texture>
+		</control>
+		<control type="grouplist" id="9000">
+			<left>298</left><top>0</top><width>1300</width><height>84</height>
+			<orientation>horizontal</orientation>
+			<itemgap>38</itemgap>
+			<ondown>5000</ondown>
+			<include content="MbTab"><param name="id" value="9001"/><param name="tab" value="home"/><param name="label" value="Home"/></include>
+			<include content="MbTab"><param name="id" value="9002"/><param name="tab" value="continue"/><param name="label" value="Continue"/></include>
+			<include content="MbTab"><param name="id" value="9003"/><param name="tab" value="next"/><param name="label" value="Next Up"/></include>
+			<include content="MbTab"><param name="id" value="9004"/><param name="tab" value="new"/><param name="label" value="New"/></include>
+			<include content="MbTab"><param name="id" value="9005"/><param name="tab" value="movies"/><param name="label" value="Movies"/></include>
+			<include content="MbTab"><param name="id" value="9006"/><param name="tab" value="shows"/><param name="label" value="Shows"/></include>
+			<include content="MbTab"><param name="id" value="9007"/><param name="tab" value="browse"/><param name="label" value="Browse"/></include>
+			<include content="MbTab"><param name="id" value="9008"/><param name="tab" value="search"/><param name="label" value="Search"/><param name="opens" value="false"/>
+				<param name="onclick" value="ActivateWindow(Videos,plugin://plugin.video.mediabox/search,return)"/></include>
+			<include content="MbTab"><param name="id" value="9009"/><param name="tab" value="settings"/><param name="label" value="Settings"/><param name="opens" value="false"/>
+				<param name="onclick" value="ActivateWindow(Settings)"/></include>
+		</control>
+		<control type="image">
+			<left>1580</left><top>37</top><width>10</width><height>10</height>
+			<texture colordiffuse="mb_amber">mediabox/dot.png</texture>
+			<visible>!String.IsEmpty(Window(Home).Property(mediabox.attention))</visible>
+		</control>
+		<control type="label">
+			<left>1600</left><top>0</top><width>170</width><height>84</height>
+			<aligny>center</aligny>
+			<font>mb_mono</font>
+			<textcolor>mb_amber</textcolor>
+			<label>ATTENTION</label>
+			<visible>!String.IsEmpty(Window(Home).Property(mediabox.attention))</visible>
+		</control>
+		<control type="label">
+			<left>1646</left><top>0</top><width>200</width><height>84</height>
+			<align>right</align>
+			<aligny>center</aligny>
+			<font>mb_mono</font>
+			<textcolor>D8EEF3FF</textcolor>
+			<label>$INFO[System.Time(hh:mm)]</label>
+		</control>
+	</controls>
+</window>

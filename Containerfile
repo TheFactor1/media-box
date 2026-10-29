@@ -1,8 +1,9 @@
-# Build context: build_files/ and system_files/ are reachable via /ctx
+# Build context: build_files/, system_files/ and kodi-addons/ are reachable via /ctx
 # during RUN steps without ending up in the final image.
 FROM scratch AS ctx
 COPY build_files /build_files
 COPY system_files /system_files
+COPY kodi-addons /kodi-addons
 
 # Plain Fedora bootc + RPM Fusion. (ublue base-main uses negativo17, whose
 # ffmpeg conflicts with the RPM Fusion ffmpeg that Kodi is built against.)

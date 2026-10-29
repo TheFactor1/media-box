@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Mediabox Home (Shelf layout, Space look). Pulled into Estuary's Includes.xml by build-skin.py.
+     Coordinates are 1920x1080; Estuary's 16:10 res (1920x1200) just gets more room at the bottom. -->
+<includes>
+	<!-- The page: #05070f fading to deep blue, a faint star field, the focused title's backdrop top right. -->
+	<include name="MbBackground">
+		<control type="image">
+			<left>0</left><top>0</top><width>1920</width><height>100%</height>
+			<texture>mediabox/sky.png</texture>
+		</control>
+		<control type="image">
+			<left>0</left><top>0</top><width>1920</width><height>1080</height>
+			<texture>mediabox/stars.png</texture>
+		</control>
+		<control type="group">
+			<left>620</left><top>0</top><width>1300</width><height>760</height>
+			<animation effect="fade" start="100" end="35" time="300" condition="!String.IsEqual(Window(Home).Property(mbtab),home)">Conditional</animation>
+			<control type="image">
+				<width>1300</width><height>760</height>
+				<aspectratio>scale</aspectratio>
+				<fadetime>400</fadetime>
+				<colordiffuse>99FFFFFF</colordiffuse>
+				<texture background="true" diffuse="mediabox/backdrop-mask.png">$VAR[MbHeroFanart]</texture>
+			</control>
+		</control>
+	</include>
+
+	<!-- Hero: kicker, clearlogo (or the title in Orbitron), mono credits, two lines of plot. -->
+	<variable name="MbHeroFanart">
+		<value condition="ControlGroup(5000).HasFocus | Control.HasFocus(6000)">$INFO[ListItem.Art(fanart)]</value>
+		<value condition="Integer.IsGreater(Container(5001).NumItems,0)">$INFO[Container(5001).ListItem.Art(fanart)]</value>
+		<value condition="Integer.IsGreater(Container(5002).NumItems,0)">$INFO[Container(5002).ListItem.Art(fanart)]</value>
+		<value condition="Integer.IsGreater(Container(5003).NumItems,0)">$INFO[Container(5003).ListItem.Art(fanart)]</value>
+	</variable>
+	<include name="MbHeroInfo">
+		<param name="c" default="ListItem"/>
+		<definition>
+			<control type="label">
+				<top>0</top><width>1000</width><height>34</height>
+				<font>mb_mono</font>
+				<textcolor>mb_accent</textcolor>
+				<label>$VAR[MbHeroKicker]</label>
+			</control>
+			<control type="image">
+				<top>44</top><width>620</width><height>150</height>
+				<aspectratio aligny="center" align="left">keep</aspectratio>
+				<texture>$INFO[$PARAM[c].Art(clearlogo)]</texture>
+				<visible>!String.IsEmpty($PARAM[c].Art(clearlogo))</visible>
+			</control>
+			<control type="label">
+				<top>48</top><width>1100</width><height>90</height>
+				<font>mb_display</font>
+				<textcolor>mb_fg</textcolor>
+				<label>$INFO[$PARAM[c].Title]</label>
+				<visible>String.IsEmpty($PARAM[c].Art(clearlogo))</visible>
+			</control>
+			<control type="label">
+				<top>200</top><width>1100</width><height>30</height>
+				<font>mb_mono</font>
+				<textcolor>mb_muted</textcolor>
+				<label>$INFO[$PARAM[c].Year]$INFO[$PARAM[c].Genre,  ·  ]$INFO[$PARAM[c].Duration(mins),  ·  , MIN]$INFO[$PARAM[c].Property(res),  ·  ]$INFO[$PARAM[c].Property(hdr),  ·  ]$INFO[$PARAM[c].Property(audio),  ·  ]$INFO[$PARAM[c].Property(episodelabel),  ·  ]</label>
+			</control>
+			<control type="textbox">
+				<top>240</top><width>900</width><height>74</height>
+				<font>mb_ui</font>
+				<textcolor>mb_fg</textcolor>
+				<label>$INFO[$PARAM[c].Plot]</label>
+				<autoscroll>false</autoscroll>
+			</control>
+		</definition>
+	</include>
+	<variable name="MbHeroKicker">
+		<value condition="Control.HasFocus(5001)">$INFO[Window(Home).Property(mediabox.shelf.1.title)]</value>
+		<value condition="Control.HasFocus(5002)">$INFO[Window(Home).Property(mediabox.shelf.2.title)]</value>
+		<value condition="Control.HasFocus(5003)">$INFO[Window(Home).Property(mediabox.shelf.3.title)]</value>
+		<value condition="Control.HasFocus(5004)">$INFO[Window(Home).Property(mediabox.shelf.4.title)]</value>
+		<value condition="Control.HasFocus(5005)">$INFO[Window(Home).Property(mediabox.shelf.5.title)]</value>
+		<value condition="Control.HasFocus(5006)">$INFO[Window(Home).Property(mediabox.shelf.6.title)]</value>
+		<value condition="Control.HasFocus(5007)">$INFO[Window(Home).Property(mediabox.shelf.7.title)]</value>
+		<value condition="Control.HasFocus(5008)">$INFO[Window(Home).Property(mediabox.shelf.8.title)]</value>
+		<value condition="Control.HasFocus(5009)">$INFO[Window(Home).Property(mediabox.shelf.9.title)]</value>
+		<value condition="Control.HasFocus(5010)">$INFO[Window(Home).Property(mediabox.shelf.10.title)]</value>
+		<value condition="Control.HasFocus(5011)">$INFO[Window(Home).Property(mediabox.shelf.11.title)]</value>
+		<value condition="Control.HasFocus(5012)">$INFO[Window(Home).Property(mediabox.shelf.12.title)]</value>
+		<value condition="Control.HasFocus(6000)">$INFO[Container(9000).ListItem.Label]</value>
+		<value condition="Integer.IsGreater(Container(5001).NumItems,0)">$INFO[Window(Home).Property(mediabox.shelf.1.title)]</value>
+		<value condition="Integer.IsGreater(Container(5002).NumItems,0)">$INFO[Window(Home).Property(mediabox.shelf.2.title)]</value>
+		<value condition="Integer.IsGreater(Container(5003).NumItems,0)">$INFO[Window(Home).Property(mediabox.shelf.3.title)]</value>
+	</variable>
+
+	<!-- A poster card: 200x300 rounded poster, resume line, title + mono meta. Focus: 1.06 and the soft glow. -->
+	<include name="MbCard">
+		<param name="focused" default="false"/>
+		<param name="list"/>
+		<definition>
+			<control type="group">
+				<left>14</left><top>18</top>
+				<control type="group">
+					<animation effect="zoom" start="100" end="106" center="100,150" time="180" tween="cubic" easing="out" condition="$PARAM[focused] + Control.HasFocus($PARAM[list])">Conditional</animation>
+					<control type="image">
+						<left>-40</left><top>-40</top><width>280</width><height>380</height>
+						<texture border="56">mediabox/glow.png</texture>
+						<visible>$PARAM[focused] + Control.HasFocus($PARAM[list])</visible>
+					</control>
+					<control type="image">
+						<width>200</width><height>300</height>
+						<texture colordiffuse="FF16234A" diffuse="mediabox/poster-mask.png">mediabox/white.png</texture>
+					</control>
+					<control type="label">
+						<left>14</left><top>210</top><width>172</width><height>80</height>
+						<font>mb_ui_s</font>
+						<textcolor>mb_fg</textcolor>
+						<aligny>bottom</aligny>
+						<wrapmultiline>true</wrapmultiline>
+						<label>$INFO[ListItem.Label]</label>
+						<visible>String.IsEmpty(ListItem.Art(poster))</visible>
+					</control>
+					<control type="image">
+						<width>200</width><height>300</height>
+						<aspectratio>scale</aspectratio>
+						<texture background="true" diffuse="mediabox/poster-mask.png">$INFO[ListItem.Art(poster)]</texture>
+					</control>
+					<control type="progress">
+						<left>12</left><top>284</top><width>176</width><height>4</height>
+						<texturebg colordiffuse="40FFFFFF">mediabox/white.png</texturebg>
+						<midtexture colordiffuse="mb_accent">mediabox/white.png</midtexture>
+						<info>ListItem.PercentPlayed</info>
+						<visible>Integer.IsGreater(ListItem.PercentPlayed,0)</visible>
+					</control>
+				</control>
+				<control type="label">
+					<top>312</top><width>200</width><height>30</height>
+					<font>mb_ui_b</font>
+					<textcolor>mb_fg</textcolor>
+					<label>$INFO[ListItem.Label]</label>
+				</control>
+				<control type="label">
+					<top>342</top><width>200</width><height>24</height>
+					<font>mb_mono_s</font>
+					<textcolor>mb_muted</textcolor>
+					<label>$VAR[MbCardMeta]</label>
+				</control>
+			</control>
+		</definition>
+	</include>
+	<variable name="MbCardMeta">
+		<value condition="!String.IsEmpty(ListItem.Property(episodelabel))">$INFO[ListItem.Property(episodelabel)]</value>
+		<value>$INFO[ListItem.Year]$INFO[ListItem.Property(res),  ·  ]</value>
+	</variable>
+
+	<!-- One Home row, fed by the plugin path the service publishes for shelf n. Header and list are direct children
+	     of the grouplist (as in Estuary) so up/down moves between rows. Visibility is not NumItems: a hidden list is
+	     never processed, so a row hidden while its path was still empty would never load. The plugin reports each
+	     row's count instead (mediabox.count.N, cleared by the service whenever the paths change). -->
+	<include name="MbRow">
+		<param name="n"/>
+		<param name="nn"/>
+		<param name="id"/>
+		<definition>
+			<control type="group" id="$PARAM[id]0">
+				<height>40</height>
+				<visible>!String.IsEmpty(Window(Home).Property(mediabox.shelf.$PARAM[n].path)) + !String.IsEqual(Window(Home).Property(mediabox.count.$PARAM[n]),0)</visible>
+				<control type="label">
+					<left>74</left><top>0</top><width>160</width><height>40</height>
+					<font>mb_mono_s</font>
+					<textcolor>mb_dim</textcolor>
+					<label>ORBIT  ·  $PARAM[nn]</label>
+				</control>
+				<control type="label">
+					<left>200</left><top>0</top><width>1200</width><height>40</height>
+					<font>mb_tab</font>
+					<textcolor>mb_fg</textcolor>
+					<label>$INFO[Window(Home).Property(mediabox.shelf.$PARAM[n].title)]</label>
+				</control>
+			</control>
+			<control type="list" id="$PARAM[id]">
+				<left>60</left><width>1860</width><height>390</height>
+				<orientation>horizontal</orientation>
+				<scrolltime tween="cubic" easing="out">260</scrolltime>
+				<preloaditems>2</preloaditems>
+				<visible>!String.IsEmpty(Window(Home).Property(mediabox.shelf.$PARAM[n].path)) + !String.IsEqual(Window(Home).Property(mediabox.count.$PARAM[n]),0)</visible>
+				<content target="videos">$INFO[Window(Home).Property(mediabox.shelf.$PARAM[n].path)]</content>
+				<itemlayout width="232" height="390">
+					<include content="MbCard"><param name="list" value="$PARAM[id]"/></include>
+				</itemlayout>
+				<focusedlayout width="232" height="390">
+					<include content="MbCard"><param name="list" value="$PARAM[id]"/><param name="focused" value="true"/></include>
+				</focusedlayout>
+			</control>
+		</definition>
+	</include>
+
+	<!-- Header tab: dim label; the open tab is bright, the focused one gets the accent underline with a little glow. -->
+	<include name="MbTab">
+		<param name="id"/>
+		<param name="tab"/>
+		<param name="label"/>
+		<param name="onclick" default="noop"/>
+		<param name="opens" default="true"/>
+		<definition>
+			<control type="togglebutton" id="$PARAM[id]">
+				<width>auto</width><height>84</height>
+				<label>$PARAM[label]</label>
+				<altlabel>[COLOR FFEEF3FF]$PARAM[label][/COLOR]</altlabel>
+				<font>mb_tab</font>
+				<textcolor>80EEF3FF</textcolor>
+				<focusedcolor>mb_fg</focusedcolor>
+				<textoffsetx>0</textoffsetx>
+				<aligny>center</aligny>
+				<texturefocus colordiffuse="mb_accent">mediabox/underline.png</texturefocus>
+				<texturenofocus/>
+				<alttexturefocus colordiffuse="mb_accent">mediabox/underline.png</alttexturefocus>
+				<alttexturenofocus/>
+				<usealttexture>String.IsEqual(Window(Home).Property(mbtab),$PARAM[tab])</usealttexture>
+				<onfocus condition="$PARAM[opens]">SetProperty(mbtab,$PARAM[tab],home)</onfocus>
+				<onclick>$PARAM[onclick]</onclick>
+				<ondown condition="String.IsEqual(Window(Home).Property(mbtab),home)">5000</ondown>
+				<ondown condition="!String.IsEqual(Window(Home).Property(mbtab),home)">6000</ondown>
+			</control>
+		</definition>
+	</include>
+	<variable name="MbTabPath">
+		<value condition="String.IsEqual(Window(Home).Property(mbtab),continue)">plugin://plugin.video.mediabox/library/continue?r=$INFO[Window(Home).Property(mediabox.refresh)]</value>
+		<value condition="String.IsEqual(Window(Home).Property(mbtab),next)">plugin://plugin.video.mediabox/library/next?r=$INFO[Window(Home).Property(mediabox.refresh)]</value>
+		<value condition="String.IsEqual(Window(Home).Property(mbtab),new)">plugin://plugin.video.mediabox/new?r=$INFO[Window(Home).Property(mediabox.refresh)]</value>
+		<value condition="String.IsEqual(Window(Home).Property(mbtab),movies)">plugin://plugin.video.mediabox/library/movies?r=$INFO[Window(Home).Property(mediabox.refresh)]</value>
+		<value condition="String.IsEqual(Window(Home).Property(mbtab),shows)">plugin://plugin.video.mediabox/library/shows?r=$INFO[Window(Home).Property(mediabox.refresh)]</value>
+		<value condition="String.IsEqual(Window(Home).Property(mbtab),browse)">plugin://plugin.video.mediabox/browse?r=$INFO[Window(Home).Property(mediabox.refresh)]</value>
+	</variable>
+</includes>

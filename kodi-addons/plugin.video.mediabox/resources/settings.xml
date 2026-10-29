@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Every <option> needs a value: Kodi 22 segfaults on an empty one (CSettingString::Deserialize reads
+     optionElement->FirstChild()->Value() unchecked). -->
+<settings version="1">
+    <section id="plugin.video.mediabox">
+        <category id="hub" label="32000">
+            <group id="1">
+                <!-- On the box itself the hub is local and its token file is readable: nothing to set. -->
+                <setting id="hub_url" type="string" label="32001" help="32002">
+                    <level>0</level>
+                    <default>http://127.0.0.1:8097</default>
+                    <control type="edit" format="string">
+                        <heading>32001</heading>
+                    </control>
+                </setting>
+                <setting id="pair" type="action" label="32003" help="32004">
+                    <level>0</level>
+                    <data>RunPlugin(plugin://plugin.video.mediabox/pair)</data>
+                    <constraints>
+                        <allowempty>true</allowempty>
+                    </constraints>
+                    <control type="button" format="action">
+                        <close>true</close>
+                    </control>
+                </setting>
+                <setting id="token" type="string" label="32005">
+                    <level>4</level>
+                    <constraints>
+                        <allowempty>true</allowempty>
+                    </constraints>
+                    <visible>false</visible>
+                    <control type="edit" format="string">
+                        <hidden>true</hidden>
+                    </control>
+                </setting>
+                <setting id="token_hub" type="string" label="32005">
+                    <level>4</level>
+                    <constraints>
+                        <allowempty>true</allowempty>
+                    </constraints>
+                    <visible>false</visible>
+                    <control type="edit" format="string"/>
+                </setting>
+                <setting id="preset" type="string" label="32006" help="32007">
+                    <level>0</level>
+                    <default>auto</default>
+                    <constraints>
+                        <options>
+                            <option label="32010">auto</option>
+                            <option label="32011">slow</option>
+                            <option label="32012">standard</option>
+                            <option label="32013">fast</option>
+                            <option label="32014">max</option>
+                        </options>
+                    </constraints>
+                    <control type="spinner" format="string"/>
+                </setting>
+            </group>
+        </category>
+    </section>
+</settings>

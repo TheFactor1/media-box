@@ -21,6 +21,9 @@
     <setting id="services.webserver">true</setting>
     <setting id="services.webserverport">8080</setting>
     <setting id="services.webserverpassword">@WEBSERVER_PASSWORD@</setting>
+    <!-- Our skin (kodi-addons/skin.mediabox, built on Estuary). Seeded rather than switched at runtime, so
+         Kodi never shows its "keep this skin?" countdown; the add-on is enabled by addon-manifest.xml. -->
+    <setting id="lookandfeel.skin">skin.mediabox</setting>
     <!-- Kodi ships no picture screensaver (only black and dim). -->
     <setting id="screensaver.mode">screensaver.xbmc.builtin.dim</setting>
 </settings>

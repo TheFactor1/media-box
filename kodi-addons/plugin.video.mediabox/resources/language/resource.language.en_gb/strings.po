@@ -1,0 +1,58 @@
+# Kodi Media Center language file
+# Addon id: plugin.video.mediabox
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: en_GB\n"
+
+msgctxt "#32000"
+msgid "Hub"
+msgstr ""
+
+msgctxt "#32001"
+msgid "Hub address"
+msgstr ""
+
+msgctxt "#32002"
+msgid "Where the hub answers. On the box itself leave it at http://127.0.0.1:8097."
+msgstr ""
+
+msgctxt "#32003"
+msgid "Pair with this hub"
+msgstr ""
+
+msgctxt "#32004"
+msgid "Shows a code on the TV; approve it on the hub's setup page or from a paired device."
+msgstr ""
+
+msgctxt "#32005"
+msgid "Token"
+msgstr ""
+
+msgctxt "#32006"
+msgid "Quality"
+msgstr ""
+
+msgctxt "#32007"
+msgid "How good a copy to pick for your internet. Hub default uses what setup chose."
+msgstr ""
+
+msgctxt "#32010"
+msgid "Hub default"
+msgstr ""
+
+msgctxt "#32011"
+msgid "Slow · 1080p, up to 8 Mbps"
+msgstr ""
+
+msgctxt "#32012"
+msgid "Standard · up to 20 Mbps"
+msgstr ""
+
+msgctxt "#32013"
+msgid "Fast · up to 45 Mbps"
+msgstr ""
+
+msgctxt "#32014"
+msgid "Max · best cached copy"
+msgstr ""
