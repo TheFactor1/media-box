@@ -223,6 +223,7 @@ class Hub:
         self.new_cache = (0, None)
         self.catalog_cache = {}  # shortcut: per page, never pruned; bounded by catalogs x pages read
         self.tmdb_base = cfg.get('tmdb_base', 'https://api.themoviedb.org/3')  # only tests point this elsewhere
+        self.provider_base = cfg.get('provider_base')  # only tests point the debrid key check elsewhere
         shelves.init(self)
         self.cache = {}  # shortcut: in memory, lost on restart and never pruned; fine for one household, move to sqlite if it grows
         self.limits = {'play': security.Bucket(10, 10), 'setup': security.Bucket(10, 10), 'health': security.Bucket(1, 5),

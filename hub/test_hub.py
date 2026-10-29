@@ -20,7 +20,7 @@ import urllib.request
 from unittest import mock
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from hub import hub, ranking, security
+from hub import hub, onboarding, ranking, security
 
 YEAR = time.localtime().tm_year
 
@@ -86,6 +86,16 @@ class FakeAddon(BaseHTTPRequestHandler):
     """A Stremio addon, and also a fake AIOStreams: templates, user creation, and the user's addon under AIO_PREFIX."""
     created = []
     tmdb_calls = []
+    provider_paths = []
+    # A fake debrid provider: the Bearer key picks the answer (good… accepted, down… a 503, anything else refused),
+    # each refusal in that provider's documented shape.
+    PROVIDER_REFUSALS = {'/v1/api/user/me': (401, {'success': False, 'error': 'BAD_TOKEN', 'detail': 'Invalid token'}),
+                         '/rest/1.0/user': (401, {'error': 'bad_token', 'error_code': 8}),
+                         '/v4/user': (200, {'status': 'error', 'error': {'code': 'AUTH_BAD_APIKEY', 'message': 'bad'}}),
+                         '/api/account/info': (200, {'status': 'error', 'message': 'not logged in', 'code': 'authentication_failed'})}
+    PROVIDER_OK = {'/v1/api/user/me': {'success': True, 'data': {'email': 'x'}}, '/rest/1.0/user': {'id': 1, 'username': 'u'},
+                   '/v4/user': {'status': 'success', 'data': {'user': {'username': 'u'}}},
+                   '/api/account/info': {'status': 'success', 'customer_id': 1}}
 
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
@@ -108,6 +118,12 @@ class FakeAddon(BaseHTTPRequestHandler):
 
     def do_GET(self):
         p = self.path.removeprefix(AIO_PREFIX)
+        if p in self.PROVIDER_OK:
+            FakeAddon.provider_paths.append(self.path)
+            key = (self.headers.get('Authorization') or '').removeprefix('Bearer ')
+            if key.startswith('down'):
+                return self.reply({'error': 'maintenance'}, 503)
+            return self.reply(self.PROVIDER_OK[p]) if key.startswith('good') else self.reply(*self.PROVIDER_REFUSALS[p][::-1])
         if p.startswith('/3/'):
             path, _, query = p.partition('?')
             FakeAddon.tmdb_calls.append((path, urllib.parse.parse_qs(query)))
@@ -126,6 +142,7 @@ class FakeAddon(BaseHTTPRequestHandler):
                 {'metadata': {'id': 'builtin.debrid-starter'}, 'config': {
                     'services': [{'id': 'realdebrid', 'credentials': {'apiKey': '<template_placeholder>'}}],
                     'presets': [], 'formatter': {'id': 'prism'}, 'sortCriteria': {'global': []},
+                    'titleMatching': {'enabled': True, 'requestTypes': ['movie', 'series']}, 'yearMatching': {'enabled': True},
                     'tmdbApiKey': '<template_placeholder>'}}]})
         if p == '/manifest.json':
             body = {'id': 'fake', 'version': '1.0.0', 'name': 'Fake', 'types': ['movie', 'series'], 'idPrefixes': ['tt'],
@@ -309,7 +326,7 @@ class HubTest(Fixture):
         csp = page.getheader('Content-Security-Policy')
         self.assertIn("script-src 'sha256-", csp)
         self.assertNotIn("'unsafe-inline'; style", csp)
-        self.assertIn(b'Your debrid', page.read())
+        self.assertIn(b'Set up your box', page.read())
         conn.close()
         self.assertEqual(self.raw('GET', '/setup?n=wrong')[0], 403)
 
@@ -496,8 +513,9 @@ class SecurityTest(Fixture):
 
 
 class SetupTest(Fixture):
-    """An unconfigured hub: nonce, provisioning against a fake AIOStreams, done, TV pairing."""
+    """An unconfigured hub: nonce, key check against a fake provider, provisioning against a fake AIOStreams, done, TV pairing."""
     streams = False
+    extra = 'provider_base = "{addon}"\n'
 
     def setup(self, body):
         return self.raw('POST', '/setup', json.dumps({'n': self.nonce, **body}))
@@ -508,11 +526,26 @@ class SetupTest(Fixture):
         SetupTest.nonce = link['url'].split('n=')[1]
         self.assertEqual(self.raw('GET', '/setup')[0], 403)
         self.assertEqual(self.raw('GET', '/setup?n=wrong')[0], 403)
-        self.assertEqual(self.raw('POST', '/setup', json.dumps({'action': 'test'}))[0], 403)
+        self.assertEqual(self.raw('POST', '/setup', json.dumps({'action': 'check'}))[0], 403)
         self.assertEqual(self.raw('GET', '/setup/info?n=' + self.nonce)[1]['configured'], False)
 
+    def test_1b_key_check(self):
+        check = lambda key, provider='torbox': self.setup({'action': 'check', 'provider': provider, 'key': key})[1]
+        self.assertEqual(check('good-0123456789abcdef')['result'], 'ok')
+        self.assertEqual(check('bad-0123456789abcdef'), {'result': 'rejected', 'message': "That key wasn't accepted by TorBox."})
+        self.assertEqual(check('down-0123456789abcdef'), {'result': 'unreachable', 'message': "Couldn't reach TorBox; continue anyway?"})
+        self.assertEqual(check('short')['result'], 'rejected')  # not even key-shaped: no call
+        base = f'http://127.0.0.1:{self.addon.server_port}'
+        for provider in ('torbox', 'realdebrid', 'alldebrid', 'premiumize'):  # each provider's own success and refusal shapes
+            self.assertEqual([onboarding.check_key(provider, k, base) for k in ('good-0123456789abcdef', 'nope-0123456789abcdef')],
+                             ['ok', 'rejected'], provider)
+        with socket.socket() as s:  # a port nobody listens on: unreachable, not rejected
+            s.bind(('127.0.0.1', 0))
+            closed = f'http://127.0.0.1:{s.getsockname()[1]}'
+        self.assertEqual(onboarding.check_key('realdebrid', 'good-0123456789abcdef', closed), 'unreachable')
+        self.assertFalse(any('0123456789abcdef' in p for p in FakeAddon.provider_paths))  # the key never goes in a URL
+
     def test_2_provision(self):
-        self.assertFalse(self.setup({'action': 'test', 'provider': 'torbox', 'key': 'short'})[1]['ok'])
         status, failed, _ = self.setup({'action': 'provision', 'provider': 'torbox', 'key': 'FAIL0123456789abcdef'})
         self.assertEqual((status, failed['reason']), (502, 'Invalid torbox credentials'))  # shown, with the link path offered
         status, done, _ = self.setup({'action': 'provision', 'provider': 'torbox', 'key': 'tb-0123456789abcdef'})
@@ -521,6 +554,8 @@ class SetupTest(Fixture):
         sent = FakeAddon.created[-1]
         self.assertEqual(sent['config']['services'], [{'id': 'torbox', 'enabled': True, 'credentials': {'apiKey': 'tb-0123456789abcdef'}}])
         self.assertNotIn('tmdbApiKey', sent['config'])
+        # without a TMDB key, AIOStreams 2.37 rejects these (seen on a real instance), so they go off
+        self.assertEqual((sent['config']['titleMatching']['enabled'], sent['config']['yearMatching']['enabled']), (False, False))
         self.assertEqual(len(sent['password']), 12)
         con = sqlite3.connect(os.path.join(self.tmp.name, 'hub.sqlite'))
         rows = con.execute('SELECT value FROM settings').fetchall()

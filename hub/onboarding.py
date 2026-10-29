@@ -22,9 +22,38 @@ class ProvisionError(Exception):
     pass
 
 
+# Each provider's "who am I" call and how it says the key worked. All four take the key as a Bearer header, so it
+# never sits in a URL. Docs: TorBox https://api.torbox.app/openapi.json (GET /v1/api/user/me, {success, data});
+# Real-Debrid https://api.real-debrid.com/ (GET /rest/1.0/user, 401 on a bad token); AllDebrid https://docs.alldebrid.com/
+# (GET /v4/user, {status: "success"} or error AUTH_BAD_APIKEY); Premiumize https://www.premiumize.me/api
+# (GET /api/account/info, {status: "success"}, a bad key is HTTP 200 with status "error").
+KEY_CHECKS = {
+    'torbox': ('https://api.torbox.app', '/v1/api/user/me', lambda j: j.get('success') is True),
+    'realdebrid': ('https://api.real-debrid.com', '/rest/1.0/user', lambda j: 'username' in j or isinstance(j.get('id'), int)),
+    'alldebrid': ('https://api.alldebrid.com', '/v4/user', lambda j: j.get('status') == 'success'),
+    'premiumize': ('https://www.premiumize.me', '/api/account/info', lambda j: j.get('status') == 'success'),
+}
+
+
 def key_looks_valid(provider, key):
-    # shortcut: format check only, as AIOStreams itself does at create time; call the provider's API if bad keys turn up
     return provider in PROVIDERS and bool(re.fullmatch(r'[A-Za-z0-9_-]{16,64}', str(key or '')))
+
+
+def check_key(provider, key, base=None):
+    """'ok', 'rejected' (the provider said no) or 'unreachable' (no clear answer). Calls only the chosen provider.
+    `base` replaces the provider's host; only tests set it."""
+    if not key_looks_valid(provider, key):
+        return 'rejected'
+    default, path, accepted = KEY_CHECKS[provider]
+    req = urllib.request.Request((base or default) + path, headers={'Authorization': f'Bearer {key}', 'User-Agent': 'mediabox-hub/1'})
+    try:
+        with urllib.request.urlopen(req, timeout=8) as r:
+            answer = json.loads(r.read(2**20))
+    except urllib.error.HTTPError as e:
+        return 'rejected' if e.code in (401, 403) else 'unreachable'  # 429/5xx: the provider couldn't say
+    except (OSError, ValueError):
+        return 'unreachable'
+    return 'ok' if isinstance(answer, dict) and accepted(answer) else 'rejected'
 
 
 def start_beacon(bind, port, http_port, name):
@@ -102,6 +131,10 @@ def provision(base, provider, key):
     config['services'] = [{'id': provider, 'enabled': True, 'credentials': {'apiKey': key}}]
     if 'template_placeholder' in str(config.get('tmdbApiKey', '')):
         del config['tmdbApiKey']  # optional; a placeholder would fail validation
+        # AIOStreams 2.37 refuses these without a TMDB key; the hub's own release matching covers the same ground.
+        for feature in ('titleMatching', 'yearMatching', 'digitalReleaseFilter'):
+            if isinstance(config.get(feature), dict):
+                config[feature]['enabled'] = False
     password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(12))
     data = api(base, 'POST', '/api/v1/user', {'config': config, 'password': password})
     uuid, enc = (data or {}).get('uuid'), (data or {}).get('encryptedPassword')
@@ -126,18 +159,20 @@ def handle(hub, body, public_host):
     if not isinstance(body, dict):
         raise ValueError('body must be a JSON object')
     action, provider, key = body.get('action'), body.get('provider'), str(body.get('key') or '').strip()
-    if action in ('test', 'provision') and provider not in PROVIDERS:
+    if action in ('check', 'provision') and provider not in PROVIDERS:
         raise ValueError('pick your debrid service')
-    if action == 'test':
-        ok = key_looks_valid(provider, key)
-        return {'ok': ok, 'message': 'That looks like a valid key. It is checked for real when sources are set up.'
-                if ok else f'That does not look like a {PROVIDERS[provider]} API key; copy it again from their site.'}
-    if action == 'provision':
+    if action == 'check':
+        result, name = check_key(provider, key, hub.provider_base), PROVIDERS[provider]
+        return {'result': result, 'message': {'ok': f'{name} accepted the key.',
+                                              'rejected': f"That key wasn't accepted by {name}.",
+                                              'unreachable': f"Couldn't reach {name}; continue anyway?"}[result]}
+    if action == 'provision':  # the page runs `check` first; "continue anyway" sends unverified: true
         if not key_looks_valid(provider, key):
             raise ValueError('add a valid debrid API key first')
         account = provision(hub.aiostreams_url, provider, key)
         manifest, configure = addon_urls(hub.aiostreams_url, account, public_host)
         hub.set_setting('aiostreams', account)  # includes the generated password, encrypted with the other settings
+        hub.set_setting('debrid_unverified', body.get('unverified') is True)  # for the status screen
         hub.use_stream_addon(manifest)
         return {'ok': True, 'configureUrl': configure}
     if action == 'link':

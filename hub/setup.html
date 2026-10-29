@@ -15,10 +15,7 @@
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.45 var(--font); }
-  main { max-width: 440px; margin: 0 auto; padding: 28px 18px 48px; }
-  .steps { display: flex; gap: 6px; margin-bottom: 26px; }
-  .steps span { flex: 1; height: 3px; border-radius: 2px; background: var(--line); transition: background .3s ease-in; }
-  .steps span.on { background: var(--blue); }
+  main { max-width: 440px; margin: 0 auto; padding: 32px 18px 48px; }
   h1 { font-size: 26px; font-weight: 600; letter-spacing: -.01em; margin: 0 0 6px; }
   p.lead { color: var(--muted); margin: 0 0 22px; }
   section { display: none; }
@@ -26,12 +23,14 @@
   @keyframes in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   .card { background: var(--glass); border: 1px solid var(--line); border-top-color: var(--chrome);
           border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .card b { display: block; margin-bottom: 4px; }
   label.opt { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 10px; border: 1px solid var(--line);
               margin-bottom: 8px; cursor: pointer; }
   label.opt:has(input:checked) { border-color: var(--blue); background: rgba(159,180,255,.08); }
   label.opt input { accent-color: var(--blue); margin-top: 3px; }
   label.opt small { display: block; color: var(--muted); }
   .chips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
+  .chips.three { grid-template-columns: 1fr 1fr 1fr; }
   .chips label { text-align: center; padding: 12px 6px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
   .chips input { position: absolute; opacity: 0; }
   .chips label:has(input:checked) { border-color: var(--blue); color: var(--blue); }
@@ -39,7 +38,7 @@
   input[type=text], input[type=password], input[type=url], input[type=number] {
     width: 100%; padding: 13px 14px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0,0,0,.35);
     color: var(--fg); font: inherit; }
-  input:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+  input:focus-visible, button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
   .row { display: flex; gap: 8px; margin-top: 10px; }
   button { font: inherit; font-weight: 600; border-radius: 10px; padding: 13px 16px; border: 1px solid var(--line);
            background: var(--glass); color: var(--fg); cursor: pointer; }
@@ -49,6 +48,8 @@
   .msg.warn { color: var(--amber); }
   .msg.ok { color: var(--blue); }
   a { color: var(--blue); }
+  details { margin-top: 22px; }
+  summary { cursor: pointer; color: var(--blue); padding: 6px 0; margin-bottom: 10px; }
   .words { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; counter-reset: w; }
   .words span { padding: 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 18px; font-weight: 600; }
   .words span::before { counter-increment: w; content: counter(w) "  "; color: var(--muted); font-weight: 400; }
@@ -64,49 +65,62 @@
   .rows input[type=text] { flex: 1; min-width: 0; padding: 9px 10px; }
   .handle { touch-action: none; cursor: grab; padding: 10px 8px; border: 0; background: none; color: var(--muted); }
   .tog { padding: 9px 10px; font-size: 14px; font-weight: 500; min-width: 74px; }
-  .chips.three { grid-template-columns: 1fr 1fr 1fr; }
   .sub { color: var(--muted); font-size: 13px; margin: 14px 0 6px; }
-  .card b { display: block; margin-bottom: 4px; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
 <main>
-  <div class="steps" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
-
-  <section id="s0" aria-labelledby="h0">
-    <h1 id="h0">Your debrid</h1>
-    <p class="lead">The service that plays your streams. Your key goes straight to your own AIOStreams; this box doesn't keep it.</p>
+  <section id="sMain" aria-labelledby="hMain">
+    <h1 id="hMain">Set up your box</h1>
+    <p class="lead">Pick your debrid service and paste its API key. The box does the rest; it never keeps the key.</p>
     <div class="chips" id="providers" role="radiogroup" aria-label="Debrid service"></div>
     <input id="key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="API key" aria-label="Debrid API key">
-    <div class="row"><button id="test" type="button">Test</button><button class="go" id="next0" type="button">Next</button></div>
-    <p class="msg" id="m0" role="status"></p>
+    <div class="row"><button class="go" id="go" type="button">Continue</button></div>
+    <p class="msg" id="progress" role="status" aria-live="polite"></p>
+    <div class="row hidden" id="anyway"><button id="goAnyway" type="button">Continue anyway</button></div>
+    <details id="more">
+      <summary>More options</summary>
+      <div class="card">
+        <b>Use an addon link instead</b>
+        <p class="msg">Already have AIOStreams or another Stremio addon? Paste its link and no key is needed.</p>
+        <input id="manifest" type="url" autocomplete="off" spellcheck="false" placeholder="https://…/manifest.json" aria-label="Addon link">
+      </div>
+      <div class="card">
+        <b>Internet speed</b>
+        <p class="msg">Caps what the box asks for, so playback doesn't stall.</p>
+        <div id="speeds"></div>
+      </div>
+      <div class="card">
+        <b>Franchise collections (TMDB key)</b>
+        <p class="msg">Optional. With your free TMDB key, a film can show its whole series, like The Dark Knight Trilogy, and you can pin it as a row. Without a key the box never contacts TMDB.</p>
+        <input id="tmdbKey" type="password" autocomplete="off" spellcheck="false" placeholder="TMDB API key" aria-label="TMDB API key">
+      </div>
+      <div class="card">
+        <b>Home rows</b>
+        <p class="msg">Choose and order the rows every TV shows. You can also do this later.</p>
+        <div class="row"><button id="rowsFromMain" type="button">Edit Home rows</button></div>
+      </div>
+    </details>
   </section>
 
-  <section id="s1" aria-labelledby="h1">
-    <h1 id="h1">Where streams come from</h1>
-    <p class="lead">Pick one. You can change it later.</p>
-    <label class="opt"><input type="radio" name="src" value="auto" checked>
-      <span>Set up for me<small>Creates your AIOStreams with its official starter setup and your debrid key.</small></span></label>
-    <label class="opt"><input type="radio" name="src" value="link">
-      <span>I already have an AIOStreams or Stremio addon link<small>Paste the link that ends in manifest.json.</small></span></label>
-    <input id="manifest" class="hidden" type="url" autocomplete="off" spellcheck="false" placeholder="https://…/manifest.json" aria-label="Addon link">
-    <div class="row"><button id="back1" type="button">Back</button><button class="go" id="next1" type="button">Continue</button></div>
-    <p class="msg" id="m1" role="status"></p>
-    <p class="msg hidden" id="adjust"><a id="adjustLink" target="_blank" rel="noreferrer noopener">Adjust sources</a> in AIOStreams</p>
+  <section id="sDone" aria-labelledby="hDone">
+    <h1 id="hDone">You're set up</h1>
+    <p class="lead">Open the app on each TV and choose Pair. Approve the code it shows here.</p>
+    <div class="card" id="reqs"><p class="msg" id="noreq">Waiting for a TV…</p></div>
+    <details>
+      <summary>No code on the TV?</summary>
+      <p class="msg">Type these six words on the TV instead:</p>
+      <div class="words" id="words" aria-label="Pairing words"></div>
+    </details>
+    <p class="msg hidden" id="adjust"><a id="adjustLink" target="_blank" rel="noreferrer noopener">Adjust sources</a> in AIOStreams (optional)</p>
+    <div class="row"><button id="rowsFromDone" type="button">Edit Home rows</button></div>
+    <p class="msg" id="mDone" role="status"></p>
   </section>
 
-  <section id="s2" aria-labelledby="h2">
-    <h1 id="h2">Your internet</h1>
-    <p class="lead">Caps what the box asks for, so playback doesn't stall. Auto measures your connection on each TV.</p>
-    <div id="speeds"></div>
-    <div class="row"><button id="back2" type="button">Back</button><button class="go" id="next2" type="button">Continue</button></div>
-    <p class="msg" id="m2" role="status"></p>
-  </section>
-
-  <section id="s3" aria-labelledby="h3">
+  <section id="sRows" aria-labelledby="h3">
     <h1 id="h3">Home rows</h1>
-    <p class="lead">The rows every TV shows on Home. Drag ⋮⋮ to reorder (or use the arrow keys on it), type to rename, tap Shown to hide.</p>
+    <p class="lead">Drag ⋮⋮ to reorder (or use the arrow keys on it), type to rename, tap Shown to hide.</p>
     <ul class="rows" id="rows" aria-label="Home rows"></ul>
     <div class="row"><button id="addCol" type="button">+ Collection</button><button id="addCat" type="button">+ Catalog</button></div>
     <div class="card hidden" id="catForm"><p class="msg" id="catNone">Every catalog is already on Home.</p><div id="catList"></div></div>
@@ -129,32 +143,15 @@
       </div>
       <div class="row"><button id="colCancel" type="button">Cancel</button><button class="go" id="colCreate" type="button">Create</button></div>
     </div>
-    <div class="card">
-      <b>Franchise collections (TMDB key)</b>
-      <p class="msg">Optional. With your free TMDB key, a film can show its whole series, like The Dark Knight Trilogy, and you can pin it as a row. Without a key the box never contacts TMDB.</p>
-      <input id="tmdbKey" type="password" autocomplete="off" spellcheck="false" placeholder="TMDB API key" aria-label="TMDB API key">
-      <div class="row"><button id="tmdbSave" type="button">Save key</button></div>
-      <p class="msg" id="mT" role="status"></p>
-    </div>
-    <div class="row"><button id="back3" type="button">Back</button><button class="go" id="next3" type="button">Continue</button></div>
+    <div class="row"><button class="go" id="rowsBack" type="button">Done</button></div>
     <p class="msg" id="m3" role="status"></p>
-  </section>
-
-  <section id="s4" aria-labelledby="h4">
-    <h1 id="h4">Done</h1>
-    <p class="lead">Now connect your TVs. If a TV shows a pairing code, approve it here.</p>
-    <div class="card" id="reqs"><p class="msg" id="noreq">Waiting for a TV… (open the app on the TV and choose Pair)</p></div>
-    <p class="lead">No code on the TV? Type these six words on it instead:</p>
-    <div class="words" id="words" aria-label="Pairing words"></div>
-    <div class="row"><button id="editRows" type="button">Edit Home rows</button></div>
-    <p class="msg" id="m4" role="status"></p>
   </section>
 </main>
 <script>
 (() => {
   const n = new URLSearchParams(location.search).get('n');
   const $ = id => document.getElementById(id);
-  let step = 0, info = null;
+  let info = null, current = 'sMain', from = 'sMain', provisioned = false;
 
   async function call(method, path, body) {
     const opts = { method, headers: { 'Content-Type': 'application/json' } };
@@ -166,64 +163,75 @@
   }
   function say(id, text, kind) { const m = $(id); m.textContent = text; m.className = 'msg' + (kind ? ' ' + kind : ''); }
   function busy(btn, on) { btn.disabled = on; }
-  function show(i) {
-    step = i;
-    document.querySelectorAll('section').forEach((s, k) => s.classList.toggle('on', k === i));
-    document.querySelectorAll('.steps span').forEach((s, k) => s.classList.toggle('on', k <= i));
-    const h = $('h' + i); h.tabIndex = -1; h.focus();
-    if (i === 3) loadRows();
-    if (i === 4) finish();
+  function show(id) {
+    if (id === 'sRows') from = current;
+    current = id;
+    document.querySelectorAll('section').forEach(s => s.classList.toggle('on', s.id === id));
+    const h = document.querySelector('#' + id + ' h1'); h.tabIndex = -1; h.focus();
+    if (id === 'sRows') loadRows();
+    if (id === 'sDone') finish();
   }
   const provider = () => (document.querySelector('input[name=prov]:checked') || {}).value;
-  const source = () => document.querySelector('input[name=src]:checked').value;
+  const providerName = () => info.providers[provider()] || 'your service';
+  const speed = () => (document.querySelector('input[name=speed]:checked') || {}).value || 'auto';
 
-  $('test').onclick = async () => {
-    if (!provider()) return say('m0', 'Pick your debrid service first.', 'warn');
-    try { const j = await call('POST', '/setup', { action: 'test', provider: provider(), key: $('key').value });
-          say('m0', j.message, j.ok ? 'ok' : 'warn'); }
-    catch (e) { say('m0', e.message, 'warn'); }
-  };
-  $('next0').onclick = () => show(1);
-  $('back1').onclick = () => show(0);
-  $('back2').onclick = () => show(1);
-  document.querySelectorAll('input[name=src]').forEach(r => r.onchange = () => {
-    $('manifest').classList.toggle('hidden', source() !== 'link'); say('m1', '');
-  });
-  $('next1').onclick = async () => {
-    const btn = $('next1'); busy(btn, true);
+  // One line that grows as the steps go by: "Checking your key… Setting up streams… Done".
+  let steps = [];
+  const progress = (text, kind) => { steps.push(text); say('progress', steps.join(' '), kind); };
+
+  async function go(anyway) {
+    const btn = $('go'), link = $('manifest').value.trim(), key = $('key').value.trim();
+    busy(btn, true); $('anyway').classList.add('hidden'); steps = [];
     try {
-      if (source() === 'auto') {
-        if (!provider() || !$('key').value) { busy(btn, false); return say('m1', 'Go back and add your debrid key, or paste a link instead.', 'warn'); }
-        say('m1', 'Setting up AIOStreams…');
-        const j = await call('POST', '/setup', { action: 'provision', provider: provider(), key: $('key').value });
+      if (!provisioned && link) {
+        progress('Checking your link…');
+        await call('POST', '/setup', { action: 'link', manifest: link });
+        provisioned = true;
+      } else if (!provisioned) {
+        if (!key) { say('progress', 'Paste your API key, or use a link under More options.', 'warn'); $('key').focus(); return; }
+        if (!anyway) {
+          progress('Checking your key…');
+          const c = await call('POST', '/setup', { action: 'check', provider: provider(), key });
+          if (c.result !== 'ok') {
+            say('progress', c.message, 'warn');  // the key stays in the field to fix
+            if (c.result === 'unreachable') $('anyway').classList.remove('hidden'); else $('key').focus();
+            return;
+          }
+        }
+        progress('Setting up streams…');
+        const j = await call('POST', '/setup', { action: 'provision', provider: provider(), key, unverified: !!anyway });
+        provisioned = true;  // a retry after a later failure must not create a second AIOStreams account
         $('key').value = '';  // the key now lives in AIOStreams only
         $('adjustLink').href = j.configureUrl; $('adjust').classList.remove('hidden');
-        say('m1', 'Your streams are set up.', 'ok');
-      } else {
-        await call('POST', '/setup', { action: 'link', manifest: $('manifest').value });
-        say('m1', 'Link saved.', 'ok');
+        if (anyway) say('mDone', "We couldn't check your key with " + providerName() + '. If nothing plays, set it up again with a new key.', 'warn');
       }
-      show(2);
+      await call('POST', '/setup', { action: 'internet', preset: speed() });
+      if ($('tmdbKey').value.trim()) { await call('POST', '/setup', { action: 'tmdb', key: $('tmdbKey').value.trim() }); $('tmdbKey').value = ''; }
+      progress('Done', 'ok');
+      show('sDone');
     } catch (e) {
-      // Never a dead end: on any failure, offer the paste-a-link path.
-      say('m1', e.message + (source() === 'auto' ? ' You can paste an addon link instead.' : ''), 'warn');
-      if (source() === 'auto') { document.querySelector('input[name=src][value=link]').checked = true; $('manifest').classList.remove('hidden'); }
+      // Never a dead end: any failure points at the other way in.
+      say('progress', e.message + (link ? '' : ' You can paste an addon link under More options instead.'), 'warn');
+      if (!link && !provisioned) { $('more').open = true; $('manifest').focus(); }
     } finally { busy(btn, false); }
-  };
-  $('next2').onclick = async () => {
-    const choice = (document.querySelector('input[name=speed]:checked') || {}).value || 'auto';
-    try { await call('POST', '/setup', { action: 'internet', preset: choice }); show(3); }
-    catch (e) { say('m2', e.message, 'warn'); }
-  };
+  }
+  $('go').onclick = () => go(false);
+  $('goAnyway').onclick = () => go(true);
+  $('key').addEventListener('keydown', e => { if (e.key === 'Enter') go(false); });
+  $('rowsFromMain').onclick = () => show('sRows');
+  $('rowsFromDone').onclick = () => show('sRows');
+  $('rowsBack').onclick = () => show(from);
 
   async function finish() {
     try {
       const j = await call('POST', '/setup', { action: 'done' });
       $('words').replaceChildren(...(j.words || []).map(w => { const s = document.createElement('span'); s.textContent = w; return s; }));
       poll();
-    } catch (e) { say('m4', e.message, 'warn'); }
+    } catch (e) { say('mDone', e.message, 'warn'); }
   }
+  let polling = false;
   async function poll() {
+    if (polling) return; polling = true;
     try {
       const j = await call('GET', '/pair/requests');
       const rows = j.requests.map(r => {
@@ -233,12 +241,12 @@
         const b = document.createElement('button'); b.type = 'button'; b.className = 'go'; b.style.flex = '0'; b.textContent = 'Approve';
         b.onclick = async () => { busy(b, true);
           try { await call('POST', '/pair/approve', { requestId: r.requestId }); d.textContent = r.name + ' is paired.'; }
-          catch (e) { say('m4', e.message, 'warn'); busy(b, false); } };
+          catch (e) { say('mDone', e.message, 'warn'); busy(b, false); } };
         d.append(t, b); return d;
       });
       $('reqs').replaceChildren(...(rows.length ? rows : [$('noreq')]));
-      setTimeout(poll, 2000);
-    } catch (e) { say('m4', 'Setup has closed. Open it again from the TV to pair more.', ''); }
+      polling = false; setTimeout(poll, 2000);
+    } catch (e) { say('mDone', 'Setup has closed. Open it again from the TV to pair more.', ''); }
   }
 
   // ---- Home rows: the same /shelves and /collections calls the TVs use, authorised by this page's nonce ----
@@ -343,15 +351,6 @@
           say('m3', title + ' is on Home now.', 'ok'); loadRows(); }
     catch (e) { say('m3', e.message, 'warn'); }
   };
-  $('tmdbSave').onclick = async () => {
-    try { const j = await call('POST', '/setup', { action: 'tmdb', key: $('tmdbKey').value.trim() });
-          $('tmdbKey').value = ''; say('mT', j.tmdb ? 'Key saved. Franchises are on.' : 'Key removed. The box will not contact TMDB.', 'ok'); }
-    catch (e) { say('mT', e.message, 'warn'); }
-  };
-  $('back3').onclick = () => show(2);
-  $('next3').onclick = () => show(4);
-  $('editRows').onclick = () => show(3);
-
   (async () => {
     try { info = await call('GET', '/setup/info'); }
     catch (e) { document.querySelector('main').textContent = e.message; return; }
@@ -373,7 +372,7 @@
       s.append(sm); l.append(i, s); return l;
     }));
     if (info.tmdb) $('tmdbKey').placeholder = 'Key saved; enter a new one to replace it';
-    show(info.configured ? 4 : 0);  // already set up (e.g. opened to approve a TV): straight to pairing
+    show(info.configured ? 'sDone' : 'sMain');  // already set up (e.g. opened to approve a TV): straight to pairing
   })();
 })();
 </script>
