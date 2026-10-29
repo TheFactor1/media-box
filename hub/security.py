@@ -61,17 +61,24 @@ def _keystream(key, nonce, n):
     return b''.join(hmac.digest(key, nonce + i.to_bytes(8, 'big'), 'sha256') for i in range((n + 31) // 32))[:n]
 
 
-def encrypt(key, plaintext):
+def _bound(name):
+    # The tag covers the row's name, so a value copied into another row fails its check. NUL-terminated: no
+    # name + nonce split can be read as another name's.
+    return b'' if name is None else name.encode() + b'\0'
+
+
+def encrypt(key, plaintext, name):
     enc, mac = _subkeys(key)
     nonce = secrets.token_bytes(16)
     ct = bytes(a ^ b for a, b in zip(plaintext, _keystream(enc, nonce, len(plaintext))))
-    return nonce + ct + hmac.digest(mac, nonce + ct, 'sha256')
+    return nonce + ct + hmac.digest(mac, _bound(name) + nonce + ct, 'sha256')
 
 
-def decrypt(key, blob):
+def decrypt(key, blob, name=None):
+    """name=None checks the old, unbound form; only Hub.seal_old_settings (one-time, at startup) asks for it."""
     enc, mac = _subkeys(key)
     nonce, ct, tag = blob[:16], blob[16:-32], blob[-32:]
-    if len(blob) < 48 or not hmac.compare_digest(tag, hmac.digest(mac, nonce + ct, 'sha256')):
+    if len(blob) < 48 or not hmac.compare_digest(tag, hmac.digest(mac, _bound(name) + nonce + ct, 'sha256')):
         raise ValueError('setting failed its integrity check (tampered, or encrypted with another key)')
     return bytes(a ^ b for a, b in zip(ct, _keystream(enc, nonce, len(ct))))
 

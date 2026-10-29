@@ -3,6 +3,7 @@
 Contract: DATAFLOW.md, "Hub API". Python 3.12 standard library only.
 Run: HUB_CONFIG=/var/lib/hub/hub.toml HUB_DATA=/var/lib/hub python -m hub.hub
 """
+import hashlib
 import hmac
 import ipaddress
 import json
@@ -54,6 +55,10 @@ def now_ms():
     return int(time.time() * 1000)
 
 
+def digest(token):
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
 def host(url):
     return urllib.parse.urlsplit(url).hostname or '?'
 
@@ -63,23 +68,32 @@ def lst(x):
 
 
 def check_url(url):
-    """http(s) only; never link-local (cloud metadata), multicast, 0.0.0.0, or the hub's own port on a non-public address."""
+    """http(s) only; never link-local (cloud metadata), multicast, 0.0.0.0, or the hub's own port on a non-public address.
+    True when every address the host resolves to is public."""
     # shortcut: checked before connecting, so DNS rebinding between this lookup and urllib's can slip past; pin the IP if that matters
     p = urllib.parse.urlsplit(url)
     if p.scheme not in ('http', 'https') or not p.hostname:
         raise AddonError(f'{host(url)}: only http and https addon links')
     port = p.port or (443 if p.scheme == 'https' else 80)
+    public = True
     for *_, sa in socket.getaddrinfo(p.hostname, port, proto=socket.IPPROTO_TCP):
         ip = ipaddress.ip_address(sa[0].split('%')[0])
         ip = getattr(ip, 'ipv4_mapped', None) or ip
         if ip.is_link_local or ip.is_multicast or ip.is_unspecified or (port in OWN_PORTS and not ip.is_global):
             raise AddonError(f'{host(url)}: refused, that address is the hub itself or link-local')
+        public = public and ip.is_global
+    return public
 
 
 class CheckedRedirect(urllib.request.HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
-        check_url(newurl)
-        return super().redirect_request(req, fp, code, msg, headers, newurl)
+        # An addon on the internet must not bounce the hub onto the LAN (router pages, AIOStreams, other boxes).
+        if not check_url(newurl) and getattr(req, 'public', False):
+            raise AddonError(f'{host(newurl)}: refused, a public addon redirected to a private address')
+        new = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new is not None:
+            new.public = getattr(req, 'public', False)  # once public, every later hop stays held to it
+        return new
 
 
 OPENER = urllib.request.build_opener(CheckedRedirect)
@@ -87,8 +101,13 @@ OPENER = urllib.request.build_opener(CheckedRedirect)
 
 def fetch(url, timeout=10, headers=None):
     try:
-        check_url(url)
-        req = urllib.request.Request(url, headers={'User-Agent': 'mediabox-hub/1', 'Accept': 'application/json', **(headers or {})})
+        public = check_url(url)
+        headers = dict(headers or {})
+        auth = headers.pop('Authorization', None)
+        req = urllib.request.Request(url, headers={'User-Agent': 'mediabox-hub/1', 'Accept': 'application/json', **headers})
+        if auth:  # unredirected: a redirect to another host must not carry the key
+            req.add_unredirected_header('Authorization', auth)
+        req.public = public  # read by CheckedRedirect
         with OPENER.open(req, timeout=timeout) as r:
             buf, end = bytearray(), time.monotonic() + 3 * timeout  # `timeout` is per read; this caps a slow drip
             while chunk := r.read(65536):
@@ -193,8 +212,22 @@ class Hub:
                  ' duration_ms INTEGER, updated_at INTEGER, PRIMARY KEY(id, s, e))')
         self.sql('CREATE TABLE IF NOT EXISTS settings(name TEXT PRIMARY KEY, value BLOB)')
         self.key = security.secret_file(os.path.join(data_dir, 'key'))
+        if not self.sql("SELECT 1 FROM settings WHERE name = 'cipher_v2'"):
+            self.seal_old_settings()
         self.token_path = os.path.join(data_dir, 'token')
-        self.token = security.b64(security.secret_file(self.token_path, 0o640))  # group media: Kodi on the box reads it
+        fresh = not self.sql("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'devices'")
+        self.sql('CREATE TABLE IF NOT EXISTS devices(id TEXT PRIMARY KEY, name TEXT, kind TEXT, token_sha256 TEXT UNIQUE,'
+                 ' created INTEGER, last_seen INTEGER)')
+        self.seen = {}  # device id -> when last_seen was last written
+        self.load_devices()
+        if fresh and os.path.exists(self.token_path):
+            # Before per-device tokens every TV shared the box's token: it lives on as one removable device.
+            self.add_device('TVs paired before (shared token)', 'legacy', security.b64(security.secret_file(self.token_path, 0o640)))
+        box = security.b64(security.secret_file(self.token_path, 0o640))  # group media: Kodi on the box reads it
+        if self.sql("SELECT 1 FROM devices WHERE kind = 'legacy' AND token_sha256 = ?", (digest(box),)):
+            # The file still holds the old shared token (also after a crash mid-migration): the box gets its own.
+            box = security.b64(security.write_secret(self.token_path, secrets.token_bytes(32), 0o640))
+        self.set_box(box)
         try:
             self.presets = ranking.preset_table(cfg.get('presets'))
         except ValueError as e:
@@ -206,6 +239,7 @@ class Hub:
             self.preset = self.setting('preset')
         self.aiostreams_url = cfg.get('aiostreams_url', 'http://127.0.0.1:3000')
         self.name, self.discovery_port = str(cfg.get('name', 'Media box')), int(cfg.get('discovery_port', 8098))
+        self.hosts = {str(h).lower() for h in lst(cfg.get('hosts'))}
         self.meta_addons = [Addon(u) for u in cfg.get('meta_addons', [CINEMETA])]
         if cfg.get('stream_addons'):
             if self.setting('stream_addons') is None:
@@ -243,13 +277,71 @@ class Hub:
 
     def setting(self, name):
         row = self.sql('SELECT value FROM settings WHERE name = ?', (name,))
-        return json.loads(security.decrypt(self.key, row[0][0])) if row else None
+        if not row:
+            return None
+        return json.loads(security.decrypt(self.key, row[0][0], name))  # named form only: see seal_old_settings
+
+    def seal_old_settings(self):
+        """Once per box: re-seal rows from before name binding with their name, then mark it done (cipher_v2). After
+        that the unbound form is never accepted, so an old-style row planted in the database is refused."""
+        for name, blob in self.sql('SELECT name, value FROM settings'):
+            try:
+                security.decrypt(self.key, blob, name)
+                continue
+            except ValueError:
+                pass
+            try:
+                plain = security.decrypt(self.key, blob)
+            except ValueError:  # tampered or another key's: left as it is; reading it fails as before
+                print(f'setting {re.sub(r"[^!-~]", "?", name)} failed its integrity check; left as is', flush=True)
+                continue
+            self.sql('UPDATE settings SET value = ? WHERE name = ?', (security.encrypt(self.key, plain, name), name))
+        self.set_setting('cipher_v2', True)
 
     def set_setting(self, name, value):
-        self.sql('INSERT OR REPLACE INTO settings VALUES (?, ?)', (name, security.encrypt(self.key, json.dumps(value).encode())))
+        self.sql('INSERT OR REPLACE INTO settings VALUES (?, ?)', (name, security.encrypt(self.key, json.dumps(value).encode(), name)))
+
+    # One token per paired device; only its SHA-256 is stored, the raw token is handed out once.
+
+    def load_devices(self):
+        self.tokens = dict(self.sql('SELECT token_sha256, id FROM devices'))  # replaced whole: readers never see it half-built
+
+    def add_device(self, name, kind, token):
+        self.sql('INSERT INTO devices VALUES (?, ?, ?, ?, ?, NULL)', (secrets.token_urlsafe(6), name, kind, digest(token), now_ms()))
+        self.load_devices()
+
+    def mint(self, name):
+        token = security.b64(secrets.token_bytes(32))
+        self.add_device(name, 'tv', token)
+        return token
+
+    def set_box(self, token):
+        if not self.sql("UPDATE devices SET token_sha256 = ? WHERE kind = 'box' RETURNING id", (digest(token),)):
+            self.add_device('This box', 'box', token)
+        self.load_devices()
 
     def authorized(self, header):
-        return hmac.compare_digest(str(header or '').encode(), f'Bearer {self.token}'.encode())
+        """The calling device's id, or None."""
+        header = str(header or '')
+        did = self.tokens.get(digest(header[7:])) if header.startswith('Bearer ') else None
+        if did and time.time() - self.seen.get(did, 0) >= 60:  # last_seen to the minute, not a write per call
+            self.seen[did] = time.time()
+            self.sql('UPDATE devices SET last_seen = ? WHERE id = ?', (now_ms(), did))
+        return did
+
+    def devices(self, caller):
+        rows = self.sql('SELECT id, name, kind, created, last_seen FROM devices ORDER BY created, rowid')
+        return [{'id': i, 'name': n, 'kind': k, 'created': c, 'lastSeen': seen, 'current': i == caller} for i, n, k, c, seen in rows]
+
+    def remove_device(self, did):
+        row = self.sql('SELECT kind FROM devices WHERE id = ?', (did,))
+        if not row:
+            raise HttpError(404, 'no such device')
+        if row[0][0] == 'box':
+            raise HttpError(409, "this box's own token can't be removed")
+        self.sql('DELETE FROM devices WHERE id = ?', (did,))
+        self.load_devices()
+        return {'ok': True}
 
     def open_pairing(self):
         self.pair_words, self.pair_until = security.pairing_words(), time.time() + PAIR_WINDOW
@@ -269,7 +361,7 @@ class Hub:
         self.pair_words = None  # one use: the next box needs a fresh window
         self.set_setting('paired', True)
         self.set_setting('trust_ended', True)
-        return {'token': self.token}
+        return {'token': self.mint('Paired with words')}
 
     def open_setup(self, timed=True):
         self.setup_nonce = secrets.token_urlsafe(16)
@@ -289,6 +381,22 @@ class Hub:
 
     def setup_url(self):
         return f'http://{onboarding.lan_ip()}:{self.port}/setup?n={self.setup_nonce}'
+
+    def host_ok(self, header, local):
+        """DNS rebinding guard: a rebound page's Host names the attacker's domain, so only loopback names, hub.toml
+        `hosts`, or the very IP the client connected to (`local`) are served."""
+        m = re.fullmatch(r'\[([0-9a-f:.]+)\](?::\d*)?|([^:\[\]@/?#\s]+)(?::\d*)?', str(header or '').lower())
+        name = m and (m[1] or m[2])
+        if not name:
+            return False
+        if name in ('127.0.0.1', 'localhost', '::1', *self.hosts):
+            return True
+        try:
+            ip, own = (ipaddress.ip_address(x.split('%')[0]) for x in (name, local))
+        except ValueError:  # a name that isn't an IP literal and isn't listed
+            return False
+        plain = lambda a: getattr(a, 'ipv4_mapped', None) or a
+        return plain(ip) == plain(own)
 
     def finish_setup(self):
         if not self.stream_addons:
@@ -333,7 +441,8 @@ class Hub:
 
     def pending_requests(self):
         now = time.time()
-        return [{'requestId': k, 'name': v['name'], 'code': v['code'], 'ageS': int(now - v['created'])}
+        # No code here: the approver must read it off the TV, so holding the nonce or a token isn't enough.
+        return [{'requestId': k, 'name': v['name'], 'ageS': int(now - v['created'])}
                 for k, v in list(self.pair_requests.items()) if not v['approved'] and now - v['created'] < PAIR_WINDOW]
 
     def approve(self, body):
@@ -342,6 +451,8 @@ class Hub:
             raise HttpError(404, 'no such pairing request')
         if time.time() - req['created'] >= PAIR_WINDOW:
             raise HttpError(410, 'that pairing request expired; start again on the TV')
+        if not hmac.compare_digest(str(body.get('code') or '').encode(), req['code'].encode()):
+            raise HttpError(403, 'that code does not match the one on the TV')
         req['approved'] = True
         self.set_setting('paired', True)
         self.set_setting('trust_ended', True)
@@ -357,11 +468,13 @@ class Hub:
             return 202, {'status': 'pending'}, {}
         if self.pair_requests.pop(rid, None) is None:  # the token is handed out once, even to two racing polls
             raise HttpError(404, 'no such pairing request')
-        return 200, {'token': self.token}, {}
+        return 200, {'token': self.mint(req['name'])}, {}
 
     def rotate(self):
-        self.token = security.b64(security.write_secret(self.token_path, secrets.token_bytes(32), 0o640))
-        return {'token': self.token}
+        """A new token for the box itself (Kodi re-reads the file); paired TVs keep theirs."""
+        token = security.b64(security.write_secret(self.token_path, secrets.token_bytes(32), 0o640))
+        self.set_box(token)
+        return {'token': token}
 
     def sql(self, query, args=()):
         con = sqlite3.connect(self.db, timeout=10)
@@ -607,8 +720,8 @@ class Hub:
 
     def search(self, q):
         q = q.strip().casefold()
-        if not q:
-            raise HttpError(400, 'q is required')
+        if not q or len(q) > 100:
+            raise HttpError(400, 'q is required, at most 100 characters')
         lib = self.library(None)
         title = lambda i: (i['title'] or '').casefold()
         tiers = [lambda i: title(i).startswith(q),
@@ -647,15 +760,35 @@ def episode(se):
     """[] -> (0, 0) for a movie; ['1', '3'] -> (1, 3)."""
     if not se:
         return 0, 0
-    if len(se) == 2 and all(x.isdigit() for x in se):
+    if len(se) == 2 and all(re.fullmatch(r'\d{1,6}', x) for x in se):  # not isdigit(): '²' passes that and breaks int()
         return int(se[0]), int(se[1])
-    raise HttpError(404, 'expected /{id}/{season}/{episode}')
+    raise HttpError(400, 'expected /{id}/{season}/{episode}')
 
 
 def skip(qs):
-    if not qs.get('skip', '0').isdigit():
+    if not re.fullmatch(r'\d{1,6}', qs.get('skip', '0')):
         raise HttpError(400, 'skip must be a number')
     return int(qs.get('skip', '0'))
+
+
+def kind(t):
+    """Strict: the hub's own logic (play, streams, episodes) knows only these two."""
+    if t not in ('movie', 'series'):
+        raise HttpError(400, 'type must be movie or series')
+    return t
+
+
+def addon_type(t):
+    """Any well-formed Stremio type (tv, anime, channel…): catalogs and meta just pass it to the addon."""
+    if not re.fullmatch(r'[a-z][a-z0-9_-]{0,19}', t):
+        raise HttpError(400, 'type is not a valid addon type')
+    return t
+
+
+def shape(path):
+    """The route without titles or ids, for the log: /play/tt1/1/2 -> /play/:id/:id/:id."""
+    path = re.sub(r'(?<=/request/).+', ':id', path)
+    return re.sub(r'(?<=/)(?:tt\d+|\d+)(?=/|$)', ':id', path)
 
 
 def imdb(id_):
@@ -667,6 +800,7 @@ def imdb(id_):
 class Handler(BaseHTTPRequestHandler):
     hub: Hub
     protocol_version = 'HTTP/1.1'
+    server_version, sys_version = 'mediabox-hub', ''  # no Python version in the Server header
     timeout = 30  # idle or slow-sending connections are dropped instead of holding a thread forever
 
     def do_GET(self): self.route('GET')
@@ -693,18 +827,21 @@ class Handler(BaseHTTPRequestHandler):
                 raise HttpError(413, 'request body over 64 KB')
             # Read the body before routing so an early 4xx can't leave it in the keep-alive stream.
             self.raw = self.rfile.read(length)
+            if not self.hub.host_ok(self.headers.get('Host'), self.connection.getsockname()[0]):
+                raise HttpError(421, 'unknown host name; add it to hosts in hub.toml')
             parts = [urllib.parse.unquote(p) for p in u.path.split('/') if p]
             qs = {k: v[-1] for k, v in urllib.parse.parse_qs(u.query).items()}
             mp = ['GET' if method == 'HEAD' else method, *parts]
             # /pair counts only word guesses and TV requests, not reading the words or opening a window.
-            limit = self.hub.limits.get('pair' if mp == ['POST', 'pair'] else 'pair/request' if mp == ['POST', 'pair', 'request']
+            # Approvals share the guess bucket: each one tries a 6-digit code.
+            limit = self.hub.limits.get('pair' if mp in (['POST', 'pair'], ['POST', 'pair', 'approve']) else 'pair/request' if mp == ['POST', 'pair', 'request']
                                         else parts[0] if parts and parts[0] in ('play', 'setup', 'health') else '')
             if limit and not limit.take(self.client_address[0]):
                 raise HttpError(429, 'too many requests; slow down')
             # Open to the LAN: health and pairing. Setup checks its nonce, /pair and approvals check token or nonce inside.
             public = method == 'OPTIONS' or mp in (['GET', 'health'], ['GET', 'pair'], ['POST', 'pair'], ['POST', 'pair', 'request'],
-                                                    ['GET', 'pair', 'requests'], ['POST', 'pair', 'approve']) \
-                or mp[:3] == ['GET', 'pair', 'request'] or (parts[:1] == ['setup'] and mp != ['POST', 'setup', 'open'])
+                                                    ['GET', 'pair', 'requests'], ['POST', 'pair', 'approve'], ['GET', 'devices']) \
+                or mp[:3] == ['GET', 'pair', 'request'] or mp[:2] == ['DELETE', 'devices'] or (parts[:1] == ['setup'] and mp != ['POST', 'setup', 'open'])
             # The setup page has no token; its nonce (in a header) also opens the Home rows and collections calls.
             page = parts[:1] in (['shelves'], ['shelf'], ['collections']) and self.hub.setup_ok(self.headers.get('X-Setup-Nonce'))
             if not public and not page and not self.hub.authorized(self.headers.get('Authorization')):
@@ -729,16 +866,18 @@ class Handler(BaseHTTPRequestHandler):
         if method == 'OPTIONS':
             self.send_header('Access-Control-Allow-Methods', 'GET, HEAD, POST, PUT, PATCH, DELETE, OPTIONS')
             self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Setup-Nonce')
+        headers = {'X-Content-Type-Options': 'nosniff', 'Cross-Origin-Resource-Policy': 'same-origin',
+                   'Referrer-Policy': 'no-referrer', **headers}
+        if 'Content-Type' not in headers:
+            headers.update({'Content-Type': 'application/json', 'Cache-Control': 'no-store'})
         for k, v in headers.items():
             self.send_header(k, v)
-        if 'Content-Type' not in headers:
-            self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(data)))
         self.end_headers()
         if method != 'HEAD':
             self.wfile.write(data)
-        # Path only, never the query, headers, addon URLs (see fetch) or stream URLs.
-        print(f'{self.client_address[0]} {method} {re.sub(r"[^!-~]", "?", u.path)} {status} {(time.monotonic() - t0) * 1000:.0f}ms{err}', flush=True)
+        # Route shape only, never ids, the query, headers, addon URLs (see fetch) or stream URLs.
+        print(f'{self.client_address[0]} {method} {re.sub(r"[^!-~]", "?", shape(u.path))} {status} {(time.monotonic() - t0) * 1000:.0f}ms{err}', flush=True)
 
     def dispatch(self, method, parts, qs):
         hub = self.hub
@@ -747,7 +886,8 @@ class Handler(BaseHTTPRequestHandler):
             case ['OPTIONS', *_]:
                 return 204, None, {}
             case ['GET', 'health']:
-                return ok(hub.health())
+                # Unpaired callers learn only that a hub is here; the addon list (and its outbound checks) needs the token.
+                return ok(hub.health() if hub.authorized(self.headers.get('Authorization')) else {'ok': True})
             case ['GET', 'pair']:
                 # The words are for the TV to show, so only the box itself or an already paired client may read them.
                 if not self.local_or_paired():
@@ -761,7 +901,16 @@ class Handler(BaseHTTPRequestHandler):
                 hub.open_pairing()
                 return ok({'until': int(hub.pair_until * 1000)})
             case ['POST', 'pair', 'rotate']:
+                if not self.loopback():
+                    raise HttpError(403, 'rotate the box token on the box itself')
                 return ok(hub.rotate())
+            case ['GET', 'devices']:
+                self.trusted(qs.get('n'))
+                return ok({'devices': hub.devices(hub.authorized(self.headers.get('Authorization')))})
+            case ['DELETE', 'devices', did]:
+                body = self.body()
+                self.trusted(body.get('n') if isinstance(body, dict) else qs.get('n'))
+                return ok(hub.remove_device(did))
             case ['POST', 'pair', 'request']:
                 return ok(hub.pair_request(self.body(), hub.authorized(self.headers.get('Authorization'))))
             case ['GET', 'pair', 'request', rid]:
@@ -786,7 +935,7 @@ class Handler(BaseHTTPRequestHandler):
             case ['GET', 'setup']:
                 hub.require_setup(qs.get('n'))
                 return 200, SETUP_HTML, {'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store',
-                                         'Referrer-Policy': 'no-referrer', 'X-Frame-Options': 'DENY', 'Content-Security-Policy':
+                                         'X-Frame-Options': 'DENY', 'Content-Security-Policy':
                                          "default-src 'none'; script-src " + SETUP_SCRIPT + "; style-src 'unsafe-inline'; "
                                          "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"}
             case ['GET', 'setup', 'info']:
@@ -816,9 +965,9 @@ class Handler(BaseHTTPRequestHandler):
                     return ok({k: best[k] for k in ('url', 'headers', 'badges', 'source', 'cut')})
                 return 302, None, {'Location': best['url']}
             case ['GET', 'resume', id_, *se]:
-                return ok(hub.get_resume((id_, *episode(se))) or {})
+                return ok(hub.get_resume((imdb(id_), *episode(se))) or {})
             case ['PUT', 'resume', id_, *se]:
-                return ok(hub.put_resume((id_, *episode(se)), self.body()))
+                return ok(hub.put_resume((imdb(id_), *episode(se)), self.body()))
             case ['GET', 'browse', 'catalogs']:
                 return ok({'catalogs': hub.catalogs()})
             case ['GET', 'presets']:
@@ -846,15 +995,17 @@ class Handler(BaseHTTPRequestHandler):
             case ['GET', 'new']:
                 return ok({'items': hub.new_releases(skip(qs))})
             case ['GET', 'browse', 'catalog', type_, cid]:
-                return ok({'items': hub.catalog(type_, cid, skip(qs))})
+                return ok({'items': hub.catalog(addon_type(type_), cid, skip(qs))})
             case ['GET', 'browse', 'meta', type_, id_]:
-                meta = hub.meta(type_, id_)
+                meta = hub.meta(addon_type(type_), imdb(id_))
                 item = to_item(meta)
                 eps = episodes(meta)
                 hub.annotate([item], {item['id']: eps})
                 return ok({**item, 'videos': [{'s': s, 'e': e, 'title': t} for s, e, t in eps]})
+            case ['GET', 'browse', 'cast', type_, id_]:
+                return ok(shelves.cast_for(hub, kind(type_), imdb(id_)))
             case ['GET', 'browse', 'streams' | 'subtitles' as what, type_, id_, *se]:
-                s, e = episode(se)
+                type_, id_, (s, e) = kind(type_), imdb(id_), episode(se)
                 vid = f'{id_}:{s}:{e}' if se else id_
                 if what == 'subtitles':
                     return ok({'subtitles': hub.subtitles(type_, vid)})
@@ -864,8 +1015,11 @@ class Handler(BaseHTTPRequestHandler):
                 return ok({'items': hub.search(qs.get('q', ''))})
         raise HttpError(404, 'no such call')
 
+    def loopback(self):
+        return ipaddress.ip_address(self.client_address[0]).is_loopback
+
     def local_or_paired(self):
-        return ipaddress.ip_address(self.client_address[0]).is_loopback or self.hub.authorized(self.headers.get('Authorization'))
+        return self.loopback() or self.hub.authorized(self.headers.get('Authorization'))
 
     def trusted(self, nonce):
         """A paired client, or the setup page presenting its nonce."""

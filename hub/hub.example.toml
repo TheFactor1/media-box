@@ -1,6 +1,7 @@
 # Hub config: non-secret settings only. Copy to /var/lib/hub/hub.toml (or point HUB_CONFIG at it).
-# Secrets live next to it in /var/lib/hub: `token` (pairing token) and `key` (encrypts the settings
-# table in hub.sqlite: stream addon links, the AIOStreams account), both 0600. Back them up with the
+# Secrets live next to it in /var/lib/hub: `token` (this box's own token, 0640 so Kodi reads it; each paired TV
+# gets its own, stored only as a hash) and `key` (encrypts the settings
+# table in hub.sqlite: stream addon links, the AIOStreams account; 0600). Back them up with the
 # database or the settings are unreadable.
 #
 # First run: the TV shows a QR for http://<box>:8097/setup?n=<one-time nonce> (it reads the link from
@@ -8,9 +9,9 @@
 # The setup page answers only while no stream source is configured, or for 10 minutes after a paired
 # device calls POST /setup/open.
 #
-# Pairing a TV: every call except GET /health, pairing and the setup page needs "Authorization: Bearer <token>".
+# Pairing a TV: every call except GET /health (just {ok} without a token), pairing and the setup page needs "Authorization: Bearer <token>".
 #   Easy way: the TV calls POST /pair/request {name}, shows the 6-digit code, and polls GET /pair/request/<id>;
-#   approve it on the setup page (or from any paired device). Requests expire after 10 minutes.
+#   approve it on the setup page by typing that code (POST /pair/approve {requestId, code}). Requests expire after 10 minutes.
 #   Headless way: type the six words from GET /pair (read on the box itself) into POST /pair {words}.
 
 # 0.0.0.0 because Player on the Android box reaches the hub over the LAN. On a box where only
@@ -19,6 +20,11 @@ bind = "0.0.0.0"
 port = 8097
 # The hub refuses to start if bind would listen on a public IP. Only for a deliberate exposure:
 # allow_public = true
+
+# Host names the hub answers to (DNS rebinding guard). 127.0.0.1, localhost, ::1 and the box's current LAN
+# address always work; any other Host header gets 421. Add a name here if a front end reaches the box by one,
+# e.g. its mDNS or router name:
+# hosts = ["mediabox.local"]
 
 # LAN discovery: a UDP `MEDIABOX?`, space-padded to 64 bytes, to this port (or broadcast) is answered with
 # `MEDIABOX 1 <port> <name>`. Nothing about the user is in the reply.

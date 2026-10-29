@@ -9,6 +9,8 @@ import urllib.parse
 PAGE = 50
 SMART_CAP = 200
 FRANCHISE_TTL = 7 * 86400
+CAST_MAX = 50  # credits can list hundreds; X-Ray shows the top billing
+TMDB_IMG = 'https://image.tmdb.org/t/p/w185'
 BUILTIN = {'continue': 'Continue watching', 'next': 'Next up', 'new': 'New', 'recent': 'Recently kept'}
 TYPES = {'movie': 'Movies', 'series': 'Shows'}
 # Smart filters use the Refine sheet's fields: OR within genres and within length, AND within format.
@@ -310,6 +312,25 @@ def franchise_for(hub, imdb):
     if cid is None:
         raise core.HttpError(404, 'that title is not part of a collection')
     return franchise_by_collection(hub, cid)
+
+
+def cast_for(hub, type_, imdb):
+    """{'cast': [{name, character, photo}]} from TMDB credits; empty, with no outbound call, without a TMDB key."""
+    core = _core(hub)
+    if not hub.setting('tmdb_api_key'):
+        return {'cast': []}
+    kind = 'movie' if type_ == 'movie' else 'tv'
+
+    def build():
+        found = core.lst(tmdb(hub, f'/find/{imdb}', external_source='imdb_id').get(f'{kind}_results'))
+        if not found or not isinstance(found[0], dict) or not isinstance(found[0].get('id'), int):
+            return []
+        people = [c for c in core.lst(tmdb(hub, f'/{kind}/{found[0]["id"]}/credits').get('cast')) if isinstance(c, dict)]
+        photo = lambda p: TMDB_IMG + p if isinstance(p, str) and re.fullmatch(r'/[\w-]+\.(?:jpg|png)', p) else None
+        return [{'name': text(c.get('name'), 200), 'character': text(c.get('character'), 200) or None, 'photo': photo(c.get('profile_path'))}
+                for c in people if text(c.get('name'))][:CAST_MAX]
+
+    return {'cast': cached(hub, f'tmdb:cast:{type_}:{imdb}', FRANCHISE_TTL, build)}
 
 
 def franchise_by_collection(hub, cid):

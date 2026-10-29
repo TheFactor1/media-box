@@ -25,5 +25,7 @@
          Kodi never shows its "keep this skin?" countdown; the add-on is enabled by addon-manifest.xml. -->
     <setting id="lookandfeel.skin">skin.mediabox</setting>
     <!-- Kodi ships no picture screensaver (only black and dim). -->
+    <!-- 1 = AUTO_UPDATES_NOTIFY: Kodi says an add-on update exists but never installs it by itself. -->
+    <setting id="general.addonupdates">1</setting>
     <setting id="screensaver.mode">screensaver.xbmc.builtin.dim</setting>
 </settings>

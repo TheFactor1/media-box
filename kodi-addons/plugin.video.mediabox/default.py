@@ -88,7 +88,9 @@ def title_item(it, play_next=False):
 
 def list_items(items, content='videos', play_next=False):
     xbmcplugin.setContent(HANDLE, content)
-    xbmcplugin.addDirectoryItems(HANDLE, [title_item(i, play_next) for i in items if i.get('id')])
+    # Only the two types the hub plays; anything else would end up in plugin paths it can't serve.
+    xbmcplugin.addDirectoryItems(HANDLE, [title_item(i, play_next) for i in items
+                                          if i.get('id') and i.get('type') in ('movie', 'series')])
 
 
 def hub_get(path):

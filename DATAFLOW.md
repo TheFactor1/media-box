@@ -61,7 +61,7 @@ One small service (Python 3.12 stdlib + sqlite3, one container, port 8097) that 
 
 | Call | Does |
 |---|---|
-| `GET /health` | `{ok, addons: [..reachable?..]}` |
+| `GET /health` | `{ok}`; with the token `{ok, addons: [..reachable?..]}` |
 | `GET /library?collection=continue\|next\|movies\|shows` | Kept titles, filtered/sorted per collection. `continue` = has a resume point under 92 %, most recently watched first; `next` = series with a next episode; `movies`/`shows` = all kept of that type, newest kept first |
 | `GET /new?skip=N` | **New releases from the user's catalogs**, not recently kept: the catalog named by `new_catalog` in `hub.toml` (default: Cinemeta's movie and series "top" catalogs filtered to the current and previous year, newest first), with `inLibrary` and `resume` filled in. A fresh box has a populated New tab on day one |
 | `POST /keep {id, type}` | Adds the title: metadata from the meta addon, best-stream badges from the stream addons, returns the item. Idempotent |
@@ -72,6 +72,7 @@ One small service (Python 3.12 stdlib + sqlite3, one container, port 8097) that 
 | `GET /browse/catalogs` | The user's catalogs (from the meta/catalog addons' manifests) |
 | `GET /browse/catalog/{type}/{catalogId}?skip=N` | Items, with `inLibrary` and `resume` filled in |
 | `GET /browse/meta/{type}/{id}` | Full metadata |
+| `GET /browse/cast/{type}/{id}` | `{cast: [{name, character, photo}]}` from TMDB credits, `type` movie or series, `photo` an `https://image.tmdb.org/...` URL or null. Uses the hub's TMDB key (front ends ship none); without a key `{cast: []}` and no TMDB call. Cached 7 days. Player's X-Ray reads this |
 | `GET /browse/streams/{type}/{id}[/{s}/{e}]` | Ranked streams with parsed badges; same ranking `/play` uses |
 | `GET /search?q=` | Library first (title start, then any word, then genre), then catalog search via the addons |
 
@@ -112,11 +113,11 @@ Config: `/var/lib/hub/hub.toml` (addon manifest URLs, meta addon, preset); data:
 
 ## Security and privacy (Matt's rule, 2026-10-27: both at max)
 **Hub**
-- **Every call needs a pairing token** except `GET /health` and the setup page while unpaired. The token is 32 random bytes, generated on first start, stored 0600, sent as `Authorization: Bearer`. Pairing: the TV (localhost or an already-paired client) reads a one-time 6-word code from `GET /pair` while a 10-minute window is open; the new box posts the words to `POST /pair` and receives the token; the code dies after one use; 5 guesses a minute. `POST /pair/rotate` invalidates every box. **Usual path:** the TV calls `POST /pair/request {name}` and shows the returned 6-digit code; the phone setup page (or any paired client) approves it (`GET /pair/requests`, `POST /pair/approve`); the TV polls `GET /pair/request/{id}` and receives the token. Nothing is typed on the TV.
+- **Every call needs a pairing token** except `GET /health` and the setup page while unpaired. **Each paired device gets its own token** (32 random bytes, sent as `Authorization: Bearer`), handed out once when it pairs; the hub stores only its SHA-256 in the `devices` table, never the token. The box's own token is the exception: `/var/lib/hub/token` holds it raw, mode 0640, group media, because Kodi on the box reads it on every call. `GET /devices` lists devices (`{id, name, kind: box|tv|legacy, created, lastSeen, current}`) and `DELETE /devices/{id}` removes one at once (not the box: 409); both take a paired device's token or the setup page's nonce, and the setup page shows the list with Remove. A hub from before per-device tokens turns its old shared token into one `legacy` device ("TVs paired before") so those TVs keep working until it is removed, and gives the box a fresh token. Pairing: the TV (localhost or an already-paired client) reads a one-time 6-word code from `GET /pair` while a 10-minute window is open; the new box posts the words to `POST /pair` and receives its token; the code dies after one use; 5 guesses a minute. `POST /pair/rotate` (from the box itself only) replaces the box token; paired TVs keep theirs. **Usual path:** the TV calls `POST /pair/request {name}` and shows the returned 6-digit code; the phone setup page (or any paired client) approves it (`GET /pair/requests`, `POST /pair/approve {requestId, code}`: the approver types the code from the TV; the list never contains it); the TV polls `GET /pair/request/{id}` and receives its own token. Nothing is typed on the TV.
 - **Setup locks itself:** `/setup` answers only while unconfigured or for 10 minutes after "Set up again" is pressed on the TV; the page is served with a one-time nonce in the QR, no password field, no account.
 - **Secrets at rest are encrypted:** the AIOStreams URL (it embeds a config token) and any debrid key the setup page handles are stored encrypted with a key held in a separate 0600 file, so a copied database is useless without the box. Never logged; logs show hosts only, never paths or query strings.
 - **Bind to LAN only**: refuses to start on a public IP unless `allow_public = true`; CORS limited to the setup page's own origin; 10 req/s per client on `/setup` and `/play`; request bodies capped at 64 KB.
-- **No telemetry, no third-party calls the user didn't configure.** Outbound traffic is only to the user's addon URLs and the meta addon; TMDB cast is off unless the user adds a key. `/health` reports addon reachability without sending anything about the user.
+- **No telemetry, no third-party calls the user didn't configure.** Outbound traffic is only to the user's addon URLs and the meta addon; TMDB cast is off unless the user adds a key. `/health` reports addon reachability without sending anything about the user. Titles you browse are looked up at Cinemeta (Stremio's metadata service), and posters load from image CDNs.
 - **The hub never proxies streams** (it 302s), so it never sees what is watched beyond its own library and resume tables, which stay on the box and are in the nightly local backup only.
 - **Updates**: the hub image is pinned by digest in the quadlet and compose file; bootc bound images are signed (cosign, Phase 5).
 

@@ -55,7 +55,10 @@
   .words span::before { counter-increment: w; content: counter(w) "  "; color: var(--muted); font-weight: 400; }
   .req { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0;
          border-bottom: 1px solid var(--line); }
-  .req b { font-size: 20px; letter-spacing: .08em; }
+  #reqs .req { flex-wrap: wrap; }
+  .req label { flex: 1 1 100%; }
+  .req label small { display: block; color: var(--muted); font-size: 13px; }
+  #reqs .req input { flex: 1; min-width: 0; padding: 10px; font-size: 18px; letter-spacing: .08em; text-align: center; }
   .hidden { display: none; }
   .rows { list-style: none; margin: 0 0 12px; padding: 0; }
   .rows li { display: flex; gap: 6px; align-items: center; padding: 6px; margin-bottom: 6px; border: 1px solid var(--line);
@@ -106,13 +109,15 @@
 
   <section id="sDone" aria-labelledby="hDone">
     <h1 id="hDone">You're set up</h1>
-    <p class="lead">Open the app on each TV and choose Pair. Approve the code it shows here.</p>
+    <p class="lead">Open the app on each TV and choose Pair. Type the code it shows here.</p>
     <div class="card" id="reqs"><p class="msg" id="noreq">Waiting for a TV…</p></div>
+    <div class="card"><b>Devices</b><div id="devs"></div></div>
     <details>
       <summary>No code on the TV?</summary>
       <p class="msg">Type these six words on the TV instead:</p>
       <div class="words" id="words" aria-label="Pairing words"></div>
     </details>
+    <p class="msg">Titles you browse are looked up at Cinemeta (Stremio's metadata service), and posters load from image CDNs.</p>
     <p class="msg hidden" id="adjust"><a id="adjustLink" target="_blank" rel="noreferrer noopener">Adjust sources</a> in AIOStreams (optional)</p>
     <div class="row"><button id="rowsFromDone" type="button">Edit Home rows</button></div>
     <p class="msg" id="mDone" role="status"></p>
@@ -229,24 +234,66 @@
       poll();
     } catch (e) { say('mDone', e.message, 'warn'); }
   }
+  // The hub never sends the code: typing what the TV shows proves the phone is in the same room.
+  function reqRow(r) {
+    const d = document.createElement('div'); d.className = 'req';
+    const l = document.createElement('label'); l.htmlFor = 'code-' + r.requestId;
+    const name = document.createElement('b'); name.textContent = r.name;
+    const hint = document.createElement('small'); hint.textContent = 'Type the code shown on your TV';
+    l.append(name, hint);
+    const i = document.createElement('input'); i.type = 'text'; i.id = 'code-' + r.requestId; i.inputMode = 'numeric';
+    i.maxLength = 7; i.autocomplete = 'off'; i.placeholder = '000 000';
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'go'; b.style.flex = '0'; b.textContent = 'Approve';
+    const approve = async () => {
+      const code = i.value.replace(/\D/g, '');
+      if (code.length !== 6) { say('mDone', 'Type all six digits from the TV.', 'warn'); i.focus(); return; }
+      busy(b, true);
+      try { await call('POST', '/pair/approve', { requestId: r.requestId, code }); d.textContent = r.name + ' is paired.'; say('mDone', ''); }
+      catch (e) { say('mDone', e.message, 'warn'); busy(b, false); i.focus(); }
+    };
+    b.onclick = approve;
+    i.addEventListener('keydown', e => { if (e.key === 'Enter') approve(); });
+    d.append(l, i, b); return d;
+  }
+  const reqRows = new Map();
+  const noreq = $('noreq');  // kept: once replaced it is no longer in the page to look up
   let polling = false;
   async function poll() {
     if (polling) return; polling = true;
     try {
       const j = await call('GET', '/pair/requests');
-      const rows = j.requests.map(r => {
-        const d = document.createElement('div'); d.className = 'req';
-        const t = document.createElement('span'); t.textContent = r.name + ' ';
-        const c = document.createElement('b'); c.textContent = r.code.slice(0, 3) + ' ' + r.code.slice(3); t.append(c);
-        const b = document.createElement('button'); b.type = 'button'; b.className = 'go'; b.style.flex = '0'; b.textContent = 'Approve';
-        b.onclick = async () => { busy(b, true);
-          try { await call('POST', '/pair/approve', { requestId: r.requestId }); d.textContent = r.name + ' is paired.'; }
-          catch (e) { say('mDone', e.message, 'warn'); busy(b, false); } };
-        d.append(t, b); return d;
-      });
-      $('reqs').replaceChildren(...(rows.length ? rows : [$('noreq')]));
+      const rows = j.requests.map(r => reqRows.get(r.requestId) || reqRows.set(r.requestId, reqRow(r)).get(r.requestId));
+      const want = rows.length ? rows : [noreq], have = [...$('reqs').children];
+      // Only redraw on a change: re-inserting the rows would drop the phone keyboard mid-code every poll.
+      if (want.length !== have.length || want.some((x, k) => x !== have[k])) $('reqs').replaceChildren(...want);
+      await loadDevices();
       polling = false; setTimeout(poll, 2000);
     } catch (e) { say('mDone', 'Setup has closed. Open it again from the TV to pair more.', ''); }
+  }
+
+  // Paired devices, each with its own token. Redrawn only when the list changes, so a button keeps its focus.
+  let devKey = '';
+  async function loadDevices() {
+    const list = (await call('GET', '/devices')).devices;
+    const key = JSON.stringify(list.map(d => [d.id, d.name]));
+    if (key === devKey) return;
+    devKey = key;
+    $('devs').replaceChildren(...list.map(d => {
+      const r = document.createElement('div'); r.className = 'req';
+      const t = document.createElement('span'); t.textContent = d.name; r.append(t);
+      if (d.kind !== 'box') {  // the box's own token can't be removed
+        const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Remove';
+        b.setAttribute('aria-label', 'Remove ' + d.name);
+        b.onclick = async () => {
+          if (!confirm('Remove ' + d.name + '? It will have to pair again.')) return;
+          busy(b, true);
+          try { await call('DELETE', '/devices/' + encodeURIComponent(d.id), {}); devKey = ''; await loadDevices(); }
+          catch (e) { say('mDone', e.message, 'warn'); busy(b, false); }
+        };
+        r.append(b);
+      }
+      return r;
+    }));
   }
 
   // ---- Home rows: the same /shelves and /collections calls the TVs use, authorised by this page's nonce ----

@@ -46,7 +46,8 @@ def check_key(provider, key, base=None):
     if not key_looks_valid(provider, key):
         return 'rejected'
     default, path, accepted = KEY_CHECKS[provider]
-    req = urllib.request.Request((base or default) + path, headers={'Authorization': f'Bearer {key}', 'User-Agent': 'mediabox-hub/1'})
+    req = urllib.request.Request((base or default) + path, headers={'User-Agent': 'mediabox-hub/1'})
+    req.add_unredirected_header('Authorization', f'Bearer {key}')  # a redirect elsewhere must not carry the key
     try:
         with urllib.request.urlopen(req, timeout=8) as r:
             answer = json.loads(r.read(2**20))
@@ -197,7 +198,12 @@ def handle(hub, body, public_host):
         # the hub is a separate design. To change sources, run setup again; it cleans up the old account.
         return {'ok': True}
     if action == 'link':
-        return hub.use_stream_addon(body.get('manifest'))
+        out = hub.use_stream_addon(body.get('manifest'))
+        old = hub.setting('aiostreams')
+        if old:  # the account "Set up for me" made holds the debrid key and is no longer used
+            delete_account(hub.aiostreams_url, old)
+            hub.sql("DELETE FROM settings WHERE name = 'aiostreams'")
+        return out
     if action == 'internet':
         choice = body.get('preset')
         if choice != 'auto' and choice not in hub.presets:

@@ -80,6 +80,12 @@ TMDB = {  # a fake TMDB under /3: The Dark Knight's collection, parts out of ord
         {'id': 155, 'release_date': '2008-07-14'}, {'id': 999, 'release_date': '2020-01-01'}]},
     '/3/movie/272/external_ids': {'imdb_id': 'tt0372784'}, '/3/movie/155/external_ids': {'imdb_id': 'tt0468569'},
     '/3/movie/49026/external_ids': {'imdb_id': 'tt1345836'}, '/3/movie/999/external_ids': {'imdb_id': None},
+    '/3/movie/155/credits': {'cast': [{'name': 'Christian Bale', 'character': 'Bruce Wayne', 'profile_path': '/bale.jpg'},
+                                      {'name': 'Heath Ledger', 'character': 'Joker', 'profile_path': None},
+                                      {'name': 'Odd Path', 'character': '', 'profile_path': '/../x.jpg'}, {'character': 'nameless'}]},
+    '/3/find/tt9': {'movie_results': [], 'tv_results': [{'id': 77}]},
+    '/3/find/tt0372784': {'movie_results': [], 'tv_results': []},
+    '/3/tv/77/credits': {'cast': [{'name': 'Lead', 'character': 'Hero', 'profile_path': '/lead.png'}]},
 }
 
 
@@ -90,6 +96,7 @@ class FakeAddon(BaseHTTPRequestHandler):
     delete_status = 200
     tmdb_calls = []
     provider_paths = []
+    provider_auth = []  # Authorization headers the fake provider saw
     # A fake debrid provider: the Bearer key picks the answer (good… accepted, down… a 503, anything else refused),
     # each refusal in that provider's documented shape.
     PROVIDER_REFUSALS = {'/v1/api/user/me': (401, {'success': False, 'error': 'BAD_TOKEN', 'detail': 'Invalid token'}),
@@ -131,6 +138,7 @@ class FakeAddon(BaseHTTPRequestHandler):
         p = self.path.removeprefix(AIO_PREFIX)
         if p in self.PROVIDER_OK:
             FakeAddon.provider_paths.append(self.path)
+            FakeAddon.provider_auth.append(self.headers.get('Authorization'))
             key = (self.headers.get('Authorization') or '').removeprefix('Bearer ')
             if key.startswith('down'):
                 return self.reply({'error': 'maintenance'}, 503)
@@ -396,24 +404,33 @@ class SecurityTest(Fixture):
         self.assertEqual(self.raw('GET', '/library', headers=self.auth())[0], 200)
         status, body, resp = self.raw('GET', '/health', headers={'Origin': 'http://evil.example'})
         self.assertEqual((status, resp.getheader('Access-Control-Allow-Origin')), (200, None))
+        self.assertEqual(body, {'ok': True})  # no token: no addon list
+        full = self.raw('GET', '/health', headers=self.auth())[1]
+        self.assertEqual([(a['kind'], a['reachable']) for a in full['addons']], [('meta', True), ('stream', True)])
+        self.assertNotIn('127.0.0.1:', json.dumps(full))  # hosts only, no URLs or ports
         # Origin: null (sandboxed iframe, data: page) must not be granted either
         nul = self.raw('OPTIONS', '/pair/request', headers={'Origin': 'null'})[2]
         self.assertIsNone(nul.getheader('Access-Control-Allow-Origin'))
         self.assertEqual(self.raw('HEAD', '/health')[0], 200)  # HEAD is public wherever GET is
         self.assertEqual(self.raw('POST', '/keep', b'', {**self.auth(), 'Content-Length': '-1'})[0], 413)  # not "read to EOF"
-        self.assertNotIn('127.0.0.1:', json.dumps(body))  # hosts only, no URLs or ports
         self.assertEqual(self.raw('POST', '/keep', b'x' * (65 * 1024), self.auth())[0], 413)
 
     def test_2_pair_round_trip_and_rotate(self):
         status, body, _ = self.raw('GET', '/pair')
         self.assertEqual((status, len(body['words'])), (200, 6))
         status, paired, _ = self.raw('POST', '/pair', json.dumps({'words': ' '.join(body['words']).upper()}))
-        self.assertEqual((status, 'Bearer ' + paired['token']), (200, self.auth()['Authorization']))
+        tv = {'Authorization': 'Bearer ' + paired['token']}
+        self.assertEqual(status, 200)
+        self.assertNotEqual(tv, self.auth())  # its own token, not the box's
+        self.assertEqual(self.raw('GET', '/library', headers=tv)[0], 200)
         self.assertEqual(self.raw('GET', '/pair')[0], 403)  # one use, then closed
         old = self.auth()
+        with mock.patch.object(hub.Handler, 'loopback', return_value=False):  # as if from a LAN address
+            self.assertEqual(self.raw('POST', '/pair/rotate', headers=tv)[0], 403)
         self.assertEqual(self.raw('POST', '/pair/rotate', headers=old)[0], 200)
         self.assertEqual(self.raw('GET', '/library', headers=old)[0], 401)
         self.assertEqual(self.raw('GET', '/library', headers=self.auth())[0], 200)
+        self.assertEqual(self.raw('GET', '/library', headers=tv)[0], 200)  # rotating the box leaves paired TVs alone
 
     def test_3_pair_rate_limit(self):
         self.server.RequestHandlerClass.hub.limits['pair'] = security.Bucket(5 / 60, 5)  # fresh bucket for this client
@@ -424,19 +441,43 @@ class SecurityTest(Fixture):
     def test_4_encrypted_settings(self):
         key = os.urandom(32)
         secret = b'https://aio.example/stremio/SECRET-TOKEN/manifest.json'
-        blob = security.encrypt(key, secret)
+        blob = security.encrypt(key, secret, 'stream_addons')
         self.assertNotIn(b'SECRET-TOKEN', blob)
-        self.assertNotEqual(blob, security.encrypt(key, secret))  # fresh nonce each time
-        self.assertEqual(security.decrypt(key, blob), secret)
-        with self.assertRaises(ValueError):
-            security.decrypt(key, blob[:20] + bytes([blob[20] ^ 1]) + blob[21:])
-        with self.assertRaises(ValueError):
-            security.decrypt(os.urandom(32), blob)
+        self.assertNotEqual(blob, security.encrypt(key, secret, 'stream_addons'))  # fresh nonce each time
+        self.assertEqual(security.decrypt(key, blob, 'stream_addons'), secret)
+        for bad in (lambda: security.decrypt(key, blob[:20] + bytes([blob[20] ^ 1]) + blob[21:], 'stream_addons'),
+                    lambda: security.decrypt(os.urandom(32), blob, 'stream_addons'),
+                    lambda: security.decrypt(key, blob, 'aiostreams'),  # bound to its name
+                    lambda: security.decrypt(key, blob)):  # and not readable as an old, unbound row
+            with self.assertRaises(ValueError):
+                bad()
         con = sqlite3.connect(os.path.join(self.tmp.name, 'hub.sqlite'))
         stored = con.execute("SELECT value FROM settings WHERE name = 'stream_addons'").fetchone()[0]
         con.close()
         self.assertNotIn(b'manifest.json', stored)  # imported from hub.toml, encrypted at rest
         self.assertEqual(self.server.RequestHandlerClass.hub.stream_addons[0].host, '127.0.0.1')
+
+    def test_4b_settings_rows_cannot_be_swapped(self):
+        self.hub.set_setting('swap_a', 'first')
+        self.hub.set_setting('swap_b', 'second')
+        con = sqlite3.connect(self.hub.db)
+        a, b = (con.execute('SELECT value FROM settings WHERE name = ?', (n,)).fetchone()[0] for n in ('swap_a', 'swap_b'))
+        with con:
+            con.execute("UPDATE settings SET value = ? WHERE name = 'swap_a'", (b,))
+            con.execute("UPDATE settings SET value = ? WHERE name = 'swap_b'", (a,))
+        con.close()
+        for name in ('swap_a', 'swap_b'):
+            with self.assertRaises(ValueError):
+                self.hub.setting(name)
+        self.hub.sql("DELETE FROM settings WHERE name IN ('swap_a', 'swap_b')")
+
+    def test_4c_old_row_after_startup_is_refused(self):
+        self.assertTrue(self.hub.setting('cipher_v2'))  # sealed at startup
+        old = security.encrypt(self.hub.key, json.dumps(['planted']).encode(), None)  # the form before name binding
+        self.hub.sql('INSERT OR REPLACE INTO settings VALUES (?, ?)', ('old_row', old))
+        with self.assertRaises(ValueError):
+            self.hub.setting('old_row')
+        self.hub.sql("DELETE FROM settings WHERE name = 'old_row'")
 
     def test_5_log_has_no_query(self):
         with contextlib.redirect_stdout(io.StringIO()) as out:
@@ -479,6 +520,21 @@ class SecurityTest(Fixture):
         with self.assertRaises(hub.AddonError):  # a redirect back into the hub is refused too
             hub.fetch(f'{addon}/redirect?to={to}')
         self.assertIn('id', hub.fetch(f'{addon}/redirect?to=' + urllib.parse.quote(f'{addon}/manifest.json', safe='')))
+        real = socket.getaddrinfo
+
+        def resolve(name, port, *args, **kw):  # public.test "resolves public" for the hub's check, connects to the fake
+            if name == 'public.test':
+                ip = '93.184.216.34' if kw.get('proto') == socket.IPPROTO_TCP else '127.0.0.1'
+                return [(socket.AF_INET, socket.SOCK_STREAM, 6, '', (ip, port))]
+            return real(name, port, *args, **kw)
+        public = f'http://public.test:{self.addon.server_port}'
+        with mock.patch('socket.getaddrinfo', side_effect=resolve):
+            self.assertIn('id', hub.fetch(f'{public}/manifest.json'))  # the patched resolver itself works
+            with self.assertRaises(hub.AddonError) as e:
+                hub.fetch(f'{public}/redirect?to=' + urllib.parse.quote(f'{addon}/manifest.json', safe=''))
+            self.assertIn('private address', str(e.exception))
+            # public to public is still followed
+            self.assertIn('id', hub.fetch(f'{public}/redirect?to=' + urllib.parse.quote(f'{public}/manifest.json', safe='')))
         with self.assertRaises(hub.AddonError):  # 200000-deep JSON is an addon error, not a crash
             hub.fetch(f'{addon}/deep')
         with mock.patch('hub.hub.MAX_ADDON', 100), self.assertRaises(hub.AddonError):
@@ -505,6 +561,77 @@ class SecurityTest(Fixture):
                 time.sleep(0.01)
         self.assertIn('/x?[2J?evil', out.getvalue())
         self.assertNotIn('\x1b', out.getvalue())
+
+    def test_aa_security_headers(self):
+        for path, want in (('/health', 200), ('/library', 401)):
+            status, _, r = self.raw('GET', path)
+            self.assertEqual(status, want)
+            self.assertNotIn('Python', r.getheader('Server'))
+            self.assertEqual((r.getheader('X-Content-Type-Options'), r.getheader('Cross-Origin-Resource-Policy'),
+                              r.getheader('Referrer-Policy'), r.getheader('Cache-Control')),
+                             ('nosniff', 'same-origin', 'no-referrer', 'no-store'), path)
+
+    def test_ab_health_without_token_fetches_nothing(self):
+        with mock.patch('hub.hub.fetch', side_effect=AssertionError('fetched')) as fetch:
+            self.assertEqual(self.raw('GET', '/health')[1], {'ok': True})
+        fetch.assert_not_called()
+
+    def test_ac_host_allowlist(self):
+        self.hub.limits['pair/request'] = security.Bucket(1000, 1000)
+        self.hub.limits['health'] = security.Bucket(1000, 1000)
+        self.assertEqual(self.raw('POST', '/pair/request', b'{}', {'Host': 'evil.example'})[0], 421)
+        self.assertEqual(self.raw('POST', '/pair/request', b'{}', {'Host': 'evil.example@127.0.0.1'})[0], 421)
+        self.assertEqual(self.raw('POST', '/pair/request', b'{}')[0], 200)  # 127.0.0.1:<port>
+        self.assertEqual(self.raw('GET', '/health', headers={'Host': '10.9.9.9'})[0], 421)  # an IP we weren't reached on
+        for host in ('localhost', 'LOCALHOST:8097', '[::1]:8097', '127.0.0.1'):
+            self.assertEqual(self.raw('GET', '/health', headers={'Host': host})[0], 200, host)
+        self.hub.hosts.add('mediabox.local')
+        try:
+            self.assertEqual(self.raw('GET', '/health', headers={'Host': 'mediabox.local:8097'})[0], 200)
+        finally:
+            self.hub.hosts.discard('mediabox.local')
+        self.assertTrue(self.hub.host_ok('192.0.2.7:8097', '192.0.2.7'))  # the address the client connected to
+        self.assertTrue(self.hub.host_ok('192.0.2.7', '::ffff:192.0.2.7'))  # on a dual-stack socket
+        self.assertFalse(self.hub.host_ok('192.0.2.8:8097', '192.0.2.7'))  # any other IP literal
+        self.assertFalse(self.hub.host_ok('evil.example', '192.0.2.7'))
+        ip = onboarding.lan_ip()
+        self.assertTrue(self.hub.host_ok(urllib.parse.urlsplit(self.hub.setup_url()).netloc, ip))  # the QR's host is served
+        self.hub.pair_requests.clear()
+
+    def test_ad_log_shapes(self):
+        self.assertEqual(hub.shape('/play/tt1/1/2'), '/play/:id/:id/:id')
+        self.assertEqual(hub.shape('/pair/request/AbC-_x'), '/pair/request/:id')
+        self.assertEqual(hub.shape('/pair/request'), '/pair/request')
+        self.assertEqual(hub.shape('/browse/meta/movie/tt0468569'), '/browse/meta/movie/:id')
+        self.assertEqual(hub.shape('/shelf/catalog:x'), '/shelf/catalog:x')
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            self.get('/resume/tt12345')
+            for _ in range(100):
+                if '/resume' in out.getvalue():
+                    break
+                time.sleep(0.01)
+        self.assertIn('GET /resume/:id 200', out.getvalue())
+        self.assertNotIn('tt12345', out.getvalue())
+
+    def test_ae_input_checks(self):
+        for path in ('/play/tt1/%C2%B2/1', '/resume/x', '/resume/tt1/1/1234567', '/browse/meta/Movie!/tt1',
+                     '/browse/meta/movie/x', '/browse/streams/movie/x', '/browse/streams/tv/tt1', '/browse/subtitles/tv/tt1',
+                     '/browse/catalog/%C2%B2/top', '/browse/catalog/' + 'a' * 21 + '/top',
+                     '/new?skip=%C2%B2', '/search?q=' + 'a' * 101):
+            self.assertEqual(self.call('GET', path)[0], 400, path)
+        # Catalogs and meta take any addon type: the fake addon has no tv catalog, so 404, not 400.
+        self.assertEqual(self.call('GET', '/browse/catalog/tv/top')[0], 404)
+        self.assertEqual(self.call('GET', '/browse/catalog/anime_x-1/top')[0], 404)
+
+    def test_af_no_auth_on_redirect(self):
+        addon = f'http://127.0.0.1:{self.addon.server_port}'
+        bounce = f'{addon}/redirect?to=' + urllib.parse.quote(addon, safe='')  # the check's path is appended to `to`
+        FakeAddon.provider_auth.clear()
+        self.assertEqual(onboarding.check_key('torbox', 'good-0123456789abcdef', bounce), 'rejected')
+        with self.assertRaises(hub.AddonError):  # refused without the key: the 401 is an addon error
+            hub.fetch(bounce + '/v1/api/user/me', headers={'Authorization': 'Bearer good-0123456789abcdef'})
+        self.assertEqual(FakeAddon.provider_auth, [None, None])  # the second hop saw no Authorization
+        self.assertEqual(onboarding.check_key('torbox', 'good-0123456789abcdef', addon), 'ok')  # still sent directly
 
     def test_b_health_rate_limited(self):
         self.hub.limits['health'] = security.Bucket(1, 5)
@@ -625,6 +752,14 @@ class SetupTest(Fixture):
         finally:
             FakeAddon.delete_status = 200
 
+    def test_2c_link_removes_aiostreams_account(self):
+        acct = self.hub.setting('aiostreams')
+        FakeAddon.deleted.clear()
+        manifest = f'http://127.0.0.1:{self.addon.server_port}/manifest.json'
+        self.assertEqual(self.setup({'action': 'link', 'manifest': manifest})[0], 200)
+        self.assertEqual(FakeAddon.deleted, ['Basic ' + base64.b64encode(f"u-1:{acct['password']}".encode()).decode()])
+        self.assertIsNone(self.hub.setting('aiostreams'))
+
     def test_3_speed_and_done(self):
         self.assertEqual(self.setup({'action': 'internet', 'preset': 'fast'})[0], 200)
         self.assertEqual(self.hub.preset, 'fast')
@@ -641,11 +776,17 @@ class SetupTest(Fixture):
         self.hub.pair_requests.pop(mine['requestId'])
         self.assertEqual(self.raw('GET', '/pair/request/' + req['requestId'])[0], 202)  # pending
         self.assertEqual(self.raw('GET', '/pair/requests')[0], 401)  # listing needs the setup page or a paired device
+        self.hub.limits['pair'] = security.Bucket(5 / 60, 5)
         pending = self.raw('GET', '/pair/requests?n=' + self.nonce)[1]['requests']
-        self.assertEqual([(p['name'], p['code']) for p in pending], [('Living room', req['code'])])
-        self.assertEqual(self.raw('POST', '/pair/approve', json.dumps({'n': self.nonce, 'requestId': req['requestId']}))[0], 200)
+        self.assertEqual([p['name'] for p in pending], ['Living room'])
+        self.assertNotIn(req['code'], json.dumps(pending))  # the approver must read it off the TV
+        approve = lambda code: self.raw('POST', '/pair/approve', json.dumps({'n': self.nonce, 'requestId': req['requestId'], 'code': code}))
+        self.assertEqual(self.raw('POST', '/pair/approve', json.dumps({'n': self.nonce, 'requestId': req['requestId']}))[0], 403)
+        self.assertEqual(approve(req['code'])[0], 200)
         status, got, _ = self.raw('GET', '/pair/request/' + req['requestId'])
-        self.assertEqual((status, 'Bearer ' + got['token']), (200, self.auth()['Authorization']))
+        self.assertEqual(status, 200)
+        self.assertNotEqual('Bearer ' + got['token'], self.auth()['Authorization'])  # its own token
+        self.assertEqual(self.raw('GET', '/library', headers={'Authorization': 'Bearer ' + got['token']})[0], 200)
         self.assertEqual(self.raw('GET', '/pair/request/' + req['requestId'])[0], 404)  # handed out once
         old = self.raw('POST', '/pair/request', json.dumps({'name': 'Bedroom'}))[1]
         self.assertIsNone(old['setupUrl'])  # paired now: an unknown LAN device must not get the approving nonce
@@ -653,8 +794,132 @@ class SetupTest(Fixture):
         self.assertEqual(self.raw('GET', '/pair/request/' + old['requestId'])[0], 410)
         self.hub.setup_until = time.time() - 1  # the approval step after setup has lapsed
         late = self.raw('POST', '/pair/request', json.dumps({'name': 'Garage'}))[1]
-        self.assertEqual(self.raw('POST', '/pair/approve', json.dumps({'n': self.nonce, 'requestId': late['requestId']}))[0], 401)
+        self.assertEqual(self.raw('POST', '/pair/approve', json.dumps({'n': self.nonce, 'requestId': late['requestId'],
+                                                                       'code': late['code']}))[0], 401)
 
+    def test_5_wrong_code_is_refused_and_limited(self):
+        self.hub.limits['pair/request'] = security.Bucket(1000, 1000)
+        self.hub.limits['pair'] = security.Bucket(5 / 60, 5)
+        self.hub.open_setup()
+        nonce = self.hub.setup_nonce
+        req = self.raw('POST', '/pair/request', json.dumps({'name': 'Den'}))[1]
+        wrong = f'{(int(req["code"]) + 1) % 10**6:06d}'
+        body = json.dumps({'n': nonce, 'requestId': req['requestId'], 'code': wrong})
+        self.assertEqual([self.raw('POST', '/pair/approve', body)[0] for _ in range(6)], [403] * 5 + [429])
+        right = json.dumps({'n': nonce, 'requestId': req['requestId'], 'code': req['code']})
+        self.assertEqual(self.raw('POST', '/pair/approve', right)[0], 429)  # out of guesses: even the right code waits
+        self.assertEqual(self.raw('GET', '/pair/request/' + req['requestId'])[0], 202)  # still not approved
+
+
+
+class DeviceTest(Fixture):
+    """Per-device tokens: one per paired TV, stored only as a hash, removable one at a time."""
+
+    def tv(self, name):
+        self.hub.limits['pair/request'] = security.Bucket(1000, 1000)
+        self.hub.limits['pair'] = security.Bucket(1000, 1000)
+        req = self.raw('POST', '/pair/request', json.dumps({'name': name}))[1]
+        approve = json.dumps({'requestId': req['requestId'], 'code': req['code']})
+        self.assertEqual(self.raw('POST', '/pair/approve', approve, self.auth())[0], 200)
+        status, got, _ = self.raw('GET', '/pair/request/' + req['requestId'])
+        self.assertEqual(status, 200)
+        return {'Authorization': 'Bearer ' + got['token']}
+
+    def test_tokens_per_device(self):
+        a, b = self.tv('Living room'), self.tv('Bedroom')
+        self.assertEqual(len({a['Authorization'], b['Authorization'], self.auth()['Authorization']}), 3)
+        listed = self.raw('GET', '/devices', headers=a)[1]['devices']
+        self.assertEqual([(d['name'], d['kind'], d['current']) for d in listed],
+                         [('This box', 'box', False), ('Living room', 'tv', True), ('Bedroom', 'tv', False)])
+        self.assertIsNotNone(listed[1]['lastSeen'])
+        with open(self.hub.db, 'rb') as f:
+            stored = f.read()
+        for t in (a, b, self.auth()):  # neither the token nor its bytes are in the database
+            raw = t['Authorization'].removeprefix('Bearer ')
+            self.assertNotIn(raw.encode(), stored)
+            self.assertNotIn(base64.urlsafe_b64decode(raw + '=='), stored)
+        self.assertEqual(self.raw('GET', '/devices')[0], 401)
+        self.assertEqual(self.raw('DELETE', '/devices/' + listed[0]['id'], headers=a)[0], 409)  # never the box itself
+        self.assertEqual(self.raw('DELETE', '/devices/' + listed[1]['id'], headers=b)[0], 200)
+        self.assertEqual(self.raw('GET', '/library', headers=a)[0], 401)  # removed: refused at once
+        self.assertEqual(self.raw('GET', '/library', headers=b)[0], 200)  # the other TV keeps working
+        self.assertEqual(self.raw('DELETE', '/devices/' + listed[1]['id'], headers=b)[0], 404)
+        # The setup page lists and removes with its nonce.
+        nonce = self.raw('POST', '/setup/open', headers=self.auth())[1]['url'].split('n=')[1]
+        mine = self.raw('GET', '/devices?n=' + nonce)[1]['devices']
+        self.assertEqual([d['name'] for d in mine], ['This box', 'Bedroom'])
+        self.assertFalse(any(d['current'] for d in mine))
+        self.assertEqual(self.raw('DELETE', '/devices/' + mine[1]['id'], json.dumps({'n': nonce}))[0], 200)
+        self.assertEqual(self.raw('GET', '/library', headers=b)[0], 401)
+
+
+class MigrationTest(unittest.TestCase):
+    """A hub from before per-device tokens: its shared token keeps the old TVs working as one removable device."""
+
+    def test_shared_token_becomes_a_device(self):
+        with tempfile.TemporaryDirectory() as d:
+            config = os.path.join(d, 'hub.toml')
+            with open(config, 'w') as f:
+                f.write('bind = "127.0.0.1"\nport = 0\ndiscovery_port = 0\n')
+            old = os.urandom(32)
+            with open(os.path.join(d, 'token'), 'wb') as f:
+                f.write(old)
+            server = hub.make_server(config, d)
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+
+            def get(path, token, method='GET'):
+                conn = http.client.HTTPConnection('127.0.0.1', server.server_port, timeout=30)
+                conn.request(method, path, headers={'Authorization': 'Bearer ' + security.b64(token)})
+                r = conn.getresponse()
+                body = json.loads(r.read() or b'null')
+                conn.close()
+                return r.status, body
+            try:
+                with open(os.path.join(d, 'token'), 'rb') as f:
+                    box = f.read()
+                self.assertNotEqual(box, old)  # the box got a fresh token (Kodi reads it on its next call)
+                self.assertEqual(get('/library', old)[0], 200)  # existing TVs keep working
+                self.assertEqual(get('/library', box)[0], 200)
+                devices = get('/devices', box)[1]['devices']
+                self.assertEqual([(x['name'], x['kind']) for x in devices],
+                                 [('TVs paired before (shared token)', 'legacy'), ('This box', 'box')])
+                hub.Hub(config, d)  # a restart doesn't migrate again
+                with open(os.path.join(d, 'token'), 'rb') as f:
+                    self.assertEqual(f.read(), box)
+                self.assertEqual(get('/devices', box)[1]['devices'], devices)
+                self.assertEqual(get('/devices/' + devices[0]['id'], box, 'DELETE')[0], 200)
+                self.assertEqual(get('/library', old)[0], 401)
+            finally:
+                server.shutdown()
+                server.server_close()
+                server.beacon.close()
+
+
+class CipherMigrationTest(unittest.TestCase):
+    """A box whose settings were sealed before name binding: one pass at startup re-seals them, then it is closed."""
+
+    def test_old_rows_are_sealed_once_at_startup(self):
+        with tempfile.TemporaryDirectory() as d:
+            config = os.path.join(d, 'hub.toml')
+            with open(config, 'w') as f:
+                f.write('bind = "127.0.0.1"\nport = 0\ndiscovery_port = 0\n')
+            first = hub.Hub(config, d)
+            key = first.key
+            first.sql("DELETE FROM settings WHERE name = 'cipher_v2'")  # as a box from before this change
+            old = security.encrypt(key, json.dumps({'uuid': 'u-1'}).encode(), None)
+            bad = old[:20] + bytes([old[20] ^ 1]) + old[21:]
+            first.sql('INSERT INTO settings VALUES (?, ?)', ('aiostreams', old))
+            first.sql('INSERT INTO settings VALUES (?, ?)', ('broken', bad))
+            with contextlib.redirect_stdout(io.StringIO()) as out:
+                again = hub.Hub(config, d)
+            self.assertEqual(again.setting('aiostreams'), {'uuid': 'u-1'})  # re-sealed with its name
+            stored = again.sql("SELECT value FROM settings WHERE name = 'aiostreams'")[0][0]
+            with self.assertRaises(ValueError):
+                security.decrypt(key, stored)  # no longer in the old form
+            self.assertEqual(again.sql("SELECT value FROM settings WHERE name = 'broken'")[0][0], bad)  # left alone
+            self.assertIn('setting broken failed its integrity check', out.getvalue())
+            self.assertNotIn('u-1', out.getvalue())  # logged by name only
+            self.assertTrue(again.setting('cipher_v2'))
 
 
 class ShelfTest(Fixture):
@@ -722,6 +987,28 @@ class ShelfTest(Fixture):
         self.assertEqual(self.raw('GET', '/shelves')[0], 401)
         self.raw('POST', '/setup', json.dumps({'n': nonce, 'action': 'tmdb', 'key': ''}))
         self.assertEqual(self.call('GET', '/franchise/tt0468569')[0], 404)  # key removed: even the cached answer stops
+
+    def test_7_cast(self):
+        FakeAddon.tmdb_calls.clear()
+        self.assertEqual(self.get('/browse/cast/movie/tt0468569'), {'cast': []})  # no key: empty, and no TMDB call
+        self.assertEqual(FakeAddon.tmdb_calls, [])
+        self.assertEqual(self.raw('GET', '/browse/cast/movie/tt0468569')[0], 401)  # token required
+        self.assertEqual(self.call('GET', '/browse/cast/tv/tt0468569')[0], 400)
+        self.assertEqual(self.call('GET', '/browse/cast/movie/x')[0], 400)
+        nonce = self.call('POST', '/setup/open')[1]['url'].split('n=')[1]
+        self.raw('POST', '/setup', json.dumps({'n': nonce, 'action': 'tmdb', 'key': '0123456789abcdef0123456789abcdef'}))
+        self.assertEqual(self.get('/browse/cast/movie/tt0468569')['cast'], [
+            {'name': 'Christian Bale', 'character': 'Bruce Wayne', 'photo': 'https://image.tmdb.org/t/p/w185/bale.jpg'},
+            {'name': 'Heath Ledger', 'character': 'Joker', 'photo': None},
+            {'name': 'Odd Path', 'character': None, 'photo': None}])  # a path that isn't a plain file name is dropped
+        self.assertEqual(self.get('/browse/cast/series/tt9')['cast'],
+                         [{'name': 'Lead', 'character': 'Hero', 'photo': 'https://image.tmdb.org/t/p/w185/lead.png'}])
+        calls = len(FakeAddon.tmdb_calls)
+        self.get('/browse/cast/movie/tt0468569')
+        self.assertEqual(len(FakeAddon.tmdb_calls), calls)  # cached
+        self.assertEqual(self.get('/browse/cast/movie/tt0372784'), {'cast': []})  # TMDB doesn't know it
+        self.raw('POST', '/setup', json.dumps({'n': nonce, 'action': 'tmdb', 'key': ''}))
+        self.assertEqual(self.get('/browse/cast/movie/tt0468569'), {'cast': []})  # key removed: cached cast stops too
 
 
 if __name__ == '__main__':
