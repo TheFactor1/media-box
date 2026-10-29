@@ -6,6 +6,9 @@ PartOf=hub.target
 Image=ghcr.io/thefactor1/mediabox-hub:latest
 GlobalArgs=--storage-opt=additionalimagestore=/usr/lib/bootc/storage
 Network=host
+NoNewPrivileges=true
+DropCapability=ALL
+ReadOnly=true
 Volume=/var/lib/hub:/var/lib/hub:Z
 
 [Service]

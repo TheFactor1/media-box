@@ -3,9 +3,17 @@ Description=AIOStreams (the box's own stream source, provisioned by the hub's se
 PartOf=hub.target
 
 [Container]
-Image=ghcr.io/viren070/aiostreams:latest
+# v2.37.0, pinned by its manifest-list digest. Bump deliberately, by PR: take Docker-Content-Digest of
+# ghcr.io/v2/viren070/aiostreams/manifests/<tag> (OCI index Accept header) and test on the VM first.
+Image=ghcr.io/viren070/aiostreams@sha256:bcfd8580695a50c8f464578a0e25af065f3bd17eac35ed82a733a18342ca9718
 GlobalArgs=--storage-opt=additionalimagestore=/usr/lib/bootc/storage
-Network=host
+# Loopback only, independent of the firewall: the hub and Kodi on this box use 127.0.0.1:3000 (BASE_URL).
+# shortcut: not yet tried on the VM with the hardened non-root container; fall back to Network=host if it fails
+PublishPort=127.0.0.1:3000:3000
+NoNewPrivileges=true
+DropCapability=ALL
+ReadOnly=true
+User=1002:1002
 EnvironmentFile=/var/lib/aiostreams/env
 Environment=BASE_URL=http://127.0.0.1:3000
 Volume=/var/lib/aiostreams:/app/data:Z

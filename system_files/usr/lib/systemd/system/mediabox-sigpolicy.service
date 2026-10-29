@@ -1,0 +1,18 @@
+[Unit]
+Description=Enforce signed OS updates (one-time bootc switch with signature policy)
+# Only once, and only on images that ship our public key (docs/SIGNING.md), so a box built before the key
+# existed is never told to demand signatures it can't check.
+ConditionPathExists=!/var/lib/mediabox/sigpolicy-enforced
+ConditionPathExists=/etc/pki/containers/media-box.pub
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+# Records enforcement in the deployment's origin; it applies from the next staged update.
+# shortcut: the exact `bootc status --format=json` field and whether a same-ref switch needs a reboot are unverified, check on the VM once a signed image exists
+ExecStart=/usr/bin/bootc switch --enforce-container-sigpolicy ghcr.io/thefactor1/media-box:latest
+ExecStartPost=/usr/bin/touch /var/lib/mediabox/sigpolicy-enforced
+
+[Install]
+WantedBy=multi-user.target

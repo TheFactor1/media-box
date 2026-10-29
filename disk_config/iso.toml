@@ -1,6 +1,5 @@
-# bootc-image-builder config for the anaconda-iso output.
-# The builder refuses [[customizations.user]] alongside custom kickstart, so the admin
-# account for the Phase 0 spikes lives in the kickstart: SSH key only, no password.
+# RELEASE installer: no login user, root locked, sshd off (the image disables it). The dev variant with an
+# SSH login is iso-dev.toml. Recovery on a release box means reinstalling until the wizard can enable SSH.
 [customizations.installer.kickstart]
 contents = """
 text
@@ -9,13 +8,5 @@ zerombr
 clearpart --all --initlabel
 autopart --type=btrfs --nohome
 rootpw --lock
-user --name=admin --groups=wheel --lock
-sshkey --username=admin "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN2jAmCpV+XvBlLwL7I/dX6fj5NCOkFB4CRV4wbtF/J+ matth@DESKTOP-MFBFQOF"
 reboot
-
-%post
-# The account has no password, so sudo must not ask for one.
-echo 'admin ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/admin
-chmod 0440 /etc/sudoers.d/admin
-%end
 """

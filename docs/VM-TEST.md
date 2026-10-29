@@ -2,9 +2,9 @@
 
 VM settings: Fedora 64-bit, UEFI with Secure Boot off, 2 cores, 8 GB, 40 GB disk, bridged network, 3D on with 2 GB graphics memory.
 
-1. Download the ISO (run id from the Actions page, "Build ISO"):
+1. Build the **dev** ISO (Actions → Build ISO → Run workflow → variant `dev`; the release ISO has no login and SSH off), then download it:
    ```powershell
-   gh run download <run id> --repo TheFactor1/media-box -n iso -D "$HOME\Downloads\mediabox-iso"
+   gh run download <run id> --repo TheFactor1/media-box -n iso-dev -D "$HOME\Downloads\mediabox-iso"
    ```
 2. VM → Settings → CD/DVD → Use ISO image file → the `.iso` in that folder, tick **Connect at power on**. Power on.
 3. The installer runs unattended (it wipes the VM's virtual disk), reboots, and boots the image. First boot pulls the hub and AIOStreams images, so give it a few minutes on the network.

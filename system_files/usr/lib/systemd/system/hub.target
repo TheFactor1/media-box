@@ -1,5 +1,5 @@
 [Unit]
-Description=Hub mode: local Jellyfin and media automation stack
+Description=Hub mode: hub API and AIOStreams
 Requires=multi-user.target
 After=multi-user.target
 

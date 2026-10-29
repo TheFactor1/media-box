@@ -22,7 +22,7 @@ sudo podman build -t media-box:latest .
 
 ## ISO
 
-Put your SSH public key in `disk_config/iso.toml`, then:
+`disk_config/iso.toml` is the release installer (no login, SSH off). For a test box you can SSH into, put your public key in `disk_config/iso-dev.toml` and build that variant (Actions → Build ISO → variant `dev`); locally, swap the config path below:
 
 ```bash
 sudo podman run --rm --privileged --security-opt label=type:unconfined_t \

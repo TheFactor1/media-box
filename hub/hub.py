@@ -32,6 +32,7 @@ STREAM_TTL = 600         # contract: stream cache per title 10 min
 MANIFEST_TTL = 3600
 META_TTL = 86400
 PAIR_WINDOW = 600     # pairing words, setup page and TV pairing requests each last 10 min
+FIRST_BOOT_WINDOW = 1800  # an unpaired LAN device may get the setup link only this long after start, and never after setup
 MAX_BODY = 64 * 1024
 NEW_PAGE, NEW_MAX = 50, 300  # /new page size; titles read per catalog
 MAX_ADDON = 8 * 2**20    # an addon answer over 8 MB is refused, so a hostile addon can't exhaust memory
@@ -193,7 +194,7 @@ class Hub:
         self.sql('CREATE TABLE IF NOT EXISTS settings(name TEXT PRIMARY KEY, value BLOB)')
         self.key = security.secret_file(os.path.join(data_dir, 'key'))
         self.token_path = os.path.join(data_dir, 'token')
-        self.token = security.b64(security.secret_file(self.token_path))
+        self.token = security.b64(security.secret_file(self.token_path, 0o640))  # group media: Kodi on the box reads it
         try:
             self.presets = ranking.preset_table(cfg.get('presets'))
         except ValueError as e:
@@ -230,6 +231,9 @@ class Hub:
                        'pair': security.Bucket(5 / 60, 5), 'pair/request': security.Bucket(3 / 60, 3)}
         self.pair_words, self.pair_until, self.pair_requests = None, 0, {}
         self.setup_nonce, self.setup_until = None, 0
+        self.started = time.monotonic()  # monotonic: an NTP step after a wrong RTC must not stretch the window
+        if (self.stream_addons or self.setting('paired')) and not self.setting('trust_ended'):
+            self.set_setting('trust_ended', True)  # boxes set up before this flag existed get no fresh window
         if not self.setting('paired'):
             self.open_pairing()
         if not self.stream_addons:
@@ -264,6 +268,7 @@ class Hub:
             raise HttpError(403, 'those words do not match')
         self.pair_words = None  # one use: the next box needs a fresh window
         self.set_setting('paired', True)
+        self.set_setting('trust_ended', True)
         return {'token': self.token}
 
     def open_setup(self, timed=True):
@@ -289,6 +294,7 @@ class Hub:
         if not self.stream_addons:
             raise HttpError(400, 'choose where streams come from first')
         self.setup_until = min(self.setup_until, time.time() + PAIR_WINDOW)  # keep the approval step usable a while
+        self.set_setting('trust_ended', True)  # from now on only the phone page or a paired device can approve
         if not self.pairing_open():
             self.open_pairing()
         return {'words': self.pair_words}
@@ -314,12 +320,16 @@ class Hub:
         name = re.sub(r'[^ -~]', '', str(body.get('name') if isinstance(body, dict) else '') or 'TV')[:40]
         rid, code = secrets.token_urlsafe(16), f'{secrets.randbelow(10**6):06d}'
         self.pair_requests[rid] = {'name': name, 'code': code, 'created': now, 'approved': False}
-        if not self.setting('paired') and not self.setup_live():
-            self.open_setup()  # first TV on a never-paired hub: the setup page's approval step opens for it
-        # The setup link carries the nonce that can approve requests, so an unauthenticated TV gets it only
-        # in the first-boot trust window (never paired); afterwards anyone on the LAN could approve themselves.
-        share = self.setup_live() and (authorized or not self.setting('paired'))
+        if self.first_boot_trust() and not self.setup_live():
+            self.open_setup()  # first TV on a fresh hub: the setup page's approval step opens for it
+        # The setup link carries the nonce that can approve requests, so an unauthenticated TV gets it only in the
+        # first-boot trust window; otherwise anyone on the LAN could approve themselves. `paired` alone isn't enough:
+        # Kodi on the box reads the token file and never pairs, so a Kodi-only box would stay open forever.
+        share = self.setup_live() and (authorized or self.first_boot_trust())
         return {'requestId': rid, 'code': code, 'setupUrl': self.setup_url() if share else None}
+
+    def first_boot_trust(self):
+        return not self.setting('trust_ended') and time.monotonic() - self.started < FIRST_BOOT_WINDOW
 
     def pending_requests(self):
         now = time.time()
@@ -334,6 +344,7 @@ class Hub:
             raise HttpError(410, 'that pairing request expired; start again on the TV')
         req['approved'] = True
         self.set_setting('paired', True)
+        self.set_setting('trust_ended', True)
         return {'ok': True}
 
     def poll_request(self, rid):
@@ -349,7 +360,7 @@ class Hub:
         return 200, {'token': self.token}, {}
 
     def rotate(self):
-        self.token = security.b64(security.write_secret(self.token_path, secrets.token_bytes(32)))
+        self.token = security.b64(security.write_secret(self.token_path, secrets.token_bytes(32), 0o640))
         return {'token': self.token}
 
     def sql(self, query, args=()):
@@ -876,6 +887,7 @@ def make_server(config_path, data_dir):
 
 
 def main():
+    os.umask(0o077)  # hub.sqlite and anything else the hub writes stay private to the hub user
     server = make_server(os.environ.get('HUB_CONFIG', '/var/lib/hub/hub.toml'), os.environ.get('HUB_DATA', '/var/lib/hub'))
     print(f'hub listening on {server.server_address[0]}:{server.server_address[1]}', flush=True)
     server.serve_forever()

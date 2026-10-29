@@ -126,13 +126,14 @@ Config: `/var/lib/hub/hub.toml` (addon manifest URLs, meta addon, preset); data:
 - Phone companion stays LAN-only with its existing pairing.
 
 **Box (Fedora)**
-- nftables default-deny inbound except hub :8097, Kodi :8080 and the wizard :80 on the LAN interface; SSH off by default; secure boot where the hardware allows; `/var/lib/hub` and `/var/lib/mediabox` 0700.
+- firewalld on, opening only the hub (8097/tcp) and its discovery beacon (8098/udp); AIOStreams (3000) and Kodi's web server (8080, off by default) stay local; SSH off by default; secure boot where the hardware allows; `/var/lib/hub` 0710 hub:media (key 0600 hub-only; token 0640 so Kodi on the box can read it; hub.sqlite 0600), `/var/lib/mediabox` 0700, `/var/lib/aiostreams` 0700 aiostreams. The hub and AIOStreams containers run as their own users with no capabilities, no new privileges and a read-only root.
 - Tailscale for remote access (device-to-device, no port forwarding); a Cloudflare tunnel only for the phone pages, never for video.
 
 **Privacy posture for users:** the box talks to the user's own providers and addons only; the project runs no server, collects nothing, and has no accounts. Said plainly on the status screen's "Privacy" card.
 
 - LAN-reachable: the hub (:8097, token required), Kodi web server, the wizard. Jellyfin only in the "real files" tier.
 - The wizard runs only while unpaired or after "Set up again" on the TV; the pairing code is shown on the TV, so physical access to the TV is the credential.
-- Provider keys never touch the box; they live in the user's AIOStreams. The box stores only the AIOStreams URL (which may embed a config token: `/var/lib/resolver`, 0600).
+- With "Set up for me", the debrid key lives in the box's own AIOStreams (`/var/lib/aiostreams`, 0700), stored by AIOStreams; the hub keeps only the AIOStreams account and manifest URL, encrypted in its settings. With a pasted link, the key stays wherever that AIOStreams runs.
 - SSH: off by default; the wizard has an "Advanced → enable SSH with this public key" card.
+- Release installs (`disk_config/iso.toml`) create no login user and leave sshd disabled; root is locked. Recovery means reinstalling, or the dev installer (`iso-dev.toml`, admin + SSH key + passwordless sudo) on test boxes only, until the wizard's SSH card exists.
 - Logs never leave the box unless the user downloads the bundle.

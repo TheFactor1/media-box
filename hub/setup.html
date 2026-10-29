@@ -202,7 +202,7 @@
         const j = await call('POST', '/setup', { action: 'provision', provider: provider(), key, unverified: !!anyway });
         provisioned = true;  // a retry after a later failure must not create a second AIOStreams account
         $('key').value = '';  // the key now lives in AIOStreams only
-        $('adjustLink').href = j.configureUrl; $('adjust').classList.remove('hidden');
+        if (j.configureUrl) { $('adjustLink').href = j.configureUrl; $('adjust').classList.remove('hidden'); }
         if (anyway) say('mDone', "We couldn't check your key with " + providerName() + '. If nothing plays, set it up again with a new key.', 'warn');
       }
       await call('POST', '/setup', { action: 'internet', preset: speed() });

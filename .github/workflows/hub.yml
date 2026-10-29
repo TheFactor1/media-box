@@ -7,6 +7,8 @@ on:
   push:
     branches: [main]
     paths: ["hub/**", ".github/workflows/hub.yml"]
+  schedule:
+    - cron: "30 9 * * 1" # weekly rebuild on a fresh python:3.12-alpine
   workflow_dispatch:
 
 env:
@@ -19,9 +21,9 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
 
@@ -34,9 +36,39 @@ jobs:
       - name: Build image
         run: podman build -f hub/Containerfile -t "$IMAGE:latest" -t "$IMAGE:${{ github.sha }}" hub
 
+      # Trivy reads podman's image as an archive.
+      - name: Save image for scan
+        run: podman save -o "$RUNNER_TEMP/hub.tar" "$IMAGE:latest"
+
+      # Fails the run (and so blocks the push) on fixable HIGH/CRITICAL findings.
+      - name: Scan image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          input: ${{ runner.temp }}/hub.tar
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1
+
       - name: Push
         if: github.event_name != 'pull_request'
         run: |
           echo '${{ github.token }}' | podman login ghcr.io -u '${{ github.actor }}' --password-stdin
-          podman push "$IMAGE:latest"
+          podman push --digestfile "$RUNNER_TEMP/digest" "$IMAGE:latest"
           podman push "$IMAGE:${{ github.sha }}"
+
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        if: github.event_name != 'pull_request'
+
+      # Signs the digest, which covers both tags. Skips until the key is in repo secrets (docs/SIGNING.md).
+      - name: Sign
+        if: github.event_name != 'pull_request'
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          if [ -z "$COSIGN_PRIVATE_KEY" ]; then
+            echo "::warning::COSIGN_PRIVATE_KEY is not set; $IMAGE was pushed unsigned. See docs/SIGNING.md."
+            exit 0
+          fi
+          echo '${{ github.token }}' | cosign login ghcr.io -u '${{ github.actor }}' --password-stdin
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY "$IMAGE@$(cat "$RUNNER_TEMP/digest")"

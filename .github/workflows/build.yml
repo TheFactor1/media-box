@@ -25,7 +25,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Free disk space
         run: sudo rm -rf /usr/local/lib/android /opt/ghc /usr/share/dotnet
@@ -36,6 +36,24 @@ jobs:
       - name: Build
         run: sudo podman build --tag "$IMAGE:latest" --tag "$IMAGE:${{ github.sha }}" .
 
+      # Trivy can't see root podman's storage, so hand it the image as an archive.
+      - name: Save image for scan
+        run: |
+          sudo podman save -o "$RUNNER_TEMP/image.tar" "$IMAGE:latest"
+          sudo chmod a+r "$RUNNER_TEMP/image.tar"
+
+      # Report only: the OS image carries Fedora's whole package set, and the daily rebuild picks up fixes.
+      - name: Scan image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          input: ${{ runner.temp }}/image.tar
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 0
+
+      - name: Drop scan archive
+        run: rm -f "$RUNNER_TEMP/image.tar"
+
       - name: Login to GHCR
         if: github.event_name != 'pull_request'
         run: echo '${{ github.token }}' | sudo podman login ghcr.io -u '${{ github.actor }}' --password-stdin
@@ -43,5 +61,22 @@ jobs:
       - name: Push
         if: github.event_name != 'pull_request'
         run: |
-          sudo podman push "$IMAGE:latest"
+          sudo podman push --digestfile "$RUNNER_TEMP/digest" "$IMAGE:latest"
           sudo podman push "$IMAGE:${{ github.sha }}"
+
+      - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+        if: github.event_name != 'pull_request'
+
+      # Signs the digest, which covers both tags. Skips until the key is in repo secrets (docs/SIGNING.md).
+      - name: Sign
+        if: github.event_name != 'pull_request'
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+        run: |
+          if [ -z "$COSIGN_PRIVATE_KEY" ]; then
+            echo "::warning::COSIGN_PRIVATE_KEY is not set; $IMAGE was pushed unsigned. See docs/SIGNING.md."
+            exit 0
+          fi
+          echo '${{ github.token }}' | cosign login ghcr.io -u '${{ github.actor }}' --password-stdin
+          cosign sign -y --key env://COSIGN_PRIVATE_KEY "$IMAGE@$(cat "$RUNNER_TEMP/digest")"

@@ -7,6 +7,7 @@ COPY kodi-addons /kodi-addons
 
 # Plain Fedora bootc + RPM Fusion. (ublue base-main uses negativo17, whose
 # ffmpeg conflicts with the RPM Fusion ffmpeg that Kodi is built against.)
+# On a tag, not a digest, on purpose: the daily build must pick up Fedora security updates.
 FROM quay.io/fedora/fedora-bootc:44
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \

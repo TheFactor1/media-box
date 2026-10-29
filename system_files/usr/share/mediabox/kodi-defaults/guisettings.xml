@@ -18,7 +18,7 @@
     <setting id="winsystem.ishdrdisplay">true</setting>
     <!-- Kodi won't start the web server with authentication on (the default) and an empty password;
          kodi-seed puts a per-box random one here. Username stays the default "kodi". -->
-    <setting id="services.webserver">true</setting>
+    <setting id="services.webserver">false</setting>
     <setting id="services.webserverport">8080</setting>
     <setting id="services.webserverpassword">@WEBSERVER_PASSWORD@</setting>
     <!-- Our skin (kodi-addons/skin.mediabox, built on Estuary). Seeded rather than switched at runtime, so

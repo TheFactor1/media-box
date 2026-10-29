@@ -14,25 +14,27 @@ WORDS = [w for w in open(os.path.join(os.path.dirname(__file__), 'words.txt'), e
 assert len(WORDS) == 2048, 'words.txt must hold 2048 words'
 
 
-def secret_file(path):
-    """32 random bytes, created once with mode 0600 and kept from then on."""
+def secret_file(path, mode=0o600):
+    """32 random bytes, created once with `mode` and kept from then on."""
     if os.path.exists(path):
-        os.chmod(path, 0o600)
+        os.chmod(path, mode)
         with open(path, 'rb') as f:
             data = f.read()
         if len(data) != 32:  # never silently replace: a new key would make the stored settings unreadable
             raise SystemExit(f'{path}: expected 32 bytes; restore it from backup or delete it to start over')
         return data
-    return write_secret(path, secrets.token_bytes(32))
+    return write_secret(path, secrets.token_bytes(32), mode)
 
 
-def write_secret(path, data):
+def write_secret(path, data, mode=0o600):
     tmp = path + '.tmp'
     try:  # a leftover (or planted) tmp keeps its own mode under O_CREAT, so start from nothing and O_EXCL
         os.unlink(tmp)
     except FileNotFoundError:
         pass
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_BINARY', 0), 0o600)
+    if hasattr(os, 'fchmod'):
+        os.fchmod(fd, mode)  # explicit: the process umask (077) would otherwise strip the token's group bit
     with os.fdopen(fd, 'wb') as f:
         f.write(data)
         f.flush()

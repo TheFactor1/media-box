@@ -1,0 +1,4 @@
+# Our images carry cosign signatures as sigstore attachments; podman looks for them there.
+docker:
+  ghcr.io/thefactor1:
+    use-sigstore-attachments: true

@@ -2,11 +2,18 @@ name: Build ISO
 
 on:
   workflow_dispatch:
+    inputs:
+      variant:
+        description: release (no login) or dev (admin + SSH key)
+        type: choice
+        options: [release, dev]
+        default: release
   pull_request:
     branches: [main]
     paths: ["disk_config/**", ".github/workflows/build-disk.yml"]
 
 env:
+  VARIANT: ${{ inputs.variant || 'release' }}
   IMAGE_NAME: ${{ github.event.repository.name }}
   IMAGE_REGISTRY: ghcr.io/${{ github.repository_owner }}
 
@@ -17,7 +24,7 @@ jobs:
       contents: read
       packages: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Free disk space
         run: sudo rm -rf /usr/local/lib/android /opt/ghc /usr/share/dotnet
@@ -30,19 +37,21 @@ jobs:
           echo '${{ github.token }}' | sudo podman login ghcr.io -u '${{ github.actor }}' --password-stdin
           sudo podman pull "$IMAGE:latest"
 
+      # bootc-image-builder pinned by digest (it runs --privileged); bump deliberately, by PR: Docker-Content-Digest
+      # of quay.io/v2/centos-bootc/bootc-image-builder/manifests/latest with the manifest-list Accept header.
       - name: Build anaconda ISO
         run: |
           mkdir -p output
           sudo podman run --rm --privileged --security-opt label=type:unconfined_t \
-            -v ./disk_config/iso.toml:/config.toml:ro \
+            -v ./disk_config/${{ env.VARIANT == 'dev' && 'iso-dev.toml' || 'iso.toml' }}:/config.toml:ro \
             -v ./output:/output \
             -v /var/lib/containers/storage:/var/lib/containers/storage \
-            quay.io/centos-bootc/bootc-image-builder:latest \
+            quay.io/centos-bootc/bootc-image-builder@sha256:b858892139e0779d48869a4dd8cbbc4e257da49f5a4b502824a55d221ed65a55 \
             --type anaconda-iso --rootfs btrfs --config /config.toml "$IMAGE:latest"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: github.event_name != 'pull_request'
         with:
-          name: iso
+          name: iso-${{ env.VARIANT }}
           path: output/bootiso/*.iso
           retention-days: 7

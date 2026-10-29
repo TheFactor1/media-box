@@ -2,6 +2,7 @@
 
 AIOStreams API: docs/AIOSTREAMS-API.md (POST /api/v1/user {config, password} -> data {uuid, encryptedPassword}).
 """
+import base64
 import copy
 import ipaddress
 import json
@@ -93,9 +94,12 @@ def lan_ip():
             return '127.0.0.1'
 
 
-def api(base, method, path, body=None):
+def api(base, method, path, body=None, auth=None):
+    headers = {'Content-Type': 'application/json', 'User-Agent': 'mediabox-hub/1'}
+    if auth:  # (uuid, password): AIOStreams' Basic auth for an existing user
+        headers['Authorization'] = 'Basic ' + base64.b64encode(f'{auth[0]}:{auth[1]}'.encode()).decode()
     req = urllib.request.Request(base.rstrip('/') + path, method=method, data=json.dumps(body).encode() if body is not None else None,
-                                 headers={'Content-Type': 'application/json', 'User-Agent': 'mediabox-hub/1'})
+                                 headers=headers)
     host = urllib.parse.urlsplit(base).hostname
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
@@ -143,6 +147,14 @@ def provision(base, provider, key):
     return {'uuid': uuid, 'encryptedPassword': enc, 'password': password}
 
 
+def delete_account(base, account):
+    """Remove an AIOStreams user we created, so a replaced debrid key doesn't linger there. Never fatal."""
+    try:
+        api(base, 'DELETE', '/api/v1/user', auth=(account['uuid'], account['password']))
+    except (ProvisionError, KeyError, TypeError) as e:
+        print(f'could not delete an old AIOStreams account at {urllib.parse.urlsplit(base).hostname} ({type(e).__name__})', flush=True)
+
+
 def addon_urls(base, account, public_host):
     """(manifest URL the hub uses, configure URL for the user's phone). A loopback AIOStreams is shown at the hub's own host."""
     q = lambda s: urllib.parse.quote(s, safe='')
@@ -169,12 +181,21 @@ def handle(hub, body, public_host):
     if action == 'provision':  # the page runs `check` first; "continue anyway" sends unverified: true
         if not key_looks_valid(provider, key):
             raise ValueError('add a valid debrid API key first')
+        old = hub.setting('aiostreams')
         account = provision(hub.aiostreams_url, provider, key)
-        manifest, configure = addon_urls(hub.aiostreams_url, account, public_host)
-        hub.set_setting('aiostreams', account)  # includes the generated password, encrypted with the other settings
-        hub.set_setting('debrid_unverified', body.get('unverified') is True)  # for the status screen
-        hub.use_stream_addon(manifest)
-        return {'ok': True, 'configureUrl': configure}
+        try:
+            manifest, configure = addon_urls(hub.aiostreams_url, account, public_host)
+            hub.use_stream_addon(manifest)
+            hub.set_setting('aiostreams', account)  # includes the generated password, encrypted with the other settings
+            hub.set_setting('debrid_unverified', body.get('unverified') is True)  # for the status screen
+        except Exception:
+            delete_account(hub.aiostreams_url, account)  # don't leave an orphan holding the key
+            raise
+        if old:
+            delete_account(hub.aiostreams_url, old)  # running setup again replaces the account and its key
+        # AIOStreams' own configure page stays hidden: it has no password of its own and proxying its UI through
+        # the hub is a separate design. To change sources, run setup again; it cleans up the old account.
+        return {'ok': True}
     if action == 'link':
         return hub.use_stream_addon(body.get('manifest'))
     if action == 'internet':

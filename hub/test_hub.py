@@ -3,6 +3,7 @@
 (-I drops the working directory from sys.path, so `python -I -m unittest hub.test_hub` cannot import
 any local package; discover -t . puts the project root back.) Without -I: python -m unittest hub.test_hub
 """
+import base64
 import contextlib
 import http.client
 import io
@@ -85,6 +86,8 @@ TMDB = {  # a fake TMDB under /3: The Dark Knight's collection, parts out of ord
 class FakeAddon(BaseHTTPRequestHandler):
     """A Stremio addon, and also a fake AIOStreams: templates, user creation, and the user's addon under AIO_PREFIX."""
     created = []
+    deleted = []  # Basic auth headers of DELETE /api/v1/user
+    delete_status = 200
     tmdb_calls = []
     provider_paths = []
     # A fake debrid provider: the Bearer key picks the answer (good… accepted, down… a 503, anything else refused),
@@ -105,6 +108,14 @@ class FakeAddon(BaseHTTPRequestHandler):
             return self.reply({'success': False, 'error': {'code': 'X', 'message': 'Invalid torbox credentials'}, 'data': None}, 400)
         FakeAddon.created.append(body)
         self.reply({'success': True, 'detail': 'created', 'error': None, 'data': {'uuid': 'u-1', 'encryptedPassword': 'enc-1'}}, 201)
+
+    def do_DELETE(self):
+        if self.path != '/api/v1/user':
+            return self.send_error(404)
+        FakeAddon.deleted.append(self.headers.get('Authorization'))
+        if FakeAddon.delete_status != 200:
+            return self.reply({'success': False, 'error': {'message': 'boom'}, 'data': None}, FakeAddon.delete_status)
+        self.reply({'success': True, 'detail': 'User deleted successfully', 'error': None, 'data': None})
 
     def reply(self, body, status=200):
         self.reply_raw(json.dumps(body).encode(), status)
@@ -374,6 +385,11 @@ class ReleaseTest(Fixture):
 class SecurityTest(Fixture):
     """Token, pairing, limits, encrypted settings, logging, bind check."""
 
+    def test_0_configured_box_gets_no_window(self):
+        # Set up before trust_ended existed and never paired (a Kodi-only box): no setup link right after start.
+        self.assertIsNone(self.raw('POST', '/pair/request', json.dumps({'name': 'Intruder'}))[1]['setupUrl'])
+        self.hub.pair_requests.clear()
+
     def test_1_token_required(self):
         self.assertEqual(self.raw('GET', '/library')[0], 401)
         self.assertEqual(self.raw('GET', '/library', headers={'Authorization': 'Bearer wrong'})[0], 401)
@@ -494,6 +510,17 @@ class SecurityTest(Fixture):
         self.hub.limits['health'] = security.Bucket(1, 5)
         self.assertEqual([self.raw('GET', '/health')[0] for _ in range(6)], [200] * 5 + [429])
 
+    @unittest.skipIf(os.name == 'nt', 'POSIX file modes')
+    def test_cc_secret_modes(self):
+        mode = lambda n: os.stat(os.path.join(self.tmp.name, n)).st_mode & 0o777
+        self.assertEqual((mode('key'), mode('token')), (0o600, 0o640))  # Kodi (group media) reads the token, never the key
+        old = os.umask(0o077)  # as main() runs it
+        try:
+            self.hub.rotate()
+        finally:
+            os.umask(old)
+        self.assertEqual(mode('token'), 0o640)
+
     def test_c_secret_write_and_public_route(self):
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, 'key')
@@ -531,6 +558,17 @@ class SetupTest(Fixture):
         self.assertEqual(self.raw('POST', '/setup', json.dumps({'action': 'check'}))[0], 403)
         self.assertEqual(self.raw('GET', '/setup/info?n=' + self.nonce)[1]['configured'], False)
 
+    def test_1a_first_boot_window(self):
+        self.hub.limits['pair/request'] = security.Bucket(1000, 1000)
+        status, req, _ = self.raw('POST', '/pair/request', json.dumps({'name': 'Early TV'}))
+        self.assertIn('/setup?n=' + self.nonce, req['setupUrl'])  # fresh, unconfigured hub: the first TV gets the QR
+        self.hub.started -= 31 * 60
+        try:  # setup never finished but the box has been up 31 minutes: a LAN device gets no link
+            self.assertIsNone(self.raw('POST', '/pair/request', json.dumps({'name': 'Late'}))[1]['setupUrl'])
+        finally:
+            self.hub.started += 31 * 60
+        self.hub.pair_requests.clear()
+
     def test_1b_key_check(self):
         check = lambda key, provider='torbox': self.setup({'action': 'check', 'provider': provider, 'key': key})[1]
         self.assertEqual(check('good-0123456789abcdef')['result'], 'ok')
@@ -552,7 +590,7 @@ class SetupTest(Fixture):
         self.assertEqual((status, failed['reason']), (502, 'Invalid torbox credentials'))  # shown, with the link path offered
         status, done, _ = self.setup({'action': 'provision', 'provider': 'torbox', 'key': 'tb-0123456789abcdef'})
         self.assertEqual(status, 200, done)
-        self.assertTrue(done['configureUrl'].endswith(AIO_PREFIX + '/configure'))
+        self.assertNotIn('configureUrl', done)  # AIOStreams' own page stays hidden until it is gated
         sent = FakeAddon.created[-1]
         self.assertEqual(sent['config']['services'], [{'id': 'torbox', 'enabled': True, 'credentials': {'apiKey': 'tb-0123456789abcdef'}}])
         self.assertNotIn('tmdbApiKey', sent['config'])
@@ -566,6 +604,27 @@ class SetupTest(Fixture):
         streams = self.get('/browse/streams/movie/tt1?preset=fast')['streams']
         self.assertIn('http://cdn/4kweb', [s['url'] for s in streams])  # served through the provisioned addon
 
+    def test_2b_old_account_is_deleted(self):
+        basic = lambda acct: 'Basic ' + base64.b64encode(f"u-1:{acct['password']}".encode()).decode()
+        first = self.hub.setting('aiostreams')
+        FakeAddon.deleted.clear()
+        self.assertEqual(self.setup({'action': 'provision', 'provider': 'torbox', 'key': 'tb-0123456789abcdef'})[0], 200)
+        self.assertEqual(FakeAddon.deleted, [basic(first)])  # running setup again removes the previous account
+        second, real = self.hub.setting('aiostreams'), self.hub.use_stream_addon
+        self.hub.use_stream_addon = lambda url: (_ for _ in ()).throw(hub.HttpError(400, 'nope'))
+        try:
+            self.assertEqual(self.setup({'action': 'provision', 'provider': 'torbox', 'key': 'tb-0123456789abcdef'})[0], 400)
+        finally:
+            self.hub.use_stream_addon = real
+        made = FakeAddon.created[-1]['password']
+        self.assertEqual(FakeAddon.deleted[-1], 'Basic ' + base64.b64encode(f'u-1:{made}'.encode()).decode())  # orphan removed
+        self.assertEqual(self.hub.setting('aiostreams'), second)  # the working account is kept
+        FakeAddon.delete_status = 500
+        try:  # a failed cleanup must not fail setup
+            self.assertEqual(self.setup({'action': 'provision', 'provider': 'torbox', 'key': 'tb-0123456789abcdef'})[0], 200)
+        finally:
+            FakeAddon.delete_status = 200
+
     def test_3_speed_and_done(self):
         self.assertEqual(self.setup({'action': 'internet', 'preset': 'fast'})[0], 200)
         self.assertEqual(self.hub.preset, 'fast')
@@ -573,9 +632,13 @@ class SetupTest(Fixture):
         self.assertEqual((status, len(done['words'])), (200, 6))
 
     def test_4_tv_pairing(self):
+        self.hub.limits['pair/request'] = security.Bucket(1000, 1000)
         status, req, _ = self.raw('POST', '/pair/request', json.dumps({'name': 'Living room'}))
         self.assertEqual((status, len(req['code']), req['code'].isdigit()), (200, 6, True))
-        self.assertIn('/setup?n=' + self.nonce, req['setupUrl'])  # never paired yet: the TV shows it as a QR
+        self.assertIsNone(req['setupUrl'])  # setup is done: trust ended even though nothing has paired yet
+        mine = self.raw('POST', '/pair/request', json.dumps({'name': 'Phone'}), self.auth())[1]
+        self.assertIn('/setup?n=' + self.nonce, mine['setupUrl'])  # a paired client still gets the link
+        self.hub.pair_requests.pop(mine['requestId'])
         self.assertEqual(self.raw('GET', '/pair/request/' + req['requestId'])[0], 202)  # pending
         self.assertEqual(self.raw('GET', '/pair/requests')[0], 401)  # listing needs the setup page or a paired device
         pending = self.raw('GET', '/pair/requests?n=' + self.nonce)[1]['requests']
@@ -588,6 +651,9 @@ class SetupTest(Fixture):
         self.assertIsNone(old['setupUrl'])  # paired now: an unknown LAN device must not get the approving nonce
         self.hub.pair_requests[old['requestId']]['created'] -= 601
         self.assertEqual(self.raw('GET', '/pair/request/' + old['requestId'])[0], 410)
+        self.hub.setup_until = time.time() - 1  # the approval step after setup has lapsed
+        late = self.raw('POST', '/pair/request', json.dumps({'name': 'Garage'}))[1]
+        self.assertEqual(self.raw('POST', '/pair/approve', json.dumps({'n': self.nonce, 'requestId': late['requestId']}))[0], 401)
 
 
 
