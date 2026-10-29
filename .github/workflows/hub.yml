@@ -59,6 +59,7 @@ jobs:
       - uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
         if: github.event_name != 'pull_request'
 
+      # Legacy cosign format (a sha256-<digest>.sig tag): podman/bootc's use-sigstore-attachments can't read cosign v3's default bundles.
       # Signs the digest, which covers both tags. Skips until the key is in repo secrets (docs/SIGNING.md).
       - name: Sign
         if: github.event_name != 'pull_request'
@@ -71,4 +72,4 @@ jobs:
             exit 0
           fi
           echo '${{ github.token }}' | cosign login ghcr.io -u '${{ github.actor }}' --password-stdin
-          cosign sign -y --key env://COSIGN_PRIVATE_KEY "$IMAGE@$(cat "$RUNNER_TEMP/digest")"
+          cosign sign -y --new-bundle-format=false --use-signing-config=false --key env://COSIGN_PRIVATE_KEY "$IMAGE@$(cat "$RUNNER_TEMP/digest")"
