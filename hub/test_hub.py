@@ -518,6 +518,8 @@ class SetupTest(Fixture):
     extra = 'provider_base = "{addon}"\n'
 
     def setup(self, body):
+        # The suite runs faster than any person; keep the per-IP limit from tripping on fast CI runners.
+        self.server.RequestHandlerClass.hub.limits['setup'] = security.Bucket(1000, 1000)
         return self.raw('POST', '/setup', json.dumps({'n': self.nonce, **body}))
 
     def test_1_nonce_required(self):
