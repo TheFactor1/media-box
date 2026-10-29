@@ -1,7 +1,9 @@
 # DEV installer: an admin login with Matt's SSH key, passwordless sudo and sshd on. Never ship this one.
 # bootc-image-builder config for the anaconda-iso output.
 # The builder refuses [[customizations.user]] alongside custom kickstart, so the admin
-# account for the Phase 0 spikes lives in the kickstart: SSH key only, no password.
+# account for the Phase 0 spikes lives in the kickstart. Its password is for the console only (SSH stays
+# key-only): build-disk.yml swaps __ADMIN_PASSWORD_HASH__ for the DEV_ADMIN_PASSWORD_HASH secret, so the
+# hash never sits in this public repo. Root stays locked; the console and rescue mode go through admin.
 [customizations.installer.kickstart]
 contents = """
 text
@@ -10,14 +12,24 @@ zerombr
 clearpart --all --initlabel
 autopart --type=btrfs --nohome
 rootpw --lock
-user --name=admin --groups=wheel --lock
+user --name=admin --groups=wheel --iscrypted --password=__ADMIN_PASSWORD_HASH__
 sshkey --username=admin "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIN2jAmCpV+XvBlLwL7I/dX6fj5NCOkFB4CRV4wbtF/J+ matth@DESKTOP-MFBFQOF"
 reboot
 
 %post
-# The account has no password, so sudo must not ask for one.
+# Over SSH there's no password to type, so sudo must not ask for one.
 echo 'admin ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/admin
 chmod 0440 /etc/sudoers.d/admin
+# The password is for the console: SSH takes keys only.
+printf 'PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitRootLogin no
+' > /etc/ssh/sshd_config.d/10-keys-only.conf
+# Root is locked, so let rescue/emergency mode open a shell at the console instead of refusing everyone.
+mkdir -p /etc/systemd/system/rescue.service.d /etc/systemd/system/emergency.service.d
+printf '[Service]
+Environment=SYSTEMD_SULOGIN_FORCE=1
+' | tee /etc/systemd/system/rescue.service.d/sulogin.conf > /etc/systemd/system/emergency.service.d/sulogin.conf
 # The image ships sshd disabled; dev boxes need it.
 systemctl enable sshd.service
 %end

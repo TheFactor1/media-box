@@ -2,6 +2,11 @@
 
 VM settings: Fedora 64-bit, UEFI with Secure Boot off, 2 cores, 8 GB, 40 GB disk, bridged network, 3D on with 2 GB graphics memory.
 
+0. Once: give the dev `admin` account a console password. Make its hash in Git Bash (it asks twice; the password itself goes nowhere) and store the hash as a repo secret:
+   ```sh
+   openssl passwd -6 | gh secret set DEV_ADMIN_PASSWORD_HASH --repo TheFactor1/media-box
+   ```
+   The password works at the VM's console (and in rescue mode) only; SSH stays key-only. Root stays locked. A dev build without the secret fails rather than shipping a box nobody can log in to at the console.
 1. Build the **dev** ISO (Actions → Build ISO → Run workflow → variant `dev`; the release ISO has no login and SSH off), then download it:
    ```powershell
    gh run download <run id> --repo TheFactor1/media-box -n iso-dev -D "$HOME\Downloads\mediabox-iso"

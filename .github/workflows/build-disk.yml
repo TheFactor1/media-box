@@ -37,6 +37,18 @@ jobs:
           echo '${{ github.token }}' | sudo podman login ghcr.io -u '${{ github.actor }}' --password-stdin
           sudo podman pull "$IMAGE:latest"
 
+      # The dev ISO's console password, as a SHA-512 crypt hash from a secret (docs/VM-TEST.md); never in the repo.
+      - name: Dev admin password
+        if: env.VARIANT == 'dev'
+        env:
+          HASH: ${{ secrets.DEV_ADMIN_PASSWORD_HASH }}
+        run: |
+          case "$HASH" in
+            '$6$'*) ;;
+            *) echo "::error::DEV_ADMIN_PASSWORD_HASH is missing or not a SHA-512 crypt hash; see docs/VM-TEST.md"; exit 1 ;;
+          esac
+          python3 -c 'import os,sys; p="disk_config/iso-dev.toml"; s=open(p).read(); assert "__ADMIN_PASSWORD_HASH__" in s; open(p,"w").write(s.replace("__ADMIN_PASSWORD_HASH__", os.environ["HASH"]))'
+
       # bootc-image-builder pinned by digest (it runs --privileged); bump deliberately, by PR: Docker-Content-Digest
       # of quay.io/v2/centos-bootc/bootc-image-builder/manifests/latest with the manifest-list Accept header.
       - name: Build anaconda ISO
