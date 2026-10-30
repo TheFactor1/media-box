@@ -38,6 +38,14 @@ PY
 
 chmod +x /usr/libexec/mediabox/kodi-seed
 
+# Pin the hub to the exact image this build found. Bound images are only fetched when their reference changes, so a
+# :latest tag would leave every box on the hub it first pulled. hub.yml runs this build after each new hub image.
+dnf5 install -y skopeo
+hub_digest=$(skopeo inspect --format '{{.Digest}}' docker://ghcr.io/thefactor1/mediabox-hub:latest)
+[[ "$hub_digest" == sha256:* ]]
+sed -i "s|^Image=ghcr.io/thefactor1/mediabox-hub:latest\$|Image=ghcr.io/thefactor1/mediabox-hub@$hub_digest|" /usr/share/containers/systemd/hub.container
+grep -q "^Image=ghcr.io/thefactor1/mediabox-hub@sha256:" /usr/share/containers/systemd/hub.container
+
 # Our own TV interface: Broadsheet in a kiosk browser, films in mpv on the display. Installed beside Kodi, which stays
 # the default until HDR, passthrough and refresh switching pass on real hardware (docs/OWN-UI-RESEARCH.md).
 dnf5 install -y cage chromium mpv wlr-randr polkit kbd

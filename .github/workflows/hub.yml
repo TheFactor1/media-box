@@ -20,6 +20,7 @@ jobs:
     permissions:
       contents: read
       packages: write
+      actions: write  # to start the OS image build below
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
@@ -73,3 +74,10 @@ jobs:
           fi
           echo '${{ github.token }}' | cosign login ghcr.io -u '${{ github.actor }}' --password-stdin
           cosign sign -y --new-bundle-format=false --use-signing-config=false --key env://COSIGN_PRIVATE_KEY "$IMAGE@$(cat "$RUNNER_TEMP/digest")"
+
+      # The OS image pins the hub by digest, so boxes only get this hub through a new OS image.
+      - name: Rebuild the OS image with this hub
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run build.yml --repo "$GITHUB_REPOSITORY" --ref main
