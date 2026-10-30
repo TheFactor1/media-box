@@ -38,4 +38,11 @@ sudo systemctl stop kodi && sudo systemctl start mediabox-ui
 ```
 To make it stick: `sudo systemctl disable kodi && sudo systemctl enable mediabox-ui`. Back to Kodi: `sudo systemctl stop mediabox-ui && sudo systemctl start kodi`.
 
+## Checking containers
+The hub and AIOStreams images live in bootc's own store, so plain `podman` can't see them and reports them as missing or damaged. Always pass the store:
+```sh
+sudo podman --storage-opt=additionalimagestore=/usr/lib/bootc/storage ps
+```
+Even then, `podman system check` reports "layer is missing" for a running container, because it doesn't look across the two stores. That isn't damage. Don't run `--repair` on it.
+
 What a VM can't tell us: HDR, audio passthrough, refresh-rate switching, real Kodi performance. Those need the N150.
