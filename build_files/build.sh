@@ -63,12 +63,18 @@ if [[ -f /etc/pki/containers/media-box.pub ]]; then
 import json
 p = '/etc/containers/policy.json'
 policy = json.load(open(p))
-policy.setdefault('transports', {}).setdefault('docker', {})['ghcr.io/thefactor1'] = [{
+# bootc refuses to enforce signatures while the default is insecureAcceptAnything, so the default rejects and
+# only what the box runs is allowed: our signed images, AIOStreams (its quadlet pins a digest), and local storage.
+policy['default'] = [{'type': 'reject'}]
+transports = policy.setdefault('transports', {})
+transports.setdefault('docker', {})['ghcr.io/thefactor1'] = [{
     'type': 'sigstoreSigned', 'keyPath': '/etc/pki/containers/media-box.pub',
     'signedIdentity': {'type': 'matchRepository'}}]
+transports['docker']['ghcr.io/viren070/aiostreams'] = [{'type': 'insecureAcceptAnything'}]
+transports['containers-storage'] = {'': [{'type': 'insecureAcceptAnything'}]}
 json.dump(policy, open(p, 'w'), indent=2)
 PY
-  python3 -c "import json; assert json.load(open('/etc/containers/policy.json'))['transports']['docker']['ghcr.io/thefactor1'][0]['type'] == 'sigstoreSigned'"
+  python3 -c "import json; p = json.load(open('/etc/containers/policy.json')); assert p['default'][0]['type'] == 'reject' and p['transports']['docker']['ghcr.io/thefactor1'][0]['type'] == 'sigstoreSigned'"
   systemctl enable mediabox-sigpolicy.service
 fi
 # Hub mode is on by default; the wizard flips this to player.target later.

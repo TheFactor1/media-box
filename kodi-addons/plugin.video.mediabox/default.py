@@ -96,7 +96,8 @@ def list_items(items, content='videos', play_next=False):
 def hub_get(path):
     """GET or, on 401 from a hub that isn't paired yet, offer to pair once and retry."""
     try:
-        return mbhub.get(path)
+        # The hub's first fill of New pages through whole catalogs and can pass mbhub's usual 20 s.
+        return mbhub.get(path, timeout=60)
     except HubError as e:
         if e.status == 401 and xbmcgui.Dialog().yesno('Mediabox', 'This TV is not paired with your hub yet. Pair now?'):
             if mbhub.pair():
