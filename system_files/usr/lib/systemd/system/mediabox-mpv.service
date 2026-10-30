@@ -1,0 +1,20 @@
+[Unit]
+Description=Film playback (mpv directly on the display, started by the TV interface)
+Conflicts=getty@tty1.service kodi.service mediabox-ui.service
+
+[Service]
+User=media
+Group=media
+SupplementaryGroups=audio video render input
+PAMName=login
+TTYPath=/dev/tty1
+StandardInput=tty
+# mpv reads keys only with both ends on the terminal.
+StandardOutput=tty
+StandardError=journal
+Environment=HOME=/var/lib/media
+# A stopped compositor can leave the keyboard switched off.
+ExecStartPre=-/usr/bin/kbd_mode -u -C /dev/tty1
+# The film URL arrives over the socket from the bridge, so it never appears on a command line.
+ExecStart=/usr/bin/mpv --config=no --vo=gpu-next --gpu-context=drm --hwdec=auto-safe --fs --ao=alsa --idle=once --force-window=immediate --ytdl=no --really-quiet --input-terminal=yes --terminal --input-conf=/usr/lib/mediabox/ui/mpv-input.conf --input-ipc-server=/run/mediabox/mpv.sock
+Restart=no

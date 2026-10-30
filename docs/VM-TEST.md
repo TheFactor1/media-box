@@ -31,4 +31,11 @@ VM settings: Fedora 64-bit, UEFI with Secure Boot off, 2 cores, 8 GB, 40 GB disk
 | Update | `sudo bootc upgrade` | "No update available" or stages one |
 | Rollback | `sudo bootc rollback && sudo reboot`, then `sudo bootc status` | booted from the previous deployment |
 
+## Trying our own interface instead of Kodi
+Kodi is still the default. On a VM on an image that includes it, swap for this boot:
+```sh
+sudo systemctl stop kodi && sudo systemctl start mediabox-ui
+```
+To make it stick: `sudo systemctl disable kodi && sudo systemctl enable mediabox-ui`. Back to Kodi: `sudo systemctl stop mediabox-ui && sudo systemctl start kodi`.
+
 What a VM can't tell us: HDR, audio passthrough, refresh-rate switching, real Kodi performance. Those need the N150.

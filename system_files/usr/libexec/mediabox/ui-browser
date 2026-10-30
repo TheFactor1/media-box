@@ -1,0 +1,18 @@
+#!/usr/bin/bash
+# Runs inside cage. Draws at 1080p even on a 4K TV: four times fewer pixels per frame, and films still play at full resolution in mpv.
+set -uo pipefail
+
+while read -r output _; do
+  [[ -n "$output" ]] && wlr-randr --output "$output" --mode 1920x1080 2>/dev/null
+done < <(wlr-randr 2>/dev/null | grep -E '^[^ ]')
+
+# The page has nothing to show until the bridge and the hub answer; the hub is a container that can take a while at boot.
+for _ in $(seq 1 60); do
+  curl -fs -o /dev/null --max-time 2 http://127.0.0.1:8099/api/presets && break
+  sleep 1
+done
+
+exec /usr/bin/chromium-browser --ozone-platform=wayland --kiosk --app=http://127.0.0.1:8099/ \
+  --user-data-dir="$HOME/ui-profile" --no-first-run --noerrdialogs --disable-session-crashed-bubble \
+  --disable-background-networking --disable-sync --disable-component-update --disable-features=Translate,MediaRouter,OptimizationHints \
+  --disable-domain-reliability --no-pings --password-store=basic --force-device-scale-factor=1

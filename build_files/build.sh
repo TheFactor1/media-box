@@ -38,6 +38,17 @@ PY
 
 chmod +x /usr/libexec/mediabox/kodi-seed
 
+# Our own TV interface: Broadsheet in a kiosk browser, films in mpv on the display. Installed beside Kodi, which stays
+# the default until HDR, passthrough and refresh switching pass on real hardware (docs/OWN-UI-RESEARCH.md).
+dnf5 install -y cage chromium mpv wlr-randr polkit kbd
+mpv --version
+(cd /ctx/ui && PYTHONDONTWRITEBYTECODE=1 python3 -E -s -m unittest test_shell)
+mkdir -p /usr/lib/mediabox/ui
+cp -r /ctx/ui/. /usr/lib/mediabox/ui/
+rm -f /usr/lib/mediabox/ui/test_shell.py
+rm -rf /usr/lib/mediabox/ui/__pycache__
+chmod +x /usr/libexec/mediabox/ui-session /usr/libexec/mediabox/ui-browser
+
 # Kodi talks to ALSA directly; keep the media user's session from starting PipeWire on the HDMI device.
 systemctl --global mask pipewire.socket pipewire.service pipewire-pulse.socket pipewire-pulse.service wireplumber.service
 

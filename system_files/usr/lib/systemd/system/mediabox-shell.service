@@ -1,0 +1,22 @@
+[Unit]
+Description=TV interface bridge (local page, hub calls, hands the screen to mpv)
+After=network-online.target hub.service
+Wants=network-online.target
+
+[Service]
+User=media
+Group=media
+Environment=HOME=/var/lib/media
+StateDirectory=media
+# mpv's control socket lives here; both units run as media.
+RuntimeDirectory=mediabox
+RuntimeDirectoryPreserve=yes
+ExecStart=/usr/bin/python3 -E -s /usr/lib/mediabox/ui/shell.py
+Restart=always
+RestartSec=2
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/var/lib/media
+ProtectHome=yes
+PrivateTmp=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

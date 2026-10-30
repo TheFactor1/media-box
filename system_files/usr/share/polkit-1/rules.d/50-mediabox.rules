@@ -1,0 +1,9 @@
+// The TV interface's bridge runs as media and swaps the screen between these two units, and nothing else.
+polkit.addRule(function (action, subject) {
+  if (action.id === "org.freedesktop.systemd1.manage-units" && subject.user === "media") {
+    var unit = action.lookup("unit"), verb = action.lookup("verb");
+    if ((unit === "mediabox-ui.service" || unit === "mediabox-mpv.service") && (verb === "start" || verb === "stop")) {
+      return polkit.Result.YES;
+    }
+  }
+});

@@ -1,0 +1,10 @@
+#!/usr/bin/bash
+# Runs as user media from mediabox-ui.service: a one-app compositor holding the kiosk browser.
+set -euo pipefail
+
+# VMware's virtual GPU can't import the browser's buffers (docs/OWN-UI-SPIKE.md). Real hardware keeps GPU compositing.
+for driver in /sys/class/drm/card*/device/driver; do
+  [[ "$(basename "$(readlink -f "$driver")")" == vmwgfx ]] && export WLR_RENDERER=pixman
+done
+
+exec /usr/bin/cage -s -- /usr/libexec/mediabox/ui-browser

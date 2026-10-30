@@ -1,0 +1,758 @@
+<title>Broadsheet Prototype</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&family=Inter:wght@400;600&display=swap">
+<style>
+/* A clickable mock-up of the TV app, with an editor over it. The stage is a fixed 1920x1080 TV, scaled to fit. */
+:root {
+  --paper: #f4efe4; --ink: #1a1714; --red: #a3271c; --muted: #4f4840; --quiet: #6b645a; --rule: #b8ae9c; --soft: #ddd6c7;
+  --chrome: #24201c; --chrome-2: #39332c; --chrome-fg: #f4efe4; --chrome-dim: #b9b0a2; --blue: #7fb4ff;
+  --display: "Playfair Display", Georgia, serif; --body: "Source Serif 4", Georgia, serif; --ui: Inter, system-ui, sans-serif;
+  color-scheme: dark;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body { background: var(--chrome); color: var(--chrome-fg); font: 14px/1.35 var(--ui); overflow: hidden; }
+button, input, select, textarea { font: inherit; }
+#app { height: 100%; display: flex; flex-direction: column; }
+
+#bar { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-block: 8px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); background: var(--chrome); border-bottom: 1px solid var(--chrome-2); }
+#bar .where { font-weight: 600; margin-right: 8px; }
+#saved { color: var(--chrome-dim); font-size: 12px; margin-right: auto; }
+.animbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: var(--chrome-dim); }
+.animbar select { min-height: 40px; padding: 0 8px; background: var(--chrome-2); color: var(--chrome-fg); border: 1px solid #5a5146; border-radius: 4px; }
+.tool { min-height: 40px; padding: 0 14px; border: 1px solid #5a5146; border-radius: 4px; background: var(--chrome-2); color: var(--chrome-fg); cursor: pointer; }
+.tool:hover { background: #4a4238; }
+.tool:focus-visible, .sw:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.tool.primary { background: var(--blue); border-color: var(--blue); color: #10202f; font-weight: 600; }
+.tool:disabled { opacity: .45; cursor: default; }
+
+#work { flex: 1; min-height: 0; display: flex; }
+#view { flex: 1; min-width: 0; position: relative; overflow: hidden; background: #15120f; }
+#stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; background: var(--paper); color: var(--ink); font-family: var(--body); overflow: hidden; }
+#panel { flex: none; width: 300px; overflow-y: auto; padding: 14px; background: var(--chrome); border-left: 1px solid var(--chrome-2); display: flex; flex-direction: column; gap: 12px; }
+#panel h2 { margin: 0; font-size: 15px; }
+#panel h3 { margin: 6px 0 0; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--chrome-dim); }
+#panel p { margin: 0; color: var(--chrome-dim); font-size: 13px; }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.fields label, .wide { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--chrome-dim); }
+#panel input, #panel select, #panel textarea { width: 100%; min-height: 36px; padding: 4px 8px; background: var(--chrome-2); color: var(--chrome-fg); border: 1px solid #5a5146; border-radius: 4px; box-sizing: border-box; }
+#panel textarea { min-height: 76px; resize: vertical; }
+.btns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+.sw { width: 32px; height: 32px; border: 1px solid #fff5; border-radius: 4px; cursor: pointer; }
+.sw.on { box-shadow: 0 0 0 2px var(--blue); }
+.list { display: flex; flex-direction: column; gap: 2px; }
+.list button { min-height: 32px; text-align: left; padding: 0 8px; border: 0; border-radius: 3px; background: none; color: var(--chrome-fg); cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+.list button:hover { background: var(--chrome-2); }
+.list button.on { background: var(--blue); color: #10202f; }
+.list .off { opacity: .55; }
+
+.el { position: absolute; box-sizing: border-box; }
+.txt { overflow: hidden; white-space: pre-wrap; }
+.nav { cursor: pointer; }
+.btn { display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: 600; white-space: nowrap; overflow: hidden; }
+.btn:active { transform: scale(.96); }
+.tab { display: flex; align-items: center; justify-content: center; cursor: pointer; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
+.tab.on { box-shadow: inset 0 -4px 0 var(--red); }
+.pic { background-size: cover; }
+.strip { display: flex; gap: 24px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; scrollbar-width: none; scroll-behavior: smooth; }
+.strip .card { scroll-snap-align: start; }
+.more { position: absolute; top: 112px; width: 52px; height: 76px; display: flex; align-items: center; justify-content: center; background: var(--paper); border: 1px solid var(--ink); font: 600 34px var(--body); cursor: pointer; z-index: 4; }
+.morev { position: absolute; right: 0; bottom: 0; padding: 6px 16px; background: var(--ink); color: var(--paper); font: 600 20px var(--body); cursor: pointer; z-index: 4; }
+.more:hover { background: var(--ink); color: var(--paper); }
+.more.prev { left: 0; }
+.more.next { right: 0; }
+.gridw { display: grid; grid-template-columns: repeat(auto-fill, 226px); gap: 24px; overflow-y: auto; align-content: start; scrollbar-width: none; }
+.scrolly { height: 100%; overflow-y: auto; scrollbar-width: none; box-sizing: border-box; scroll-snap-type: y proximity; }
+.scrolly > .line, .scrolly > .mrow { scroll-snap-align: start; }
+.card { position: relative; flex: none; width: 226px; cursor: pointer; }
+.card .poster { position: relative; height: 300px; }
+.card .t { margin-top: 10px; font-size: 25px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pencil { position: absolute; left: 0; top: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 3; }
+.pencil rect { fill: none; stroke: var(--red); stroke-width: 5; stroke-dasharray: 1000; stroke-dashoffset: 1000; animation: draw .24s cubic-bezier(.3,.6,.2,1) forwards; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+.stamp { position: absolute; left: 22px; top: 110px; padding: 6px 16px; border: 5px solid #d8392b; background: #78140c8c; color: #ffe7e0; font: 900 40px/1.1 var(--display); transform: rotate(-11deg); animation: stamp .26s cubic-bezier(.3,.1,.2,1); z-index: 2; }
+@keyframes stamp { from { opacity: 0; transform: rotate(-11deg) scale(2.2); } 70% { opacity: 1; transform: rotate(-11deg) scale(.96); } }
+.bar-w { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: #1a171466; }
+.bar-w i { display: block; height: 100%; background: var(--red); }
+.rise { animation: rise .28s cubic-bezier(.3,.7,.2,1); }
+@keyframes rise { from { transform: translateY(-40px); opacity: 0; } }
+.fade { animation: fade .3s ease; }
+@keyframes fade { from { opacity: 0; } }
+.set { animation: setup .34s ease-out backwards; }
+@keyframes setup { from { opacity: 0; transform: translateY(16px); } }
+.line { display: flex; align-items: baseline; gap: 24px; height: 76px; padding: 0 14px; border-bottom: 1px solid var(--rule); font-size: 28px; line-height: 76px; cursor: pointer; white-space: nowrap; position: relative; }
+.line b { flex: none; font: 900 34px/76px var(--display); width: 56px; }
+.line span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.line em { font-style: normal; font-weight: 600; font-size: 20px; color: var(--red); }
+.line.best { background: #fbf8f1; outline: 3px solid var(--red); outline-offset: -3px; }
+.keys { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.key { display: flex; align-items: center; justify-content: center; height: 84px; border: 1px solid var(--ink); font-weight: 600; font-size: 30px; cursor: pointer; }
+.key:hover { background: var(--ink); color: var(--paper); }
+.qr { background: #fff; display: grid; grid-template-columns: repeat(21, 1fr); padding: 5%; box-sizing: border-box; }
+.qr i { display: block; }
+
+.chipbar { display: flex; gap: 10px; align-items: center; height: 100%; white-space: nowrap; }
+.chips { flex: 1; min-width: 0; display: flex; gap: 10px; align-items: center; overflow-x: auto; scrollbar-width: none; }
+.chip { flex: none; transition: background-color .18s ease, color .18s ease; }
+.chip { padding: 8px 16px; border: 1px solid var(--ink); font-weight: 600; font-size: 21px; cursor: pointer; }
+.chip:hover { background: var(--soft); }
+.chip.on { background: var(--ink); color: var(--paper); }
+.chip.add { border-style: dashed; }
+.head { font-weight: 600; font-size: 22px; letter-spacing: .1em; text-transform: uppercase; color: var(--red); margin-bottom: 14px; }
+.mrow { display: flex; align-items: center; gap: 10px; min-height: 72px; border-bottom: 1px solid var(--rule); font-size: 28px; }
+.mrow.off > span { opacity: .45; }
+.mrow > span { flex: 1; min-width: 0; }
+.mrow em { font-size: 19px; font-style: normal; color: var(--red); margin-left: 12px; }
+.mrow button { min-height: 50px; padding: 0 14px; border: 1px solid var(--ink); background: none; color: var(--ink); font: 600 20px var(--body); cursor: pointer; }
+.mrow button:hover { background: var(--ink); color: var(--paper); }
+.newlist { display: flex; flex-direction: column; gap: 20px; font-size: 26px; }
+.newlist p { margin: 0; font-style: italic; color: var(--muted); }
+.nl { display: flex; flex-direction: column; gap: 6px; font-size: 22px; font-weight: 600; }
+.nl input, .nl select { min-height: 66px; padding: 0 14px; border: 2px solid var(--ink); background: #fbf8f1; color: var(--ink); font: 400 28px var(--body); }
+.two { display: flex; gap: 10px; }
+.cta { align-self: flex-start; padding: 22px 36px; background: var(--ink); color: var(--paper); font-weight: 600; font-size: 28px; cursor: pointer; }
+#picker { position: absolute; inset: 0; background: #1a171466; display: flex; align-items: center; justify-content: center; z-index: 60; }
+.pick { width: 820px; max-height: 800px; overflow: hidden; padding: 36px; background: var(--paper); border-top: 4px double var(--ink); }
+
+#turn { position: absolute; left: 0; right: 0; bottom: 0; top: 130px; overflow: hidden; perspective: 2800px; perspective-origin: 0 50%; pointer-events: none; z-index: 62; }
+.sheet { position: absolute; inset: 0; background: var(--paper); transform-origin: left center; backface-visibility: hidden; overflow: hidden; }
+.sheet-in { position: absolute; left: 0; top: -130px; width: 1920px; height: 1080px; }
+.sheet-shade { position: absolute; inset: 0; background: #1a1714; opacity: 0; pointer-events: none; }
+
+/* Editing */
+.editing .el { cursor: move; touch-action: none; }
+.editing .el:hover { outline: 2px dashed var(--blue); outline-offset: 0; }
+.editing .el.sel { outline: 3px solid var(--blue); outline-offset: 0; z-index: 50; }
+.editing .el * { pointer-events: none; }
+.editing .el.hid { display: block !important; opacity: .25; }
+.el.hid { display: none; }
+.handle { position: absolute; right: -12px; bottom: -12px; width: 24px; height: 24px; background: var(--blue); border: 3px solid #fff; cursor: nwse-resize; pointer-events: auto !important; z-index: 60; touch-action: none; box-sizing: border-box; }
+#gridlines { position: absolute; inset: 0; pointer-events: none; background-image: linear-gradient(#2a6fd622 1px, transparent 1px), linear-gradient(90deg, #2a6fd622 1px, transparent 1px); background-size: 48px 48px; display: none; z-index: 40; }
+.editing #gridlines { display: block; }
+
+#lights { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .42s ease-in-out; z-index: 70; display: flex; align-items: center; justify-content: center; color: #f4efe4; font: 900 64px var(--display); text-align: center; }
+#lights.down { opacity: 1; pointer-events: auto; cursor: pointer; }
+#lights small { display: block; margin-top: 18px; font: 400 26px var(--body); color: #b9b0a2; }
+#press { position: absolute; inset: 140px 0 0; background: var(--paper); z-index: 65; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; }
+.rollers { position: relative; width: 900px; height: 170px; overflow: hidden; }
+.sheets { position: absolute; left: 0; top: 71px; width: 2100px; height: 28px; background: repeating-linear-gradient(90deg, #fff 0 270px, transparent 270px 300px); border-block: 2px solid var(--ink); animation: feed 1.6s linear infinite; }
+@keyframes feed { to { transform: translateX(-300px); } }
+.roller { position: absolute; left: 410px; width: 80px; height: 80px; border-radius: 50%; background: var(--ink); animation: spin 1.6s linear infinite; }
+.roller::after { content: ""; position: absolute; left: 36px; top: 6px; width: 8px; height: 20px; background: var(--paper); }
+.roller.t2 { top: 90px; background: var(--red); }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (max-width: 800px) { #work { flex-direction: column; } #panel { width: auto; max-height: 45%; border-left: 0; border-top: 1px solid var(--chrome-2); } }
+@media (prefers-reduced-motion: reduce) { * { animation-duration: .01s !important; transition-duration: .01s !important; } }
+</style>
+
+<div id="app">
+  <div id="bar">
+    <span class="where" id="where"></span>
+    <span id="saved"></span>
+    <span id="animbar" class="animbar" hidden>
+      <label for="anim">Row animation</label>
+      <select id="anim"></select>
+      <label for="speed">Speed</label>
+      <select id="speed"><option value="260">Quick</option><option value="450" selected>Normal</option><option value="1200">Slow, to study</option></select>
+    </span>
+    <button class="tool" id="undo" hidden>Undo</button>
+    <button class="tool" id="reset" hidden>Reset this page</button>
+    <button class="tool primary" id="edit">Edit this page</button>
+  </div>
+  <div id="work">
+    <div id="view"><div id="stage"></div></div>
+    <aside id="panel" hidden></aside>
+  </div>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+function h(tag, props = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'style') Object.assign(e.style, v);
+    else if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (v !== undefined && v !== null) e.setAttribute(k, v);
+  }
+  for (const c of kids.flat()) if (c !== null && c !== undefined) e.append(c);
+  return e;
+}
+
+// Example titles only: the real app fills these from the hub.
+const TITLES = [
+  { id: 'quiet', title: 'The Long Quiet', type: 'show', color: '#2b3a4a', year: 2025, genre: 'Mystery', note: '52 min left', kicker: 'Continue · Season 2, Episode 4', over: "The keeper's radio is still answering, long after the town went dark.", prog: 40 },
+  { id: 'salt', title: 'Saltwater', type: 'film', color: '#7a3b2e', year: 2024, genre: 'Thriller', note: '1 hour 12 left', kicker: 'Continue', over: 'A diver finds a door on the sea floor, and it is unlocked.', prog: 30 },
+  { id: 'halflight', title: 'Halflight', type: 'film', color: '#2e5e5a', year: 2023, genre: 'Drama', note: '2 hours 8 minutes', kicker: 'New this week', over: 'A night-shift nurse trades favours with a city that never quite wakes up.', fresh: true },
+  { id: 'glass', title: 'Glasshouse', type: 'show', color: '#4d6b2e', year: 2026, genre: 'Drama', note: 'Season 3', kicker: 'New season', over: 'Season three opens with the roof already broken.', fresh: true },
+  { id: 'moons', title: 'Paper Moons', type: 'film', color: '#5a2e6b', year: 2024, genre: 'Romance', note: '38 min left', kicker: 'Continue', over: 'Two forgers fall for the same counterfeit.', prog: 70 },
+  { id: 'iron', title: 'Ironwood', type: 'show', color: '#2e6b62', year: 2026, genre: 'Western', note: 'Season 1', kicker: 'New', over: 'A logging town votes on whether to burn itself down.', fresh: true },
+  { id: 'kestrel', title: 'Kestrel', type: 'film', color: '#3b2e6b', year: 2022, genre: 'Action', note: '1 hour 41 minutes', kicker: 'Popular', over: 'A retired pilot takes one last job over the Alps.' },
+  { id: 'tide', title: 'Low Tide', type: 'film', color: '#6b5a2e', year: 2021, genre: 'Drama', note: '1 hour 55 minutes', kicker: 'Popular', over: 'A family returns to the house the sea left behind.' },
+  { id: 'north', title: 'North of Nowhere', type: 'show', color: '#2e4f6b', year: 2025, genre: 'Mystery', note: 'Season 1', kicker: 'Next up', over: 'Two surveyors map a coastline that keeps redrawing itself.' },
+];
+const EPISODES = ['Baseline', 'Contour', 'Benchmark', 'Triangulation', 'Datum', 'Fault Line', 'Tidewater', 'Meridian'];
+const COPIES = [['4K · Dolby Vision · Atmos', '36.4 GB', '38 Mb/s', 'Best match'], ['4K · HDR10 · Atmos', '58.1 GB', '61 Mb/s', 'Above your speed'], ['4K · HDR10 · 5.1', '19.8 GB', '21 Mb/s', ''], ['1080p · Atmos', '14.2 GB', '15 Mb/s', ''], ['1080p · 5.1', '8.1 GB', '8.5 Mb/s', ''], ['720p · Stereo', '2.0 GB', '2.1 Mb/s', '']];
+const SETTINGS = [['Connection speed', 'Fast'], ['Audio', 'Send to my receiver'], ['Subtitles', "Film's default"], ['Spoken language', 'Original'], ['Home rows', 'Choose and order'], ['Set up again', ''], ['Privacy', 'Nothing leaves this box']];
+const PAGE_NAMES = { home: 'Home', continue: 'Continue', next: 'Next up', new: 'New', movies: 'Movies', shows: 'Shows', browse: 'Browse', search: 'Search', settings: 'Settings', lists: 'Lists', film: 'Film page', show: 'Show page', versions: 'Other versions', setup: 'First run', masthead: 'Masthead' };
+
+const caps = { spacing: '.1em', transform: 'uppercase' };
+const T = (id, label, x, y, w, h, size, text, o = {}) => ({ id, label, kind: 'text', x, y, w, h, size, text, font: 'body', weight: 400, color: '#1a1714', ...o });
+const KICK = { font: 'body', weight: 600, color: '#a3271c', ...caps };
+const CRED = { font: 'body', weight: 600, color: '#4f4840', ...caps };
+const P = (id, label, x, y, w, h, color, o = {}) => ({ id, label, kind: 'pic', x, y, w, h, color, ...o });
+const B = (id, label, x, y, w, h, text, to, main, o = {}) => ({ id, label, kind: 'btn', x, y, w, h, text, to, size: 28, color: main ? '#f4efe4' : '#1a1714', fill: main ? '#1a1714' : '#ddd6c7', font: 'body', weight: 600, ...o });
+const R = (id, label, x, y, w, h, color) => ({ id, label, kind: 'pic', x, y, w, h, color });
+const W = (id, label, widget, x, y, w, h, o = {}) => ({ id, label, kind: 'widget', widget, x, y, w, h, ...o });
+const gridPage = (name, list) => [T('kick', 'Section name', 96, 170, 900, 30, 22, name, KICK), W('grid', 'Poster grid', 'grid', 96, 216, 1728, 702, { list })];
+
+const DEFAULTS = {
+  masthead: [
+    T('name', 'Masthead name', 96, 54, 490, 60, 48, 'The Media Box Times', { font: 'display', weight: 900, nowrap: true }),
+    ...Object.entries({ home: [650, 90], continue: [760, 150], new: [930, 60], movies: [1010, 105], shows: [1135, 90], browse: [1245, 105], lists: [1370, 80], search: [596, 40], settings: [1470, 135] }).map(([p, [x, w]]) => ({ id: 'tab-' + p, label: PAGE_NAMES[p] + ' tab', kind: 'tab', x, y: 58, w, h: 52, size: 22, to: p, text: PAGE_NAMES[p], font: 'body', weight: 600, color: '#6b645a' })),
+    T('clock', 'Clock', 1660, 72, 164, 30, 22, '8:42 PM', { font: 'body', weight: 600, color: '#4f4840', align: 'right' }),
+    R('rule1', 'Masthead rule (top)', 96, 118, 1728, 2, '#1a1714'), R('rule2', 'Masthead rule (bottom)', 96, 124, 1728, 2, '#1a1714'),
+  ],
+  home: [
+    T('kicker', 'Kicker', 96, 170, 900, 30, 22, '', { ...KICK, bind: 'kicker' }),
+    T('headline', 'Headline', 96, 205, 960, 128, 104, '', { font: 'display', weight: 900, bind: 'title', nowrap: true }),
+    T('credits', 'Credits line', 96, 340, 960, 30, 22, '', { ...CRED, bind: 'credits' }),
+    T('summary', 'Summary', 96, 385, 940, 90, 34, '', { color: '#3a342d', italic: true, bind: 'over' }),
+    B('resume', 'Resume button', 96, 500, 170, 74, 'Resume', 'play', true),
+    B('details', 'Details button', 286, 500, 190, 74, 'Details', 'title', false),
+    P('lead', 'Lead picture', 1090, 170, 734, 410, '#2b3a4a', { bind: 'color' }),
+    R('rowrule', 'Row rule', 96, 624, 1728, 2, '#1a1714'),
+    W('rowtabs', 'Row picker', 'rowtabs', 96, 632, 1728, 48),
+    W('row', 'Poster row', 'row', 96, 686, 1728, 380, { list: 'current' }),
+  ],
+  continue: gridPage('Continue watching', 'prog'), next: gridPage('Next up', 'shows'), new: gridPage('New this week', 'fresh'), movies: gridPage('Movies', 'films'), shows: gridPage('Shows', 'shows'),
+  browse: [T('kick', 'Section name', 96, 170, 900, 30, 22, 'Popular movies', KICK), W('r1', 'First row', 'row', 96, 210, 1728, 345, { list: 'films' }), T('kick2', 'Second section name', 96, 600, 900, 30, 22, 'Popular shows', KICK), W('r2', 'Second row', 'row', 96, 640, 1728, 345, { list: 'shows' })],
+  search: [T('label', 'Search label', 96, 170, 700, 30, 22, 'Title, person or genre', CRED), T('query', 'What you typed', 96, 206, 700, 96, 72, 'salt', { font: 'display', weight: 900 }), R('qrule', 'Rule under search', 96, 306, 700, 4, '#1a1714'), W('keys', 'Keyboard', 'keys', 96, 336, 700, 368), W('results', 'Results', 'results', 880, 170, 944, 836)],
+  lists: [T('title', 'Page title', 96, 170, 1000, 90, 72, 'Lists', { font: 'display', weight: 900 }), W('manager', 'Home rows', 'rowsmanager', 96, 280, 860, 760), W('newlist', 'New list', 'newlist', 1020, 280, 804, 760)],
+  settings: [T('title', 'Page title', 96, 170, 1000, 90, 72, 'Settings', { font: 'display', weight: 900 }), W('settings', 'Settings list', 'settings', 96, 280, 1100, 760)],
+  film: [
+    T('kicker', 'Kicker', 96, 170, 1000, 30, 22, '', { ...KICK, bind: 'filmkick' }),
+    T('headline', 'Headline', 96, 206, 1000, 190, 150, '', { font: 'display', weight: 900, bind: 'title', nowrap: true }),
+    T('summary', 'Summary', 96, 402, 1000, 100, 40, '', { color: '#3a342d', italic: true, bind: 'over' }),
+    R('rule', 'Rule', 96, 520, 1000, 2, '#b8ae9c'),
+    T('col1', 'Write-up, column 1', 96, 545, 480, 220, 26, "When the lights fail on the longest night of the year, everything comes down to favours owed.", {}),
+    T('col2', 'Write-up, column 2', 616, 545, 480, 220, 26, 'Directed by [DIRECTOR]. Featuring [CAST 1], [CAST 2] and [CAST 3].', {}),
+    B('play', 'Play button', 96, 800, 170, 78, 'Play', 'play', true, { size: 30 }),
+    B('versions', 'Other versions button', 286, 800, 300, 78, 'Other versions', 'versions', false, { size: 30 }),
+    B('keep', 'Keep button', 606, 800, 190, 78, 'Keep', '', false, { size: 30 }),
+    B('addlist', 'Add to list button', 816, 800, 260, 78, 'Add to list', 'addlist', false, { size: 30 }),
+    P('lead', 'Picture', 1180, 170, 644, 560, '#2e5e5a', { bind: 'color' }),
+    R('copybox', "Tonight's copy box", 1180, 760, 644, 180, '#fbf8f1'),
+    T('copy1', "Tonight's copy label", 1205, 778, 600, 28, 20, "Tonight's copy", KICK),
+    T('copy2', 'Copy details', 1205, 812, 600, 44, 32, '4K · Dolby Vision · Atmos', { font: 'display', weight: 700 }),
+    T('copy3', 'Copy note', 1205, 866, 600, 60, 24, '38 Mb/s, best match for your Fast speed', { color: '#3a342d' }),
+  ],
+  show: [
+    T('kicker', 'Kicker', 96, 170, 1000, 30, 22, '', { ...KICK, bind: 'filmkick' }),
+    T('headline', 'Headline', 96, 203, 1100, 130, 104, '', { font: 'display', weight: 900, bind: 'title', nowrap: true }),
+    T('summary', 'Summary', 96, 338, 1040, 40, 30, '', { color: '#3a342d', italic: true, bind: 'over' }),
+    B('s1', 'Season 1 button', 96, 396, 170, 60, 'Season 1', '', true, { size: 24 }), B('s2', 'Season 2 button', 276, 396, 170, 60, 'Season 2', '', false, { size: 24 }),
+    W('episodes', 'Episode list', 'episodes', 96, 476, 1040, 532),
+    P('lead', 'Picture', 1220, 170, 604, 480, '#2e4f6b', { bind: 'color' }),
+    B('play', 'Play next button', 1220, 680, 300, 78, 'Play next', 'play', true, { size: 30 }), B('versions', 'Other versions button', 1540, 680, 284, 78, 'Other versions', 'versions', false, { size: 28 }),
+    B('addlist', 'Add to list button', 1220, 776, 300, 78, 'Add to list', 'addlist', false, { size: 30 }),
+  ],
+  versions: [T('kicker', 'Kicker', 96, 170, 1000, 30, 22, 'Market report · 14 copies found', KICK), T('headline', 'Headline', 96, 205, 1500, 90, 64, '', { font: 'display', weight: 900, bind: 'versionsTitle', nowrap: true }), W('board', 'Ranked copies', 'board', 96, 318, 1728, 688)],
+  setup: [T('kick', 'Kicker', 800, 330, 900, 30, 22, 'First run', KICK), T('title', 'Headline', 800, 370, 1000, 120, 96, 'Set up this box', { font: 'display', weight: 900 }), T('body', 'Instructions', 800, 510, 960, 140, 36, 'Scan the code with your phone. You need your debrid key. Nothing is typed on the TV.', { color: '#3a342d' }), T('link', 'Link', 800, 670, 960, 40, 26, 'http://192.168.1.20:8097/setup', { font: 'body', color: '#4f4840' }), W('qr', 'QR code', 'qr', 160, 260, 560, 560), B('done', 'Prototype: finish setup', 800, 760, 360, 78, 'Prototype: finish', 'home', true, { size: 28 })],
+};
+
+// Rows on Home, in order, and the viewer's own lists. Examples; the real app reads the hub's /shelves and /collections.
+let prefs = {
+  rows: [{ id: 'continue', title: 'Continue watching', list: 'prog' }, { id: 'fresh', title: 'New this week', list: 'fresh' }, { id: 'date', title: 'Date night', custom: 'manual', items: ['moons', 'halflight'] }, { id: 'drama', title: 'Dramas', custom: 'smart', filter: { genre: 'Drama' } }, { id: 'films', title: 'Popular movies', list: 'films' }, { id: 'shows', title: 'Popular shows', list: 'shows' }],
+};
+let currentRow = 'fresh', draft = { name: '', kind: 'manual', genre: 'Drama' };
+function savePrefs() { try { if (store) store.doc('prefs/lists').set(prefs); else if (canSaveLocal()) localStorage.setItem('prefs', JSON.stringify(prefs)); } catch {} }
+function rowItems(r) {
+  if (!r) return TITLES;
+  if (r.custom === 'manual') return TITLES.filter((t) => r.items.includes(t.id));
+  if (r.custom === 'smart') return TITLES.filter((t) => t.genre === r.filter.genre);
+  return listFor(r.list);
+}
+let layouts = {};
+let store = null;
+let page = 'home', item = TITLES[0], editing = false, sel = null, undoStack = [], stateTimer = null, query = 'salt';
+const canSaveLocal = () => { try { return !!localStorage; } catch { return false; } };
+
+function els(p) { return layouts[p] || (layouts[p] = structuredClone(DEFAULTS[p])); }
+function merge(p, saved) {
+  const map = new Map(saved.map((e) => [e.id, e]));
+  const out = DEFAULTS[p].map((d) => ({ ...d, ...(map.get(d.id) || {}) }));
+  for (const e of saved) if (e.custom) out.push(e);
+  return out;
+}
+
+async function loadSaved() {
+  try {
+    const db = await window.claude?.use?.('db');
+    if (db) {
+      store = db;
+      for (const p of Object.keys(DEFAULTS)) {
+        const snap = await db.doc('layouts/' + p).get();
+        const data = snap && (snap.data ? snap.data() : snap);
+        const list = data && (data.elements || (data.data && data.data.elements));
+        if (Array.isArray(list)) layouts[p] = merge(p, list);
+      }
+      const savedPrefs = await db.doc('prefs/lists').get();
+      if (savedPrefs.exists) prefs = savedPrefs.data();
+      if (prefs.rowAnim) $('#anim').value = prefs.rowAnim;
+    }
+  } catch { store = null; }
+  if (!store && canSaveLocal()) {
+    try { const raw = localStorage.getItem('layouts'); if (raw) { const o = JSON.parse(raw); for (const p in o) if (DEFAULTS[p]) layouts[p] = merge(p, o[p]); } } catch {}
+  }
+  draw();
+  note(store ? 'Saved layouts load automatically' : 'Layouts save in this browser only');
+}
+
+function note(t) { $('#saved').textContent = t; }
+async function persist(p) {
+  note('Saving…');
+  try {
+    if (store) await store.doc('layouts/' + p).set({ elements: els(p), page: p, savedAt: Date.now() });
+    else if (canSaveLocal()) localStorage.setItem('layouts', JSON.stringify(layouts));
+    note(store ? 'Saved. Claude can read this layout' : 'Saved in this browser only');
+  } catch (e) { note('Could not save: ' + (e.code || e.message || 'unknown')); }
+}
+let timers = {};
+function touch(p) { clearTimeout(timers[p]); timers[p] = setTimeout(() => persist(p), 400); }
+function snapshot(p) { undoStack.push([p, JSON.stringify(els(p))]); if (undoStack.length > 60) undoStack.shift(); $('#undo').disabled = false; }
+
+function bound(key) {
+  const i = item;
+  return { kicker: i.kicker, title: i.title, credits: `${i.year} · ${i.genre} · ${i.note}`, over: i.over, filmkick: `${i.type === 'show' ? 'Series' : 'Film'} · ${i.year} · ${i.note}`, versionsTitle: `Every copy of ${i.title}, ranked`, color: i.color }[key];
+}
+function listFor(name) {
+  return { all: TITLES, prog: TITLES.filter((t) => t.prog), fresh: TITLES.filter((t) => t.fresh), films: TITLES.filter((t) => t.type === 'film'), shows: TITLES.filter((t) => t.type === 'show') }[name] || TITLES;
+}
+function pencil(target) {
+  if (editing) return;
+  document.querySelectorAll('.pencil').forEach((n) => n.remove());
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('class', 'pencil');
+  const r = document.createElementNS(ns, 'rect');
+  r.setAttribute('x', 3); r.setAttribute('y', 3); r.setAttribute('pathLength', 1000);
+  r.style.width = 'calc(100% - 6px)'; r.style.height = 'calc(100% - 6px)';
+  svg.append(r); target.append(svg);
+}
+function searchIcon() {
+  const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg');
+  for (const [k, v] of Object.entries({ viewBox: '0 0 24 24', width: 36, height: 36, fill: 'none', stroke: 'currentColor', 'stroke-width': 2.4, 'stroke-linecap': 'round', 'aria-hidden': 'true' })) svg.setAttribute(k, v);
+  const c = document.createElementNS(ns, 'circle');
+  c.setAttribute('cx', 10.5); c.setAttribute('cy', 10.5); c.setAttribute('r', 6.5);
+  const l = document.createElementNS(ns, 'path');
+  l.setAttribute('d', 'M15.5 15.5L21 21');
+  svg.append(c, l);
+  return svg;
+}
+function card(t, inHome) {
+  const poster = h('div', { class: 'poster', style: { background: t.color } }, t.prog ? h('div', { class: 'bar-w' }, h('i', { style: { width: t.prog + '%' } })) : null);
+  const c = h('div', { class: 'card', tabindex: 0,
+    onmouseenter: () => { pencil(poster); if (t.fresh) { c.querySelector('.stamp') || poster.append(h('div', { class: 'stamp' }, 'NEW')); } if (inHome && item !== t) { item = t; refreshBound(); } },
+    onmouseleave: () => c.querySelector('.stamp')?.remove(),
+    onclick: () => openTitle(t) }, poster, h('div', { class: 't' }, t.title));
+  return c;
+}
+function openTitle(t) { item = t; go(t.type === 'show' ? 'show' : 'film'); }
+function fitText(n, e) {
+  if (!e) return;
+  n.style.fontSize = e.size + 'px';
+  if (e.nowrap) {
+    const min = Math.round(e.size * .45);
+    let size = e.size;
+    while (n.scrollWidth > n.clientWidth + 1 && size > min) { size -= 2; n.style.fontSize = size + 'px'; }
+    n.style.textOverflow = 'ellipsis';
+    n.style.overflow = 'hidden';
+  } else if (e.bind) {
+    const lines = Math.max(1, Math.floor(e.h / (e.size * 1.15)));
+    n.style.display = '-webkit-box'; n.style.webkitBoxOrient = 'vertical'; n.style.webkitLineClamp = lines; n.style.overflow = 'hidden';
+    if (lines === 1) { n.style.display = 'block'; n.style.whiteSpace = 'nowrap'; n.style.textOverflow = 'ellipsis'; }
+  }
+}
+// A long list says there is more below, so a list that stops at the box edge never looks cut off.
+function listCues() {
+  document.querySelectorAll('#stage .scrolly').forEach((box) => {
+    const host = box.parentElement;
+    const cue = () => {
+      host.querySelector(':scope > .morev')?.remove();
+      if (box.scrollTop + box.clientHeight < box.scrollHeight - 4) host.append(h('div', { class: 'morev', role: 'button', onclick: () => box.scrollBy({ top: box.clientHeight - 76 }) }, 'More below'));
+    };
+    box.addEventListener('scroll', cue);
+    setTimeout(cue, 500);
+  });
+}
+function fitAll() {
+  document.querySelectorAll('#stage [data-bind]').forEach((n) => {
+    if (n.dataset.bind === 'color') return;
+    fitText(n, els(n.dataset.owner).find((x) => x.id === n.dataset.id));
+  });
+}
+function refreshBound() {
+  document.querySelectorAll('[data-bind]').forEach((n) => {
+    const v = bound(n.dataset.bind);
+    if (n.dataset.bind === 'color') n.style.background = v;
+    else { n.textContent = v; n.classList.remove('rise'); void n.offsetWidth; n.classList.add('rise'); }
+  });
+  fitAll();
+}
+function widget(e) {
+  switch (e.widget) {
+    case 'row': {
+      const items = e.list === 'current' ? rowItems(prefs.rows.find((r) => r.id === currentRow)) : listFor(e.list);
+      if (!items.length) return h('div', { style: { font: 'italic 400 34px var(--body)', color: '#4f4840', paddingTop: '40px' } }, 'This list is empty. Open any film and press Add to list.');
+      const strip = h('div', { class: 'strip', style: { width: '100%', height: '100%' } }, items.map((t) => card(t, page === 'home')));
+      const wrap = h('div', { style: { position: 'relative', width: '100%', height: '100%' } }, strip);
+      const arrows = () => {
+        wrap.querySelectorAll('.more').forEach((m) => m.remove());
+        if (strip.scrollLeft > 4) wrap.append(h('div', { class: 'more prev', role: 'button', 'aria-label': 'Earlier', onclick: () => strip.scrollBy({ left: -strip.clientWidth - 24 }) }, '‹'));
+        if (strip.scrollLeft + strip.clientWidth < strip.scrollWidth - 4) wrap.append(h('div', { class: 'more next', role: 'button', 'aria-label': 'More', onclick: () => strip.scrollBy({ left: strip.clientWidth + 24 }) }, '›'));
+      };
+      strip.addEventListener('scroll', arrows);
+      requestAnimationFrame(arrows);
+      return wrap;
+    }
+    case 'rowtabs': return h('div', { class: 'chipbar' }, h('div', { class: 'chips' }, prefs.rows.filter((r) => !r.hidden).map((r) => h('div', { class: 'chip' + (r.id === currentRow ? ' on' : ''), tabindex: 0, 'data-row': r.id, onclick: () => switchRow(r.id) }, r.title))), h('div', { class: 'chip add', tabindex: 0, onclick: () => go('lists') }, '+ Lists'));
+    case 'rowsmanager': return h('div', { class: 'scrolly' }, h('div', { class: 'head' }, 'Rows on Home, in order'), prefs.rows.map((r, i) => h('div', { class: 'mrow' + (r.hidden ? ' off' : '') }, h('span', {}, r.title, r.custom ? h('em', {}, r.custom === 'smart' ? 'by rules' : 'your list') : null),
+      h('button', { onclick: () => moveRow(i, -1) }, 'Up'), h('button', { onclick: () => moveRow(i, 1) }, 'Down'),
+      h('button', { onclick: () => { r.hidden = !r.hidden; savePrefs(); draw(); } }, r.hidden ? 'Show' : 'Hide'),
+      r.custom ? h('button', { onclick: () => { prefs.rows.splice(i, 1); if (currentRow === r.id) currentRow = prefs.rows[0].id; savePrefs(); draw(); } }, 'Delete') : null)));
+    case 'newlist': return h('div', { class: 'newlist scrolly' }, h('div', { class: 'head' }, 'Start a new list'),
+      h('label', { class: 'nl' }, 'Name', h('input', { id: 'nl-name', value: draft.name, placeholder: 'Friday films', oninput: (ev) => { draft.name = ev.target.value; } })),
+      h('div', { class: 'two' }, h('div', { class: 'chip' + (draft.kind === 'manual' ? ' on' : ''), onclick: () => { draft.kind = 'manual'; draw(); } }, 'I pick the titles'), h('div', { class: 'chip' + (draft.kind === 'smart' ? ' on' : ''), onclick: () => { draft.kind = 'smart'; draw(); } }, 'Fill it by genre')),
+      draft.kind === 'smart'
+        ? h('label', { class: 'nl' }, 'Genre', h('select', { id: 'nl-genre', onchange: (ev) => { draft.genre = ev.target.value; } }, ['Drama', 'Mystery', 'Thriller', 'Romance', 'Action', 'Western'].map((o) => h('option', { value: o, ...(draft.genre === o ? { selected: 'selected' } : {}) }, o))))
+        : h('p', {}, 'The empty list appears on Home. Press Add to list on any film or show to fill it.'),
+      h('div', { class: 'cta', tabindex: 0, onclick: createList }, 'Add to Home'));
+    case 'grid': return h('div', { class: 'gridw', style: { width: '100%', height: '100%' } }, listFor(e.list).map((t) => card(t)));
+    case 'episodes': return h('div', { class: 'scrolly' }, EPISODES.map((t, i) => { const r = h('div', { class: 'line set', style: { animationDelay: i * 25 + 'ms' }, onmouseenter: () => pencil(r), onclick: () => doPlay() }, h('b', {}, i + 1), h('span', {}, t), h('em', {}, i === 5 ? '31 min left' : i < 5 ? 'Watched' : '47 min')); return r; }));
+    case 'board': return h('div', { class: 'scrolly', style: { borderTop: '2px solid #1a1714' } }, COPIES.map((c, i) => { const r = h('div', { class: 'line set' + (i === 0 ? ' best' : ''), style: { animationDelay: (COPIES.length - i) * 60 + 'ms' }, onmouseenter: () => pencil(r), onclick: () => doPlay() }, h('b', {}, i + 1), h('span', {}, c[0]), h('i', { style: { fontStyle: 'normal', width: '150px', textAlign: 'right' } }, c[1]), h('i', { style: { fontStyle: 'normal', width: '150px', textAlign: 'right' } }, c[2]), h('em', { style: { width: '210px' } }, c[3])); return r; }));
+    case 'keys': return h('div', { class: 'keys' }, [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map((k) => h('div', { class: 'key', onclick: () => { query += k.toLowerCase(); draw(); } }, k)), h('div', { class: 'key', style: { gridColumn: 'span 2', fontSize: '24px' }, onclick: () => { query = query.slice(0, -1); draw(); } }, 'Delete'));
+    case 'results': { const q = query.trim().toLowerCase(); const hits = TITLES.filter((t) => t.title.toLowerCase().includes(q)); return h('div', { class: 'scrolly' }, (hits.length ? hits : []).map((t) => { const r = h('div', { class: 'line', onmouseenter: () => pencil(r), onclick: () => openTitle(t) }, h('span', { style: { fontFamily: 'var(--display)', fontWeight: 700 } }, t.title), h('em', {}, t.type === 'show' ? 'Series' : 'Film')); return r; }), hits.length ? null : h('div', { style: { fontStyle: 'italic', fontSize: '32px', padding: '20px' } }, 'No example titles match. Try "salt" or "the".')); }
+    case 'settings': return h('div', { class: 'scrolly' }, SETTINGS.map(([a, b]) => { const r = h('div', { class: 'line', onmouseenter: () => pencil(r) }, h('span', {}, a), h('em', {}, b)); return r; }));
+    case 'qr': { const n = 21; const cells = []; for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { const box = (a, b) => a < 7 && b < 7 && (a === 0 || a === 6 || b === 0 || b === 6 || (a > 1 && a < 5 && b > 1 && b < 5)); const on = box(x, y) || box(n - 1 - x, y) || box(x, n - 1 - y) || (x > 7 && y > 7 && (x * 7 + y * 13) % 3 === 0) || (x > 7 && y < 7 && (x + y) % 2 === 0) || (y > 7 && x < 7 && (x * y) % 2 === 0); cells.push(h('i', { style: { background: on ? '#000' : '#fff' } })); } return h('div', { class: 'qr', style: { width: '100%', height: '100%', gridAutoRows: '1fr' } }, cells); }
+  }
+}
+// Ways to change the poster row when a tab above it is clicked. Each gets the old row, the new row and the direction of travel.
+const EASE = 'cubic-bezier(.3,.7,.2,1)';
+const ROW_ANIMS = {
+  slide: { name: 'Slide sideways', run(o, n, dir, d) {
+    o?.animate([{ transform: 'none' }, { transform: `translateX(${-dir * 100}%)` }], { duration: d, easing: EASE, fill: 'forwards' });
+    return n.animate([{ transform: `translateX(${dir * 100}%)` }, { transform: 'none' }], { duration: d, easing: EASE });
+  } },
+  riffle: { name: 'Riffle in, poster by poster', run(o, n, dir, d) {
+    o?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: d * .35, fill: 'forwards' });
+    const cards = [...n.querySelectorAll('.card')].slice(0, 7);
+    const list = dir < 0 ? cards.reverse() : cards;
+    list.forEach((c, i) => c.animate([{ opacity: 0, transform: `translateX(${dir * 70}px)` }, { opacity: 1, transform: 'none' }], { duration: d * .7, delay: i * d * .07, easing: EASE, fill: 'backwards' }));
+    return { finished: new Promise((r) => setTimeout(r, d * 1.2)) };
+  } },
+  turn: { name: 'Turn like pages', run(o, n, dir, d) {
+    o?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: d * .3, fill: 'forwards' });
+    n.style.perspective = '1600px';
+    [...n.querySelectorAll('.card')].slice(0, 7).forEach((c, i) => {
+      c.style.transformOrigin = dir > 0 ? 'left center' : 'right center';
+      c.animate([{ opacity: 0, transform: `rotateY(${dir * 80}deg)` }, { opacity: 1, transform: 'none' }], { duration: d * .8, delay: i * d * .05, easing: EASE, fill: 'backwards' });
+    });
+    return { finished: new Promise((r) => setTimeout(r, d * 1.2)) };
+  } },
+  wipe: { name: 'Ink wipe across', run(o, n, dir, d) {
+    const from = dir > 0 ? 'inset(0 100% 0 0)' : 'inset(0 0 0 100%)';
+    return n.animate([{ clipPath: from }, { clipPath: 'inset(0 0 0 0)' }], { duration: d, easing: 'ease-in-out' });
+  } },
+  drop: { name: 'Drop behind the rule', run(o, n, dir, d) {
+    o?.animate([{ transform: 'none', opacity: 1 }, { transform: 'translateY(50px)', opacity: 0 }], { duration: d * .5, easing: 'ease-in', fill: 'forwards' });
+    return n.animate([{ transform: 'translateY(-60px)', opacity: 0, offset: 0 }, { transform: 'translateY(-60px)', opacity: 0, offset: .35 }, { transform: 'none', opacity: 1, offset: 1 }], { duration: d, easing: EASE });
+  } },
+  fold: { name: 'Fold up, unfold down', run(o, n, dir, d) {
+    o?.animate([{ transform: 'scaleY(1)', opacity: 1 }, { transform: 'scaleY(.02)', opacity: .4 }], { duration: d * .45, easing: 'ease-in', fill: 'forwards' });
+    n.style.transformOrigin = 'top';
+    o && (o.style.transformOrigin = 'top');
+    return n.animate([{ transform: 'scaleY(.02)', opacity: 0, offset: 0 }, { transform: 'scaleY(.02)', opacity: 0, offset: .45 }, { transform: 'scaleY(1)', opacity: 1, offset: 1 }], { duration: d, easing: EASE });
+  } },
+  fade: { name: 'Plain crossfade', run(o, n, dir, d) {
+    o?.animate([{ opacity: 1 }, { opacity: 0 }], { duration: d, fill: 'forwards' });
+    return n.animate([{ opacity: 0 }, { opacity: 1 }], { duration: d });
+  } },
+  none: { name: 'No animation', run() { return { finished: Promise.resolve() }; } },
+};
+let rowTimer = null;
+function switchRow(id) {
+  if (id === currentRow) return;
+  const rows = prefs.rows.filter((r) => !r.hidden);
+  const dir = rows.findIndex((r) => r.id === id) >= rows.findIndex((r) => r.id === currentRow) ? 1 : -1;
+  currentRow = id;
+  const row = prefs.rows.find((r) => r.id === id);
+  const first = rowItems(row)[0];
+  if (first && first !== item) { item = first; refreshBound(); }
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const d = reduce ? 1 : +$('#speed').value;
+  const anim = ROW_ANIMS[reduce ? 'none' : $('#anim').value] || ROW_ANIMS.riffle;
+  moveChip(id);
+  const host = document.querySelector('#stage [data-id="row"][data-owner="home"]');
+  const spec = els('home').find((e) => e.id === 'row');
+  if (!host || !spec) return draw();
+  host.querySelectorAll('.pencil').forEach((x) => x.remove());
+  host.querySelectorAll(':scope > .leaving').forEach((x) => x.remove());
+  clearTimeout(rowTimer);
+  const oldRow = host.firstElementChild;
+  if (oldRow) { oldRow.getAnimations({ subtree: true }).forEach((a) => a.cancel()); oldRow.classList.add('leaving'); oldRow.style.position = 'absolute'; oldRow.style.inset = '0'; }
+  const newRow = widget(spec);
+  host.style.overflow = 'hidden';
+  host.append(newRow);
+  anim.run(oldRow, newRow, dir, d);
+  rowTimer = setTimeout(() => { host.querySelectorAll(':scope > .leaving').forEach((x) => x.remove()); host.style.overflow = ''; }, d * 1.3 + 60);
+}
+// The active tab changes colour; the row below does the moving.
+function moveChip(id) {
+  const bar = document.querySelector('#stage .chips');
+  if (!bar) return;
+  bar.querySelector('.chip.on')?.classList.remove('on');
+  const to = bar.querySelector(`[data-row="${CSS.escape(id)}"]`);
+  if (!to) return;
+  to.classList.add('on');
+  to.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
+}
+function moveRow(i, d) { const j = i + d; if (j < 0 || j >= prefs.rows.length) return; [prefs.rows[i], prefs.rows[j]] = [prefs.rows[j], prefs.rows[i]]; savePrefs(); draw(); }
+function createList() {
+  const name = draft.name.trim();
+  if (!name) { const i = $('#nl-name'); if (i) { i.focus(); i.placeholder = 'Name the list first'; } return; }
+  const id = 'l' + Date.now();
+  prefs.rows.unshift(draft.kind === 'smart' ? { id, title: name, custom: 'smart', filter: { genre: draft.genre } } : { id, title: name, custom: 'manual', items: [] });
+  currentRow = id; draft = { name: '', kind: 'manual', genre: 'Drama' }; savePrefs(); go('home');
+}
+function addToList() {
+  const manual = prefs.rows.filter((r) => r.custom === 'manual');
+  const close = () => box.remove();
+  const box = h('div', { id: 'picker' }, h('div', { class: 'pick' }, h('div', { class: 'head' }, 'Add ' + item.title + ' to'), manual.map((r) => h('div', { class: 'line', onclick: () => { if (!r.items.includes(item.id)) r.items.push(item.id); savePrefs(); close(); } }, h('span', {}, r.title), h('em', {}, r.items.includes(item.id) ? 'Already here' : r.items.length + ' titles'))), h('div', { class: 'line', onclick: () => { close(); go('lists'); } }, h('span', {}, '+ New list')), h('div', { class: 'line', onclick: close }, h('span', {}, 'Cancel'))));
+  $('#stage').append(box);
+}
+function fontOf(e) { return e.font === 'display' ? 'var(--display)' : e.font === 'ui' ? 'var(--ui)' : 'var(--body)'; }
+
+function render(e, owner) {
+  const base = { left: e.x + 'px', top: e.y + 'px', width: e.w + 'px', height: e.h + 'px' };
+  let n;
+  if (e.kind === 'pic') {
+    n = h('div', { class: 'el pic', style: { ...base, background: e.bind ? bound(e.bind) : e.color } });
+    if (e.bind) n.dataset.bind = e.bind;
+  } else if (e.kind === 'widget') {
+    n = h('div', { class: 'el', style: base }, widget(e));
+  } else {
+    const style = { ...base, fontFamily: fontOf(e), fontSize: e.size + 'px', fontWeight: e.weight, color: e.color, lineHeight: '1.15' };
+    if (e.italic) style.fontStyle = 'italic';
+    if (e.align) style.textAlign = e.align;
+    if (e.transform) style.textTransform = e.transform;
+    if (e.spacing) style.letterSpacing = e.spacing;
+    if (e.nowrap || e.spacing) style.whiteSpace = 'nowrap';
+    if (e.spacing) style.textOverflow = 'ellipsis';
+    if (e.kind === 'btn') { style.background = e.fill; n = h('div', { class: 'el btn', style, tabindex: 0, onmouseenter: () => pencil(n), onclick: () => act(e.to) }, e.text); }
+    else if (e.kind === 'tab') { const on = page === e.to || (e.to === 'home' && ['film', 'show', 'versions'].includes(page)); if (on) style.color = '#1a1714'; if (e.to === 'search') { style.color = '#1a1714'; style.justifyContent = 'center'; } n = h('div', { class: 'el tab', style, tabindex: 0, role: 'button', 'aria-label': e.to === 'search' ? 'Search' : null, onclick: () => { if (!editing) tabTo(e.to); } }, e.to === 'search' ? searchIcon() : e.text); if (on && e.to !== 'search') n.classList.add('on'); }
+    else {
+      const txt = e.id === 'query' && owner === 'search' ? query : e.bind ? bound(e.bind) : e.text;
+      n = h('div', { class: 'el txt', style }, txt);
+      if (e.bind) n.dataset.bind = e.bind;
+    }
+  }
+  if (e.hidden) n.classList.add('hid');
+  n.dataset.id = e.id; n.dataset.owner = owner;
+  if (editing) wire(n, e, owner);
+  return n;
+}
+function draw() {
+  const s = $('#stage');
+  s.textContent = '';
+  s.classList.toggle('editing', editing);
+  s.append(h('div', { id: 'gridlines' }));
+  if (page !== 'setup') for (const e of els('masthead')) s.append(render(e, 'masthead'));
+  for (const e of els(page)) { const n = render(e, page); if (!editing) n.classList.add('fade'); s.append(n); }
+  s.append(h('div', { id: 'lights', onclick: comeBack }));
+  $('#where').textContent = PAGE_NAMES[page];
+  $('#animbar').hidden = editing || (page !== 'home' && !TAB_ORDER.includes(page));
+  if (editing && sel) { const n = s.querySelector(`[data-id="${CSS.escape(sel.id)}"][data-owner="${sel.owner}"]`); if (n) markSel(n); }
+  drawPanel();
+  fit();
+  fitAll();
+  listCues();
+}
+function fit() {
+  const v = $('#view').getBoundingClientRect();
+  const k = Math.min(v.width / 1920, v.height / 1080);
+  const s = $('#stage');
+  s.style.transform = `translate(${(v.width - 1920 * k) / 2}px, ${(v.height - 1080 * k) / 2}px) scale(${k})`;
+  s.dataset.k = k;
+}
+addEventListener('resize', fit);
+
+const TAB_ORDER = ['home', 'continue', 'new', 'movies', 'shows', 'lists', 'browse', 'settings'];
+function go(p) { page = p; sel = null; draw(); }
+// Top tabs turn the page: forward lifts the old sheet off from the right, back lays the new sheet down over it.
+// The masthead stays still; the sheets are copies, so the real page underneath is ready at once.
+const SHEET_TOP = 130;
+function pageSheet() {
+  const sheet = h('div', { class: 'sheet' }, h('div', { class: 'sheet-in' }));
+  document.querySelectorAll('#stage .el[data-owner]').forEach((n) => {
+    if (n.dataset.owner === 'masthead') return;
+    const c = n.cloneNode(true);
+    c.classList.remove('fade');
+    c.querySelectorAll('.pencil, .stamp, .more, .morev').forEach((x) => x.remove());
+    c.removeAttribute('data-owner');
+    c.removeAttribute('data-id');
+    sheet.firstChild.append(c);
+  });
+  sheet.append(h('div', { class: 'sheet-shade' }));
+  return sheet;
+}
+function tabTo(p) {
+  if (p === page) return;
+  const a = TAB_ORDER.indexOf(page), b = TAB_ORDER.indexOf(p);
+  const back = a >= 0 && b >= 0 && b < a;
+  const before = pageSheet();
+  go(p);
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  document.querySelectorAll('#stage .el[data-owner]').forEach((n) => n.classList.remove('fade'));
+  const d = +$('#speed').value * 1.25;
+  const turn = h('div', { id: 'turn' });
+  const flat = 'rotateY(0deg)', lifted = 'rotateY(-112deg)';
+  const moving = back ? pageSheet() : before;
+  if (back) turn.append(before);
+  turn.append(moving);
+  $('#stage').append(turn);
+  const frames = back ? [lifted, flat] : [flat, lifted];
+  const shade = back ? [.32, 0] : [0, .32];
+  const easing = back ? 'cubic-bezier(.2,.7,.3,1)' : 'cubic-bezier(.45,.05,.55,.95)';
+  moving.animate(frames.map((transform) => ({ transform })), { duration: d, easing, fill: 'forwards' });
+  moving.querySelector('.sheet-shade').animate(shade.map((opacity) => ({ opacity })), { duration: d, easing, fill: 'forwards' });
+  setTimeout(() => turn.remove(), d + 40);
+}
+function act(to) {
+  if (editing || !to) return;
+  if (to === 'play') return doPlay();
+  if (to === 'title') return openTitle(item);
+  if (to === 'addlist') return addToList();
+  go(to);
+}
+function doPlay() {
+  const s = $('#stage');
+  const press = h('div', { id: 'press' }, h('div', { class: 'rollers' }, h('div', { class: 'sheets' }), h('i', { class: 'roller', style: { top: 0 } }), h('i', { class: 'roller t2' })), h('div', { style: { font: '900 46px var(--display)' } }, 'Finding the best copy'));
+  s.append(press);
+  setTimeout(() => { const l = $('#lights'); l.textContent = ''; l.append(h('div', {}, item.title, h('small', {}, 'The film would play here. Click to come back.'))); l.classList.add('down'); }, 900);
+}
+function comeBack() { const l = $('#lights'); l.classList.remove('down'); document.querySelector('#press')?.remove(); }
+
+/* ---- Editing ---- */
+function markSel(n) {
+  document.querySelectorAll('.el.sel').forEach((o) => o.classList.remove('sel'));
+  document.querySelectorAll('.handle').forEach((o) => o.remove());
+  n.classList.add('sel');
+  const grip = h('div', { class: 'handle' });
+  grip.addEventListener('pointerdown', (ev) => startDrag(ev, n, 'size'));
+  n.append(grip);
+}
+function current() { return sel && els(sel.owner).find((e) => e.id === sel.id); }
+function wire(n, e, owner) {
+  n.addEventListener('pointerdown', (ev) => { if (ev.target.classList.contains('handle')) return; sel = { id: e.id, owner }; markSel(n); drawPanel(); startDrag(ev, n, 'move'); });
+}
+function startDrag(ev, n, mode) {
+  ev.preventDefault(); ev.stopPropagation();
+  const e = current(); if (!e) return;
+  const k = +$('#stage').dataset.k;
+  const start = { px: ev.clientX, py: ev.clientY, x: e.x, y: e.y, w: e.w, h: e.h };
+  const snap = (v) => ev.altKey ? Math.round(v) : Math.round(v / 4) * 4;
+  snapshot(sel.owner);
+  const move = (m) => {
+    const dx = (m.clientX - start.px) / k, dy = (m.clientY - start.py) / k;
+    if (mode === 'move') { e.x = snap(start.x + dx); e.y = snap(start.y + dy); n.style.left = e.x + 'px'; n.style.top = e.y + 'px'; }
+    else { e.w = Math.max(8, snap(start.w + dx)); e.h = Math.max(2, snap(start.h + dy)); n.style.width = e.w + 'px'; n.style.height = e.h + 'px'; }
+    syncNumbers(e);
+  };
+  const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); touch(sel.owner); };
+  addEventListener('pointermove', move); addEventListener('pointerup', up);
+}
+function syncNumbers(e) { for (const k of ['x', 'y', 'w', 'h']) { const i = document.getElementById('f-' + k); if (i) i.value = e[k]; } }
+function change(fn, redraw = true) { const e = current(); if (!e) return; snapshot(sel.owner); fn(e); touch(sel.owner); if (redraw) draw(); }
+
+function field(key, label, e) {
+  return h('label', {}, label, h('input', { id: 'f-' + key, type: 'number', value: e[key], oninput: (ev) => { const v = +ev.target.value; if (!Number.isFinite(v)) return; e[key] = v; const n = $(`#stage [data-id="${CSS.escape(e.id)}"][data-owner="${sel.owner}"]`); const css = { x: 'left', y: 'top', w: 'width', h: 'height' }[key]; if (n) n.style[css] = v + 'px'; touch(sel.owner); } }));
+}
+function drawPanel() {
+  const p = $('#panel');
+  p.hidden = !editing;
+  $('#undo').hidden = $('#reset').hidden = !editing;
+  $('#edit').textContent = editing ? 'Done' : 'Edit this page';
+  fit();
+  if (!editing) return;
+  p.textContent = '';
+  const e = current();
+  if (e) {
+    p.append(h('h2', {}, e.label));
+    if (sel.owner === 'masthead') p.append(h('p', {}, 'The masthead appears on every page.'));
+    p.append(h('div', { class: 'fields' }, field('x', 'Left', e), field('y', 'Top', e), field('w', 'Width', e), field('h', 'Height', e)));
+    if ('text' in e && !e.bind) {
+      p.append(h('label', { class: 'wide' }, 'Text', h('textarea', { id: 'f-text', oninput: (ev) => { e.text = ev.target.value; const n = $(`#stage [data-id="${CSS.escape(e.id)}"][data-owner="${sel.owner}"]`); if (n) { const g = n.querySelector('.handle'); n.textContent = e.text; if (g) n.append(g); } touch(sel.owner); } }, e.text)));
+    } else if (e.bind && e.kind === 'text') p.append(h('p', {}, 'The words here come from each film.'));
+    if (e.size) {
+      p.append(h('div', { class: 'fields' },
+        h('label', {}, 'Text size', h('input', { id: 'f-size', type: 'number', value: e.size, oninput: (ev) => { const v = +ev.target.value; if (v > 0) change((x) => { x.size = v; }, false), ($(`#stage [data-id="${CSS.escape(e.id)}"][data-owner="${sel.owner}"]`).style.fontSize = v + 'px'); } })),
+        h('label', {}, 'Typeface', h('select', { id: 'f-font', onchange: (ev) => change((x) => { x.font = ev.target.value; x.weight = ev.target.value === 'display' ? 900 : x.weight; }) }, [['display', 'Playfair'], ['body', 'Source Serif'], ['ui', 'Inter']].map(([v, l]) => h('option', { value: v, ...(e.font === v ? { selected: 'selected' } : {}) }, l))))));
+      p.append(h('div', { class: 'btns' }, h('button', { class: 'tool', onclick: () => change((x) => { x.weight = x.weight >= 600 ? 400 : 700; }) }, 'Bold'), h('button', { class: 'tool', onclick: () => change((x) => { x.italic = !x.italic; }) }, 'Italic'), h('button', { class: 'tool', onclick: () => change((x) => { x.transform = x.transform ? '' : 'uppercase'; x.spacing = x.transform ? '.1em' : ''; }) }, 'Capitals'), h('button', { class: 'tool', onclick: () => change((x) => { x.align = x.align === 'center' ? 'right' : x.align === 'right' ? 'left' : 'center'; }) }, 'Align')));
+    }
+    if (e.color || e.kind === 'btn') {
+      p.append(h('h3', {}, e.kind === 'pic' ? 'Colour' : 'Text colour'), swatches('color', e));
+      if (e.kind === 'btn') p.append(h('h3', {}, 'Button colour'), swatches('fill', e));
+    }
+    p.append(h('div', { class: 'btns' },
+      h('button', { class: 'tool', onclick: () => change((x) => { x.hidden = !x.hidden; }) }, e.hidden ? 'Show' : 'Hide'),
+      h('button', { class: 'tool', onclick: duplicate }, 'Duplicate'),
+      h('button', { class: 'tool', onclick: () => reorder(1) }, 'Bring forward'),
+      h('button', { class: 'tool', onclick: () => reorder(-1) }, 'Send back')));
+    if (e.custom) p.append(h('button', { class: 'tool', onclick: () => { snapshot(sel.owner); const l = els(sel.owner); l.splice(l.indexOf(e), 1); touch(sel.owner); sel = null; draw(); } }, 'Delete'));
+  } else {
+    p.append(h('h2', {}, 'Click anything to edit it'), h('p', {}, 'Drag to move. Drag the blue square to resize. Arrow keys nudge, and Shift moves further. Changes save by themselves.'));
+  }
+  p.append(h('h3', {}, 'Add to this page'), h('div', { class: 'btns' },
+    h('button', { class: 'tool', onclick: () => add(T('c' + Date.now(), 'New text', 200, 200, 500, 60, 36, 'New text', { custom: true })) }, 'Text'),
+    h('button', { class: 'tool', onclick: () => add(P('c' + Date.now(), 'New picture', 200, 200, 400, 300, '#2b3a4a', { custom: true })) }, 'Picture'),
+    h('button', { class: 'tool', onclick: () => add(B('c' + Date.now(), 'New button', 200, 200, 240, 74, 'Button', 'home', true, { custom: true })) }, 'Button'),
+    h('button', { class: 'tool', onclick: () => add(R('c' + Date.now(), 'New rule', 200, 200, 600, 2, '#1a1714')) }, 'Rule')));
+  p.append(h('h3', {}, 'Go to page'), h('div', { class: 'list' }, Object.keys(DEFAULTS).filter((k) => k !== 'masthead').map((k) => h('button', { class: page === k ? 'on' : '', onclick: () => go(k) }, PAGE_NAMES[k]))));
+  p.append(h('h3', {}, 'On this page'), h('div', { class: 'list' }, [...els(page).map((x) => [x, page]), ...(page === 'setup' ? [] : els('masthead').map((x) => [x, 'masthead']))].map(([x, o]) => h('button', { class: (sel && sel.id === x.id && sel.owner === o ? 'on ' : '') + (x.hidden ? 'off' : ''), onclick: () => { sel = { id: x.id, owner: o }; draw(); } }, x.label, x.hidden ? h('span', {}, 'hidden') : null))));
+}
+function swatches(key, e) {
+  const list = ['#1a1714', '#f4efe4', '#a3271c', '#4f4840', '#6b645a', '#b8ae9c', '#ddd6c7', '#fbf8f1', '#2b3a4a', '#2e5e5a', '#7a3b2e', '#1f4a7a'];
+  return h('div', { class: 'swatches' }, list.map((c) => h('button', { class: 'sw' + (e[key] === c ? ' on' : ''), 'aria-label': 'Colour ' + c, style: { background: c }, onclick: () => change((x) => { x[key] = c; }) })));
+}
+function add(e) { e.custom = true; snapshot(page); els(page).push(e); sel = { id: e.id, owner: page }; touch(page); draw(); }
+function duplicate() { const e = current(); if (!e) return; const c = { ...structuredClone(e), id: 'c' + Date.now(), label: e.label + ' copy', custom: true, x: e.x + 24, y: e.y + 24 }; snapshot(sel.owner); els(sel.owner).push(c); sel = { id: c.id, owner: sel.owner }; touch(sel.owner); draw(); }
+function reorder(d) { const l = els(sel.owner); const e = current(); const i = l.indexOf(e); const j = i + d; if (j < 0 || j >= l.length) return; snapshot(sel.owner); [l[i], l[j]] = [l[j], l[i]]; touch(sel.owner); draw(); }
+
+$('#anim').append(...Object.entries(ROW_ANIMS).map(([k, v]) => h('option', { value: k }, v.name)));
+$('#anim').value = 'riffle';
+$('#anim').addEventListener('change', (ev) => { prefs.rowAnim = ev.target.value; savePrefs(); });
+$('#edit').addEventListener('click', () => { editing = !editing; sel = null; draw(); });
+$('#undo').addEventListener('click', () => { const u = undoStack.pop(); if (!u) return; layouts[u[0]] = JSON.parse(u[1]); touch(u[0]); draw(); });
+let resetArmed = false;
+$('#reset').addEventListener('click', (ev) => {
+  if (!resetArmed) { resetArmed = true; ev.target.textContent = 'Click again to reset'; setTimeout(() => { resetArmed = false; ev.target.textContent = 'Reset this page'; }, 3000); return; }
+  resetArmed = false; ev.target.textContent = 'Reset this page'; snapshot(page); layouts[page] = structuredClone(DEFAULTS[page]); touch(page); sel = null; draw();
+});
+addEventListener('keydown', (ev) => {
+  if (!editing || !sel || /INPUT|TEXTAREA|SELECT/.test(ev.target.tagName)) return;
+  const step = ev.shiftKey ? 20 : 2;
+  const d = { ArrowLeft: ['x', -step], ArrowRight: ['x', step], ArrowUp: ['y', -step], ArrowDown: ['y', step] }[ev.key];
+  if (!d) return;
+  ev.preventDefault();
+  const e = current(); if (!e) return;
+  snapshot(sel.owner); e[d[0]] += d[1];
+  const n = $(`#stage [data-id="${CSS.escape(e.id)}"][data-owner="${sel.owner}"]`);
+  if (n) { n.style.left = e.x + 'px'; n.style.top = e.y + 'px'; }
+  syncNumbers(e); touch(sel.owner);
+});
+new ResizeObserver(fit).observe($('#view'));
+draw();
+loadSaved();
+</script>
