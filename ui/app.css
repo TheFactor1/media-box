@@ -6,7 +6,7 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor: none; }
 #stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 0 0; background: var(--paper); color: var(--ink); font-family: var(--body); overflow: hidden; }
-#page { position: absolute; inset: 0; view-transition-name: page; pointer-events: none; }
+#page { position: absolute; inset: 0; pointer-events: none; }
 #page > * { pointer-events: auto; }
 
 .el { position: absolute; }
@@ -52,6 +52,7 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor
 .line em { font-style: normal; font-weight: 600; font-size: 20px; color: var(--red); }
 .line i { flex: none; font-style: normal; width: 150px; text-align: right; font-variant-numeric: tabular-nums; }
 .line .note { flex: none; width: 220px; }
+.line.copy b { width: 110px; font-size: 30px; }
 .line.best { background: #fbf8f1; box-shadow: inset 0 0 0 3px var(--red); }
 .set { animation: setup .32s ease-out backwards; }
 @keyframes setup { from { opacity: 0; transform: translateY(16px); } }
@@ -101,18 +102,4 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor
 .boot #masthead .el { animation: fade .5s ease backwards; }
 .boot #page .el { animation: setup .4s ease-out .15s backwards; }
 
-/* The page turn on the top tabs. The browser snapshots the page, so this animates one flat picture, and the masthead stays out of it. */
-::view-transition-group(root) { animation: none; }
-::view-transition-old(root) { display: none; }
-::view-transition-new(root) { animation: none; }
-::view-transition-old(page), ::view-transition-new(page) { animation: none; mix-blend-mode: normal; transform-origin: left center; }
-/* Transform only: a filter here makes the browser redraw the whole page every frame, which is what made it lag. */
-html.turn-forward::view-transition-old(page) { animation: turnAway .38s cubic-bezier(.45, .05, .55, .95) forwards; z-index: 2; }
-html.turn-back::view-transition-new(page) { animation: turnIn .38s cubic-bezier(.2, .7, .3, 1) both; z-index: 2; }
-@keyframes turnAway { to { transform: perspective(2800px) rotateY(-100deg); } }
-@keyframes turnIn { from { transform: perspective(2800px) rotateY(-100deg); } }
-/* For a box that can't manage the turn: a short slide and fade. */
-html.turn-simple::view-transition-new(page) { animation: turnSimple .16s ease-out both; }
-@keyframes turnSimple { from { opacity: 0; transform: translateX(24px); } }
-
-@media (prefers-reduced-motion: reduce) { *, ::view-transition-old(page), ::view-transition-new(page) { animation-duration: .01s !important; transition-duration: .01s !important; } }
+@media (prefers-reduced-motion: reduce) { * { animation-duration: .01s !important; transition-duration: .01s !important; } }

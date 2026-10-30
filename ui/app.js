@@ -61,6 +61,10 @@ function leftOf(it) {
 const nextLabel = (it) => (it.nextEpisode ? `S${pad(it.nextEpisode.s)}E${pad(it.nextEpisode.e)}` : null);
 const SOURCE_NAMES = { remux: 'Remux', 'web-dl': 'Web', bluray: 'Blu-ray', hdrip: 'HD rip', hdtv: 'TV', dvd: 'DVD', cam: 'Cam' };
 const RES_NAMES = { '2160p': '4K', '1440p': '1440p', '1080p': '1080p', '720p': '720p', '576p': '576p', '480p': '480p', '360p': '360p' };
+function copyDetail(b) {
+  if (!b) return '';
+  return [...(b.hdr || []), SOURCE_NAMES[b.source], b.codec, ...(b.audio || [])].filter(Boolean).join(' · ') || (b.res ? '' : 'Resolution not stated');
+}
 function badgeLine(b) {
   if (!b) return '';
   const known = [RES_NAMES[b.res], ...(b.hdr || []), SOURCE_NAMES[b.source], b.codec, ...(b.audio || [])].filter(Boolean);
@@ -195,7 +199,8 @@ function widget(e) {
     case 'grid': return S.grid.length ? h('div', { class: 'gridw' }, S.grid.map((it, i) => card(it, { key: 'grid', i, nearEnd: moreGrid }))) : h('div', { class: 'empty' }, S.busy ? '' : EMPTY[S.page] || 'Nothing here yet.');
     case 'seasons': return h('div', { style: { display: 'flex', gap: '10px', height: '100%', overflow: 'hidden' } }, seasonsOf(S.full).map((n) => { const on = n === S.season; return focusable(h('div', { class: 'btn', style: { flex: 'none', width: '170px', height: '60px', fontSize: '24px', background: on ? '#1a1714' : '#ddd6c7', color: on ? '#f4efe4' : '#1a1714' } }, `Season ${n}`), 'season:' + n, () => { S.season = n; draw(); }); }));
     case 'episodes': { setTimeout(wireEpisodes); const list = (S.full?.videos || []).filter((v) => v.s === S.season); return h('div', { class: 'scrolly' }, list.map((v, i) => { const nxt = S.full.nextEpisode; const here = nxt && nxt.s === v.s && nxt.e === v.e; return line(`ep:${v.s}:${v.e}`, () => play({ s: v.s, e: v.e }), h('b', {}, v.e), h('span', {}, v.title || `Episode ${v.e}`), h('em', {}, here ? (leftOf(S.full) || 'Next up') : '')); })); }
-    case 'board': return h('div', { class: 'scrolly', style: { borderTop: '2px solid #1a1714' } }, (S.streams || []).filter((s) => s.playable).slice(0, 30).map((c, i) => { const r = line('copy:' + i, () => play({ ...(S.ep || {}), version: i }), h('b', {}, i + 1), h('span', {}, badgeLine(c.badges) || c.source?.name || 'Copy'), h('i', {}, c.badges?.sizeGb ? c.badges.sizeGb + ' GB' : ''), h('i', {}, c.badges?.mbps ? Math.round(c.badges.mbps * 10) / 10 + ' Mb/s' : ''), h('em', { class: 'note' }, i === 0 ? 'Best match' : c.badges?.cached === false ? 'Not ready' : c.badges?.cached ? 'Ready' : '')); r.classList.add('set'); r.style.animationDelay = Math.min(i, 8) * 40 + 'ms'; if (i === 0) r.classList.add('best'); return r; }), S.streams && !S.streams.length ? h('div', { class: 'empty' }, 'No copies found right now.') : null);
+    case 'copyfilters': return copyFilterBar();
+    case 'board': return h('div', { class: 'scrolly', style: { borderTop: '2px solid #1a1714' } }, shownCopies().map(({ c, i, top }) => { const r = line('copy:' + i, () => play({ ...(S.ep || {}), version: i }), h('b', {}, c.badges?.res ? RES_NAMES[c.badges.res] : '—'), h('span', {}, copyDetail(c.badges)), h('i', {}, c.badges?.sizeGb ? c.badges.sizeGb + ' GB' : ''), h('i', {}, c.badges?.mbps ? Math.round(c.badges.mbps * 10) / 10 + ' Mb/s' : ''), h('em', { class: 'note' }, top ? 'Best match' : c.badges?.cached === false ? 'Not ready' : c.badges?.cached ? 'Ready' : '')); r.classList.add('copy');  if (top) r.classList.add('best'); return r; }), S.streams && !shownCopies().length ? h('div', { class: 'empty' }, S.streams.length ? 'No copies match these filters.' : 'No copies found right now.') : null);
     case 'keys': return keyboard('search', (t) => { S.query = t; refreshBound(); searchSoon(); }, () => S.query, false);
     case 'results': return h('div', { class: 'scrolly' }, S.results.map((it) => line('res:' + it.id, () => openTitle(it), h('span', { style: { fontFamily: 'var(--display)', fontWeight: 700 } }, it.title), h('em', {}, [it.year, it.type === 'series' ? 'Series' : 'Film'].filter(Boolean).join(' · ')))), !S.results.length && S.query.trim() && !S.busy ? h('div', { class: 'empty' }, 'Nothing matches that yet.') : null);
     case 'settings': return settingsBody();
@@ -204,6 +209,70 @@ function widget(e) {
     case 'qr': return (S.page === 'source' ? S.sourceQr : S.setup)?.svg ? h('img', { class: 'qr', src: (S.page === 'source' ? S.sourceQr : S.setup).svg, alt: 'QR code for the setup page' }) : null;
     default: return null;
   }
+}
+// Other versions: pick what to see and how it's ordered. Choices are stepped with OK, so they work on a remote.
+const SORTS = { best: 'Best match', res: 'Highest resolution', size: 'Largest file', small: 'Smallest file', rate: 'Highest bitrate' };
+const RES_RANK = { '2160p': 7, '1440p': 6, '1080p': 5, '720p': 4, '576p': 3, '480p': 2, '360p': 1 };
+const filterOf = () => (S.copyFilter ||= { sort: 'best', res: 'All', hdr: 'All', audio: 'All', source: 'All' });
+const playable = () => (S.streams || []).filter((s) => s.playable).map((c, i) => ({ c, i }));
+const copyHasHdr = (b) => (b?.hdr || []);
+function copyOptions() {
+  const list = playable().map((x) => x.c.badges || {});
+  const uniq = (xs, order) => [...new Set(xs.filter(Boolean))].sort((a, b) => (order ? order[b] - order[a] : 0));
+  return {
+    res: ['All', ...uniq(list.map((b) => b.res), RES_RANK).map((r) => RES_NAMES[r]), ...(list.some((b) => !b.res) ? ['Not stated'] : [])],
+    hdr: ['All', ...uniq(list.flatMap(copyHasHdr)), ...(list.some((b) => !copyHasHdr(b).length) ? ['SDR'] : [])],
+    audio: ['All', ...uniq(list.flatMap((b) => b.audio || []))],
+    source: ['All', ...uniq(list.map((b) => SOURCE_NAMES[b.source]))],
+  };
+}
+function shownCopies() {
+  const f = filterOf();
+  const keep = ({ c }) => {
+    const b = c.badges || {};
+    return (f.res === 'All' || (f.res === 'Not stated' ? !b.res : RES_NAMES[b.res] === f.res))
+      && (f.hdr === 'All' || (f.hdr === 'SDR' ? !copyHasHdr(b).length : copyHasHdr(b).includes(f.hdr)))
+      && (f.audio === 'All' || (b.audio || []).includes(f.audio))
+      && (f.source === 'All' || SOURCE_NAMES[b.source] === f.source);
+  };
+  const by = {
+    res: (x, y) => (RES_RANK[y.c.badges?.res] || 0) - (RES_RANK[x.c.badges?.res] || 0) || (y.c.badges?.mbps || 0) - (x.c.badges?.mbps || 0),
+    size: (x, y) => (y.c.badges?.sizeGb || 0) - (x.c.badges?.sizeGb || 0),
+    small: (x, y) => (x.c.badges?.sizeGb || Infinity) - (y.c.badges?.sizeGb || Infinity),
+    rate: (x, y) => (y.c.badges?.mbps || 0) - (x.c.badges?.mbps || 0),
+  }[f.sort];
+  const all = playable();
+  const out = all.filter(keep);
+  if (by) out.sort(by);
+  return out.slice(0, 30).map((x) => ({ ...x, top: x.i === 0 }));
+}
+function copyFilterBar() {
+  const f = filterOf(), opts = copyOptions();
+  const step = (name, options) => () => { f[name] = options[(options.indexOf(f[name]) + 1) % options.length]; paintCopies('f:' + name); };
+  const chip = (name, label, value, options) => focusable(h('div', { class: 'chip' + (value === 'All' || value === 'Best match' ? '' : ' on') }, `${label}: ${value}`), 'f:' + name, step(name, options));
+  const ready = S.prefs.readyOnly !== false;
+  return h('div', { class: 'chips' },
+    focusable(h('div', { class: 'chip' }, 'Sort: ' + SORTS[f.sort]), 'f:sort', () => { const k = Object.keys(SORTS); f.sort = k[(k.indexOf(f.sort) + 1) % k.length]; paintCopies('f:sort'); }),
+    chip('res', 'Resolution', f.res, opts.res), chip('hdr', 'HDR', f.hdr, opts.hdr), chip('audio', 'Audio', f.audio, opts.audio), chip('source', 'Source', f.source, opts.source),
+    focusable(h('div', { class: 'chip' + (ready ? ' on' : '') }, ready ? 'Ready only' : 'Include not ready'), 'f:ready', async () => {
+      S.prefs.readyOnly = !ready;
+      await api('/prefs', { method: 'POST', body: { readyOnly: !ready } }).catch(() => {});
+      S.streams = null;
+      await withLoading(loadStreams);
+      draw('f:ready');
+    }));
+}
+function paintCopies(key) {
+  for (const w of ['copyfilters', 'board']) {
+    const host = document.querySelector(`[data-w="${w}"]`);
+    if (!host) continue;
+    host.textContent = '';
+    const e = (DEFAULTS.versions || []).find((x) => x.id === w);
+    host.append(widget(e));
+  }
+  refreshBound();
+  listCues();
+  focusOn(key);
 }
 function rowBody() {
   if (!S.rowItems.length) return h('div', { class: 'empty' }, S.busy ? '' : 'This row is empty. Open any film and press Add to list, or choose another row.');
@@ -221,7 +290,6 @@ function settingsBody() {
     line('set:source', () => go('source'), h('span', {}, 'Stream source'), h('em', {}, S.sources?.length ? S.sources.map((a) => hostName(a.host) + (a.reachable ? '' : ' (not answering)')).join(', ') : 'Add AIOStreams')),
     line('set:ready', () => setPref('readyOnly', S.prefs.readyOnly === false), h('span', {}, 'Only play copies ready to stream'), h('em', {}, S.prefs.readyOnly === false ? 'Off' : 'On')),
     line('set:choose', () => setPref('choose', !S.prefs.choose), h('span', {}, 'When I press Play'), h('em', {}, S.prefs.choose ? 'Let me choose the copy' : 'Play the best copy')),
-    line('set:turn', () => { const o = ['auto', 'full', 'off'], c = S.prefs.turn || 'auto'; setPref('turn', o[(o.indexOf(c) + 1) % o.length]); }, h('span', {}, 'Page turn'), h('em', {}, { auto: S.slowBox ? 'Automatic (simple on this box)' : 'Automatic', full: 'Always full', off: 'Off' }[S.prefs.turn || 'auto'])),
     line('set:speed', () => { const names = Object.keys(S.presets.presets || {}); if (!names.length) return; const i = names.indexOf(speed); S.prefs.preset = names[(i + 1) % names.length]; api('/prefs', { method: 'POST', body: { preset: S.prefs.preset } }).catch(() => notice("Couldn't save that.")); draw(); }, h('span', {}, 'Connection speed'), h('em', {}, speedName(speed))),
     line('set:privacy', () => {}, h('span', {}, 'Privacy'), h('em', {}, 'Nothing leaves this box')));
 }
@@ -439,23 +507,7 @@ function back() {
   S.item = prev.item; S.ep = prev.ep; S.streams = null; if (prev.page !== 'film' && prev.page !== 'show' && prev.page !== 'versions') S.full = null;
   go(prev.page, { back: true, key: prev.key });
 }
-// A turn the box can't draw smoothly looks worse than none, so count its frames and step down by itself.
-function watchTurn(t) {
-  let frames = 0, on = true;
-  const count = () => { frames += 1; if (on) requestAnimationFrame(count); };
-  t.ready.then(() => {
-    const start = performance.now();
-    requestAnimationFrame(count);
-    t.finished.catch(() => {}).finally(() => {
-      on = false;
-      const fps = Math.round(frames / ((performance.now() - start) / 1000));
-      S.turnFps = fps;
-      if (fps < 40) S.slowBox = true;
-      api('/prefs', { method: 'POST', body: { lastTurnFps: fps, slowBox: !!S.slowBox } }).catch(() => {});
-    });
-  }).catch(() => {});
-}
-// Top tabs turn the page. The browser snapshots it, so the turn moves one flat picture and the masthead stays out of it.
+// Top tabs: the new page slides in a little and fades up, in the direction of travel. One layer, moved and faded: nearly free to draw.
 async function tabTo(page) {
   if (page === S.page) return;
   const a = TAB_ORDER.indexOf(S.page), b = TAB_ORDER.indexOf(page);
@@ -464,14 +516,9 @@ async function tabTo(page) {
   S.page = page;
   if (page === 'home') S.full = null;
   await withLoading(() => loadPage(page));
-  const paint = () => { mastEl.dataset.page = ''; draw('tab:' + page); };
-  const style = S.prefs.turn === 'off' ? 'off' : S.prefs.turn === 'full' ? 'full' : S.slowBox ? 'simple' : 'full';
-  if (!document.startViewTransition || reduce() || style === 'off') return paint();
-  document.documentElement.classList.add(style === 'simple' ? 'turn-simple' : backwards ? 'turn-back' : 'turn-forward');
-  const t = document.startViewTransition(paint);
-  if (style === 'full') watchTurn(t);
-  t.ready.catch(() => {});
-  t.finished.catch(() => {}).finally(() => document.documentElement.classList.remove('turn-back', 'turn-forward', 'turn-simple'));
+  mastEl.dataset.page = '';
+  draw('tab:' + page);
+  if (!reduce()) pageEl.animate([{ opacity: 0, transform: `translateX(${backwards ? -28 : 28}px)` }, { opacity: 1, transform: 'none' }], { duration: 170, easing: 'ease-out' });
 }
 // Row tabs riffle: posters are dealt in, one after another, in the direction of travel.
 let rowTimer;
@@ -630,7 +677,6 @@ async function start() {
   fit();
   const { state, error } = await api('/state').catch(() => ({ state: {} }));
   S.prefs = await api('/prefs').catch(() => ({}));
-  S.slowBox = !!S.prefs.slowBox;
   const cold = !state?.page;
   const setup = await api('/setup-qr').catch(() => ({}));
   if (setup.url) { S.setup = setup; S.page = 'setup'; draw(); if (cold) document.body.classList.add('boot'); setTimeout(setupWatch, 5000); return; }

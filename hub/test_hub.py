@@ -1035,6 +1035,13 @@ class ReadyToStream(unittest.TestCase):
         self.assertEqual((b['source'], b['codec'], b['audio']), ('web-dl', 'HEVC', ['DD']))
         self.assertEqual(self.quality('x', 'DD+ 5.1')['audio'], ['DD+'])
 
+    def test_copies_without_a_resolution_rank_last(self):
+        ctx = ranking.context({'name': 'Halflight', 'year': 2023, 'runtime': 100}, 'movie', 0, 0)
+        raw = [('a', {'name': 'Unknown', 'description': 'Halflight 2023 XviD 9 GB', 'url': 'https://x/1'}),
+               ('a', {'name': '720p', 'description': 'Halflight 2023 1 GB', 'url': 'https://x/2'})]
+        ranked, _ = ranking.select(raw, ctx, {'prefer': 'highest_bitrate'})
+        self.assertEqual([r['url'] for r in ranked], ['https://x/2', 'https://x/1'])
+
     def test_aiostreams_wording(self):
         self.assertIs(self.marker('1080p ⚡Ready (RD)'), True)
         self.assertIs(self.marker('1080p ❌ Not Ready (RD)'), False)

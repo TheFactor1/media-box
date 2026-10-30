@@ -62,6 +62,6 @@ const DEFAULTS = {
     B('play', 'Play next button', 1220, 680, 300, 78, 'Play next', 'play', true, { size: 30, bindText: 'playNextLabel' }), B('versions', 'Other versions button', 1540, 680, 284, 78, 'Other versions', 'versions', false, { size: 28 }),
     B('addlist', 'Add to list button', 1220, 776, 300, 78, 'Add to list', 'addlist', false, { size: 30 }),
   ],
-  versions: [T('kicker', 'Kicker', 96, 170, 1000, 30, 22, '', { ...KICK, bind: 'marketKick' }), T('headline', 'Headline', 96, 205, 1500, 90, 64, '', { font: 'display', weight: 900, bind: 'versionsTitle', nowrap: true }), W('board', 'Ranked copies', 'board', 96, 318, 1728, 688)],
+  versions: [T('kicker', 'Kicker', 96, 170, 1000, 30, 22, '', { ...KICK, bind: 'marketKick' }), T('headline', 'Headline', 96, 205, 1500, 90, 64, '', { font: 'display', weight: 900, bind: 'versionsTitle', nowrap: true }), W('copyfilters', 'Sort and filters', 'copyfilters', 96, 300, 1728, 52), W('board', 'Ranked copies', 'board', 96, 364, 1728, 610)],
   setup: [T('kick', 'Kicker', 800, 330, 900, 30, 22, 'First run', KICK), T('title', 'Headline', 800, 370, 1000, 120, 96, 'Set up this box', { font: 'display', weight: 900 }), T('body', 'Instructions', 800, 510, 960, 140, 36, 'Scan the code with your phone. You need your debrid key. Nothing is typed on the TV.', { color: '#3a342d' }), T('link', 'Link', 800, 670, 960, 40, 26, '', { font: 'body', color: '#4f4840', bind: 'setupLink', nowrap: true }), W('qr', 'QR code', 'qr', 160, 260, 560, 560)],
 };

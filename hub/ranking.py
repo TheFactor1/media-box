@@ -188,7 +188,7 @@ def allowed(b, p, relaxed):
 def select(raw, ctx, p):
     """raw: [(addon host, stream)] in addon order -> (ranked streams within preset p, constraints relaxed to get any).
 
-    Order: has a url (no torrents) > release verified > cached > preset cut, then theatrical > preference > addon order
+    Order: has a url (no torrents) > states a resolution > release verified > cached > preset cut, then theatrical > preference > addon order
     (Python's sort is stable with reverse=True, so ties keep the addon's order)."""
     out = []
     for addon, s in raw:
@@ -205,8 +205,10 @@ def select(raw, ctx, p):
                     'badges': b, 'source': {'addon': addon, 'name': s.get('name')}, 'cut': b['cut'],
                     'description': s.get('description') or s.get('title')})
     cached, want = {True: 1, None: 0, False: -1}, p.get('cut')
-    key = lambda x: (x['url'] is not None, x['badges']['match'] == 'ok', cached[x['badges']['cached']],
+    key = lambda x: (x['url'] is not None, x['badges']['res'] is not None, x['badges']['match'] == 'ok', cached[x['badges']['cached']],
                      *((x['cut'] == want, x['cut'] == 'theatrical') if want else ()),
+                     # Within what the preset allows, more pixels beat more bitrate: 1080p ranks above a fatter 720p.
+                     RES_ORDER.get(x['badges']['res'], 0) if p.get('prefer') == 'highest_bitrate' else 0,
                      (x['badges']['mbps'] or -1) if p.get('prefer') == 'highest_bitrate' else 0)
     if p.get('ready_only'):  # never start a copy the debrid service would have to fetch first; unmarked addons can't tell, so they stay
         out = [x for x in out if x['badges']['cached'] is not False]

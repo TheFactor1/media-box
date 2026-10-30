@@ -269,7 +269,7 @@ const DEFAULTS = {
     B('play', 'Play next button', 1220, 680, 300, 78, 'Play next', 'play', true, { size: 30 }), B('versions', 'Other versions button', 1540, 680, 284, 78, 'Other versions', 'versions', false, { size: 28 }),
     B('addlist', 'Add to list button', 1220, 776, 300, 78, 'Add to list', 'addlist', false, { size: 30 }),
   ],
-  versions: [T('kicker', 'Kicker', 96, 170, 1000, 30, 22, 'Market report · 14 copies found', KICK), T('headline', 'Headline', 96, 205, 1500, 90, 64, '', { font: 'display', weight: 900, bind: 'versionsTitle', nowrap: true }), W('board', 'Ranked copies', 'board', 96, 318, 1728, 688)],
+  versions: [T('kicker', 'Kicker', 96, 170, 1000, 30, 22, 'Market report · 14 copies found', KICK), T('headline', 'Headline', 96, 205, 1500, 90, 64, '', { font: 'display', weight: 900, bind: 'versionsTitle', nowrap: true }), W('copyfilters', 'Sort and filters', 'copyfilters', 96, 300, 1728, 52), W('board', 'Ranked copies', 'board', 96, 364, 1728, 610)],
   // The film fills the screen; the controls are a sheet of paper that rises from the bottom when wanted.
   player: [
     P('film', 'Film (example frame)', 0, 0, 1920, 1080, '#20303c', { bind: 'color' }),
@@ -463,7 +463,8 @@ function widget(e) {
       h('div', { class: 'cta', tabindex: 0, onclick: createList }, 'Add to Home'));
     case 'grid': return h('div', { class: 'gridw', style: { width: '100%', height: '100%' } }, listFor(e.list).map((t) => card(t)));
     case 'episodes': return h('div', { class: 'scrolly' }, EPISODES.map((t, i) => { const r = h('div', { class: 'line set', style: { animationDelay: i * 25 + 'ms' }, onmouseenter: () => pencil(r), onclick: () => doPlay() }, h('b', {}, i + 1), h('span', {}, t), h('em', {}, i === 5 ? '31 min left' : i < 5 ? 'Watched' : '47 min')); return r; }));
-    case 'board': return h('div', { class: 'scrolly', style: { borderTop: '2px solid #1a1714' } }, COPIES.map((c, i) => { const r = h('div', { class: 'line set' + (i === 0 ? ' best' : ''), style: { animationDelay: (COPIES.length - i) * 60 + 'ms' }, onmouseenter: () => pencil(r), onclick: () => doPlay() }, h('b', {}, i + 1), h('span', {}, c[0]), h('i', { style: { fontStyle: 'normal', width: '150px', textAlign: 'right' } }, c[1]), h('i', { style: { fontStyle: 'normal', width: '150px', textAlign: 'right' } }, c[2]), h('em', { style: { width: '210px' } }, c[3])); return r; }));
+    case 'copyfilters': { const opt = (k, label, list) => h('div', { class: 'chip' + (copyView[k] === list[0] ? '' : ' on'), tabindex: 0, onclick: () => { copyView[k] = list[(list.indexOf(copyView[k]) + 1) % list.length]; draw(); } }, `${label}: ${copyView[k]}`); return h('div', { class: 'chips' }, opt('sort', 'Sort', ['Best match', 'Highest resolution', 'Largest file', 'Smallest file', 'Highest bitrate']), opt('res', 'Resolution', ['All', '4K', '1080p', '720p', 'Not stated']), opt('hdr', 'HDR', ['All', 'Dolby Vision', 'HDR10', 'SDR']), opt('audio', 'Audio', ['All', 'Atmos', '5.1', 'Stereo']), opt('source', 'Source', ['All', 'Remux', 'Web', 'Blu-ray'])); }
+    case 'board': return h('div', { class: 'scrolly', style: { borderTop: '2px solid #1a1714' } }, viewCopies().map((c, i) => { const r = h('div', { class: 'line set' + (i === 0 ? ' best' : ''), style: { animationDelay: (COPIES.length - i) * 60 + 'ms' }, onmouseenter: () => pencil(r), onclick: () => doPlay() }, h('b', {}, i + 1), h('span', {}, c[0]), h('i', { style: { fontStyle: 'normal', width: '150px', textAlign: 'right' } }, c[1]), h('i', { style: { fontStyle: 'normal', width: '150px', textAlign: 'right' } }, c[2]), h('em', { style: { width: '210px' } }, c[3])); return r; }));
     case 'keys': return h('div', { class: 'keys' }, [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map((k) => h('div', { class: 'key', onclick: () => { query += k.toLowerCase(); draw(); } }, k)), h('div', { class: 'key', style: { gridColumn: 'span 2', fontSize: '24px' }, onclick: () => { query = query.slice(0, -1); draw(); } }, 'Delete'));
     case 'results': { const q = query.trim().toLowerCase(); const hits = TITLES.filter((t) => t.title.toLowerCase().includes(q)); return h('div', { class: 'scrolly' }, (hits.length ? hits : []).map((t) => { const r = h('div', { class: 'line', onmouseenter: () => pencil(r), onclick: () => openTitle(t) }, h('span', { style: { fontFamily: 'var(--display)', fontWeight: 700 } }, t.title), h('em', {}, t.type === 'show' ? 'Series' : 'Film')); return r; }), hits.length ? null : h('div', { style: { fontStyle: 'italic', fontSize: '32px', padding: '20px' } }, 'No example titles match. Try "salt" or "the".')); }
     case 'seek': {
@@ -561,6 +562,15 @@ function moveChip(id) {
   to.classList.add('on');
   to.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
 }
+const copyView = { sort: 'Best match', res: 'All', hdr: 'All', audio: 'All', source: 'All' };
+function viewCopies() {
+  const v = copyView, n = (x) => parseFloat(x);
+  let list = COPIES.filter((c) => (v.res === 'All' || (v.res === 'Not stated' ? false : c[0].startsWith(v.res))) && (v.hdr === 'All' || (v.hdr === 'SDR' ? !/HDR|Vision/.test(c[0]) : c[0].includes(v.hdr))) && (v.audio === 'All' || c[0].includes(v.audio)));
+  if (v.sort === 'Largest file') list = [...list].sort((a, b) => n(b[1]) - n(a[1]));
+  if (v.sort === 'Smallest file') list = [...list].sort((a, b) => n(a[1]) - n(b[1]));
+  if (v.sort === 'Highest bitrate') list = [...list].sort((a, b) => n(b[2]) - n(a[2]));
+  return list;
+}
 function moveRow(i, d) { const j = i + d; if (j < 0 || j >= prefs.rows.length) return; [prefs.rows[i], prefs.rows[j]] = [prefs.rows[j], prefs.rows[i]]; savePrefs(); draw(); }
 function createList() {
   const name = draft.name.trim();
@@ -654,44 +664,18 @@ addEventListener('resize', fit);
 
 const TAB_ORDER = ['home', 'continue', 'new', 'movies', 'shows', 'lists', 'browse', 'settings'];
 function go(p) { page = p; sel = null; draw(); }
-// Top tabs turn the page: forward lifts the old sheet off from the right, back lays the new sheet down over it.
-// The masthead stays still; the sheets are copies, so the real page underneath is ready at once.
-const SHEET_TOP = 130;
-function pageSheet() {
-  const sheet = h('div', { class: 'sheet' }, h('div', { class: 'sheet-in' }));
-  document.querySelectorAll('#stage .el[data-owner]').forEach((n) => {
-    if (n.dataset.owner === 'masthead') return;
-    const c = n.cloneNode(true);
-    c.classList.remove('fade');
-    c.querySelectorAll('.pencil, .stamp, .more, .morev').forEach((x) => x.remove());
-    c.removeAttribute('data-owner');
-    c.removeAttribute('data-id');
-    sheet.firstChild.append(c);
-  });
-  sheet.append(h('div', { class: 'sheet-shade' }));
-  return sheet;
-}
+// Top tabs: the new page slides in a little and fades up, in the direction of travel. One short, cheap movement.
 function tabTo(p) {
   if (p === page) return;
   const a = TAB_ORDER.indexOf(page), b = TAB_ORDER.indexOf(p);
   const back = a >= 0 && b >= 0 && b < a;
-  const before = pageSheet();
   go(p);
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  document.querySelectorAll('#stage .el[data-owner]').forEach((n) => n.classList.remove('fade'));
-  const d = +$('#speed').value * 1.25;
-  const turn = h('div', { id: 'turn' });
-  const flat = 'rotateY(0deg)', lifted = 'rotateY(-112deg)';
-  const moving = back ? pageSheet() : before;
-  if (back) turn.append(before);
-  turn.append(moving);
-  $('#stage').append(turn);
-  const frames = back ? [lifted, flat] : [flat, lifted];
-  const shade = back ? [.32, 0] : [0, .32];
-  const easing = back ? 'cubic-bezier(.2,.7,.3,1)' : 'cubic-bezier(.45,.05,.55,.95)';
-  moving.animate(frames.map((transform) => ({ transform })), { duration: d, easing, fill: 'forwards' });
-  moving.querySelector('.sheet-shade').animate(shade.map((opacity) => ({ opacity })), { duration: d, easing, fill: 'forwards' });
-  setTimeout(() => turn.remove(), d + 40);
+  document.querySelectorAll('#stage .el[data-owner]').forEach((n) => {
+    if (n.dataset.owner === 'masthead') return;
+    n.classList.remove('fade');
+    n.animate([{ opacity: 0, transform: `translateX(${back ? -28 : 28}px)` }, { opacity: 1, transform: 'none' }], { duration: 170, easing: 'ease-out' });
+  });
 }
 function act(to) {
   if (editing || !to) return;
