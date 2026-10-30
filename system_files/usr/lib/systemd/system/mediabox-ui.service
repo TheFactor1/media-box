@@ -14,8 +14,13 @@ TTYPath=/dev/tty1
 StandardInput=tty
 StandardOutput=journal
 StandardError=journal
+TTYReset=yes
+TTYVTDisallocate=yes
 StateDirectory=media
 Environment=HOME=/var/lib/media
+# Between the film and the interface the screen is the text console: keep it blank.
+ExecStartPre=-/usr/bin/sh -c 'printf "\\033[2J\\033[H\\033[?25l" > /dev/tty1'
 ExecStart=/usr/libexec/mediabox/ui-session
+ExecStopPost=-/usr/bin/sh -c 'printf "\\033[2J\\033[H\\033[?25l" > /dev/tty1'
 Restart=on-failure
 RestartSec=2

@@ -156,6 +156,7 @@
 (() => {
   const n = new URLSearchParams(location.search).get('n');
   const $ = id => document.getElementById(id);
+  if (new URLSearchParams(location.search).get('add') === '1') { $('more').open = true; $('manifest').scrollIntoView(); $('manifest').focus(); }
   let info = null, current = 'sMain', from = 'sMain', provisioned = false;
 
   async function call(method, path, body) {

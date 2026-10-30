@@ -39,7 +39,7 @@ STATIC = {
 CSP = "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; img-src https: data:; base-uri 'none'; form-action 'none'"
 
 # Only what browsing needs: pairing, setup and device management stay off this path.
-ALLOWED = re.compile(r'^(shelves|shelf/[^/]+|library(/[^/]+)?|new|keep|presets|search|collections(/.*)?|franchise/[^/]+'
+ALLOWED = re.compile(r'^(health|shelves|shelf/[^/]+|library(/[^/]+)?|new|keep|presets|search|collections(/.*)?|franchise/[^/]+'
                      r'|resume/[^/]+(/\d+/\d+)?|browse/(catalogs|catalog/[^/]+/[^/]+|meta/[^/]+/[^/]+|cast/[^/]+/[^/]+|streams/[^/]+/[^/]+(/\d+/\d+)?))$')
 IMDB = re.compile(r'^tt\d+$')
 
@@ -97,8 +97,7 @@ class Player:
             raise ValueError('bad title')
         ep = episode(req.get('s'), req.get('e'))
         pick = req.get('version')
-        preset = load_prefs().get('preset')
-        query = '?' + urllib.parse.urlencode({'preset': preset}) if isinstance(preset, str) and preset else ''
+        query = prefs_query()
         if pick is None:
             status, raw = hub('GET', f'/play/{id_}{ep}{query}{"&" if query else "?"}json=1')
             if status != 200:
@@ -210,6 +209,26 @@ def strip_urls(raw):
     return json.dumps(data).encode()
 
 
+def prefs_query():
+    """The viewer's speed and ready-only choice, as the hub wants them. Ready-only is on unless turned off."""
+    prefs = load_prefs()
+    args = {}
+    if isinstance(prefs.get('preset'), str) and prefs['preset']:
+        args['preset'] = prefs['preset']
+    if prefs.get('readyOnly', True):
+        args['ready'] = '1'
+    return '?' + urllib.parse.urlencode(args) if args else ''
+
+
+def qr_svg(url):
+    from qrcodegen import QrCode
+    code = QrCode.encode_text(url, QrCode.Ecc.MEDIUM)
+    n = code.get_size()
+    cells = ''.join(f'M{x + 4} {y + 4}h1v1h-1z' for y in range(n) for x in range(n) if code.get_module(x, y))
+    svg = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {n + 8} {n + 8}"><rect width="100%" height="100%" fill="#fff"/><path d="{cells}" fill="#000"/></svg>'
+    return 'data:image/svg+xml;base64,' + base64.b64encode(svg.encode()).decode()
+
+
 def load_prefs():
     try:
         with open(PREFS_FILE, encoding='utf-8') as f:
@@ -232,12 +251,7 @@ def setup_qr():
     info = json.loads(raw or b'{}') if status == 200 else {}
     if not info.get('url') or info.get('until') is not None:
         return {'url': None, 'svg': None}
-    from qrcodegen import QrCode
-    code = QrCode.encode_text(info['url'], QrCode.Ecc.MEDIUM)
-    n = code.get_size()
-    cells = ''.join(f'M{x + 4} {y + 4}h1v1h-1z' for y in range(n) for x in range(n) if code.get_module(x, y))
-    svg = f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {n + 8} {n + 8}"><rect width="100%" height="100%" fill="#fff"/><path d="{cells}" fill="#000"/></svg>'
-    return {'url': info['url'], 'svg': 'data:image/svg+xml;base64,' + base64.b64encode(svg.encode()).decode()}
+    return {'url': info['url'], 'svg': qr_svg(info['url'])}
 
 
 PLAYER = Player()
@@ -303,6 +317,14 @@ class Handler(BaseHTTPRequestHandler):
                         raise ValueError('bad prefs')
                     save_prefs({**load_prefs(), **body})
                 return self.reply_json(200, load_prefs())
+            if path == '/source-qr' and method == 'POST':
+                # Opens the phone page for 10 minutes, straight at "paste your AIOStreams link": nobody types a link on a TV.
+                status, raw = hub('POST', '/setup/open', b'{}')
+                info = json.loads(raw or b'{}')
+                if status != 200 or not info.get('url'):
+                    return self.reply_json(status or 502, {'reason': info.get('reason') or "couldn't open the setup page"})
+                url = info['url'] + '&add=1'
+                return self.reply_json(200, {'url': url, 'svg': qr_svg(url)})
             if path == '/setup-qr' and method == 'GET':
                 return self.reply_json(200, setup_qr())
             if path == '/play' and method == 'POST':
@@ -314,6 +336,8 @@ class Handler(BaseHTTPRequestHandler):
             target = allowed(self.path)
             if target is None:
                 return self.reply_json(404, {'reason': 'no such call'})
+            if '/browse/streams/' in target:
+                target = target.split('?')[0] + prefs_query()
             status, raw = hub(method, target, self.body())
             if status == 200 and '/browse/streams/' in target:
                 raw = strip_urls(raw)

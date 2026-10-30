@@ -1011,5 +1011,15 @@ class ShelfTest(Fixture):
         self.assertEqual(self.get('/browse/cast/movie/tt0468569'), {'cast': []})  # key removed: cached cast stops too
 
 
+class ReadyToStream(unittest.TestCase):
+    def marker(self, text):
+        return ranking.badges({'name': 'x', 'description': text}, {'runtime': 100})['cached']
+
+    def test_aiostreams_wording(self):
+        self.assertIs(self.marker('1080p ⚡Ready (RD)'), True)
+        self.assertIs(self.marker('1080p ❌ Not Ready (RD)'), False)
+        self.assertIs(self.marker('1080p no marker'), None)
+
+
 if __name__ == '__main__':
     unittest.main()

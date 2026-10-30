@@ -162,8 +162,8 @@ def badges(stream, ctx):
     gb = round(float(size[1].replace(',', '.')) / (1 if size[2].startswith('g') else 1024), 2) if size else None
     if not gb and isinstance(hints.get('videoSize'), int):
         gb = round(hints['videoSize'] / 2**30, 2)
-    # Cached markers: AIOStreams uses ⚡/⏳, Torrentio-style addons use [RD+] / [RD download].
-    cached = False if re.search(r'uncached|⏳|download\]', text) else True if re.search(r'⚡|\+\]|\bcached\b|\binstant\b', text) else None
+    # Cached markers: AIOStreams uses ⚡/⏳ or "⚡Ready"/"❌ Not Ready", Torrentio-style addons use [RD+] / [RD download].
+    cached = False if re.search(r'uncached|not ready|❌|⏳|download\]', text) else True if re.search(r'⚡|\+\]|\bcached\b|\binstant\b', text) else None
     editions = every(text, CUTS)
     return {'res': first(text, RES), 'hdr': every(text, HDR), 'audio': every(text, AUDIO), 'source': first(text, SOURCE),
             'sizeGb': gb, 'mbps': round(gb * 8000 / (ctx['runtime'] * 60), 1) if gb and ctx['runtime'] else None,
@@ -204,6 +204,8 @@ def select(raw, ctx, p):
     key = lambda x: (x['url'] is not None, x['badges']['match'] == 'ok', cached[x['badges']['cached']],
                      *((x['cut'] == want, x['cut'] == 'theatrical') if want else ()),
                      (x['badges']['mbps'] or -1) if p.get('prefer') == 'highest_bitrate' else 0)
+    if p.get('ready_only'):  # never start a copy the debrid service would have to fetch first; unmarked addons can't tell, so they stay
+        out = [x for x in out if x['badges']['cached'] is not False]
     ranked = sorted(out, key=key, reverse=True)
     relaxed = []
     for step in [None] + [k for k in RELAX if p.get(k)]:

@@ -528,6 +528,8 @@ class Hub:
         if name not in self.presets:
             raise HttpError(400, f'preset must be one of {", ".join(self.presets)}')
         p = dict(self.presets[name])
+        if qs.get('ready') == '1':
+            p['ready_only'] = True
         if 'max_mbps' in qs:
             try:
                 p['max_mbps'] = float(qs['max_mbps'])
@@ -560,7 +562,7 @@ class Hub:
         streams, relaxed = self.ranked(type_, id_, s, e, p, meta)
         best = next((x for x in streams if x['url']), None)
         if not best:
-            raise HttpError(404, 'no playable stream')
+            raise HttpError(404, 'no copy is ready to stream right now' if p.get('ready_only') else 'no playable stream')
         best['source']['relaxed'] = relaxed
         return best
 

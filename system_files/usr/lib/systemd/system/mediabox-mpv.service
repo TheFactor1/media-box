@@ -12,9 +12,13 @@ StandardInput=tty
 # mpv reads keys only with both ends on the terminal.
 StandardOutput=tty
 StandardError=journal
+TTYReset=yes
+TTYVTDisallocate=yes
 Environment=HOME=/var/lib/media
 # A stopped compositor can leave the keyboard switched off.
 ExecStartPre=-/usr/bin/kbd_mode -u -C /dev/tty1
+# Between the interface and the film the screen is the text console: keep it blank.
+ExecStartPre=-/usr/bin/sh -c 'printf "\\033[2J\\033[H\\033[?25l" > /dev/tty1'
 # The film URL arrives over the socket from the bridge, so it never appears on a command line.
 ExecStart=/usr/bin/mpv --config=no --vo=gpu-next --gpu-context=drm --hwdec=auto-safe --fs --ao=alsa --audio-device=alsa/sysdefault --idle=once --force-window=immediate --ytdl=no --really-quiet --input-terminal=yes --terminal --input-conf=/usr/lib/mediabox/ui/mpv-input.conf --input-ipc-server=/run/mediabox/mpv.sock
 Restart=no

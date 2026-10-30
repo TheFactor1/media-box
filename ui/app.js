@@ -75,6 +75,7 @@ function bound(key) {
     case 'marketKick': return S.streams ? `Market report · ${S.streams.length} ${S.streams.length === 1 ? 'copy' : 'copies'} found` : 'Market report';
     case 'facts': return (it.genres || []).join(', ');
     case 'cast': return S.cast?.length ? 'Featuring ' + S.cast.slice(0, 5).map((c) => c.name).join(', ') : '';
+    case 'sourceNow': return S.sources?.length ? 'Now using: ' + S.sources.map((a) => hostName(a.host)).join(', ') : 'No source set yet';
     case 'copy': return S.streams === null ? 'Looking…' : top ? badgeLine(top.badges) || (top.source?.name ?? 'Available') : 'No copy found right now';
     case 'copyNote': return top?.badges?.mbps ? `${Math.round(top.badges.mbps)} Mb/s, best match for your speed` : '';
     case 'query': return S.query;
@@ -187,14 +188,14 @@ function widget(e) {
     }
     case 'grid': return S.grid.length ? h('div', { class: 'gridw' }, S.grid.map((it, i) => card(it, { key: 'grid', i, nearEnd: moreGrid }))) : h('div', { class: 'empty' }, S.busy ? '' : EMPTY[S.page] || 'Nothing here yet.');
     case 'seasons': return h('div', { style: { display: 'flex', gap: '10px', height: '100%', overflow: 'hidden' } }, seasonsOf(S.full).map((n) => { const on = n === S.season; return focusable(h('div', { class: 'btn', style: { flex: 'none', width: '170px', height: '60px', fontSize: '24px', background: on ? '#1a1714' : '#ddd6c7', color: on ? '#f4efe4' : '#1a1714' } }, `Season ${n}`), 'season:' + n, () => { S.season = n; draw(); }); }));
-    case 'episodes': { const list = (S.full?.videos || []).filter((v) => v.s === S.season); return h('div', { class: 'scrolly' }, list.map((v, i) => { const nxt = S.full.nextEpisode; const here = nxt && nxt.s === v.s && nxt.e === v.e; return line(`ep:${v.s}:${v.e}`, () => play({ s: v.s, e: v.e }), h('b', {}, v.e), h('span', {}, v.title || `Episode ${v.e}`), h('em', {}, here ? (leftOf(S.full) || 'Next up') : '')); })); }
-    case 'board': return h('div', { class: 'scrolly', style: { borderTop: '2px solid #1a1714' } }, (S.streams || []).filter((s) => s.playable).slice(0, 30).map((c, i) => { const r = line('copy:' + i, () => play({ ...(S.ep || {}), version: i }), h('b', {}, i + 1), h('span', {}, badgeLine(c.badges) || c.source?.name || 'Copy'), h('i', {}, c.badges?.sizeGb ? c.badges.sizeGb + ' GB' : ''), h('i', {}, c.badges?.mbps ? Math.round(c.badges.mbps * 10) / 10 + ' Mb/s' : ''), h('em', { class: 'note' }, i === 0 ? 'Best match' : '')); r.classList.add('set'); r.style.animationDelay = Math.min(i, 8) * 40 + 'ms'; if (i === 0) r.classList.add('best'); return r; }), S.streams && !S.streams.length ? h('div', { class: 'empty' }, 'No copies found right now.') : null);
+    case 'episodes': { setTimeout(wireEpisodes); const list = (S.full?.videos || []).filter((v) => v.s === S.season); return h('div', { class: 'scrolly' }, list.map((v, i) => { const nxt = S.full.nextEpisode; const here = nxt && nxt.s === v.s && nxt.e === v.e; return line(`ep:${v.s}:${v.e}`, () => play({ s: v.s, e: v.e }), h('b', {}, v.e), h('span', {}, v.title || `Episode ${v.e}`), h('em', {}, here ? (leftOf(S.full) || 'Next up') : '')); })); }
+    case 'board': return h('div', { class: 'scrolly', style: { borderTop: '2px solid #1a1714' } }, (S.streams || []).filter((s) => s.playable).slice(0, 30).map((c, i) => { const r = line('copy:' + i, () => play({ ...(S.ep || {}), version: i }), h('b', {}, i + 1), h('span', {}, badgeLine(c.badges) || c.source?.name || 'Copy'), h('i', {}, c.badges?.sizeGb ? c.badges.sizeGb + ' GB' : ''), h('i', {}, c.badges?.mbps ? Math.round(c.badges.mbps * 10) / 10 + ' Mb/s' : ''), h('em', { class: 'note' }, i === 0 ? 'Best match' : c.badges?.cached === false ? 'Not ready' : c.badges?.cached ? 'Ready' : '')); r.classList.add('set'); r.style.animationDelay = Math.min(i, 8) * 40 + 'ms'; if (i === 0) r.classList.add('best'); return r; }), S.streams && !S.streams.length ? h('div', { class: 'empty' }, 'No copies found right now.') : null);
     case 'keys': return keyboard('search', (t) => { S.query = t; refreshBound(); searchSoon(); }, () => S.query, false);
     case 'results': return h('div', { class: 'scrolly' }, S.results.map((it) => line('res:' + it.id, () => openTitle(it), h('span', { style: { fontFamily: 'var(--display)', fontWeight: 700 } }, it.title), h('em', {}, [it.year, it.type === 'series' ? 'Series' : 'Film'].filter(Boolean).join(' · ')))), !S.results.length && S.query.trim() && !S.busy ? h('div', { class: 'empty' }, 'Nothing matches that yet.') : null);
     case 'settings': return settingsBody();
     case 'rowsmanager': return managerBody();
     case 'newlist': return newListBody();
-    case 'qr': return S.setup?.svg ? h('img', { class: 'qr', src: S.setup.svg, alt: 'QR code for the setup page' }) : null;
+    case 'qr': return (S.page === 'source' ? S.sourceQr : S.setup)?.svg ? h('img', { class: 'qr', src: (S.page === 'source' ? S.sourceQr : S.setup).svg, alt: 'QR code for the setup page' }) : null;
     default: return null;
   }
 }
@@ -209,10 +210,20 @@ function keyboard(key, set, get, small) {
     focusable(h('div', { class: 'key wide' }, 'Space'), key + ':space', () => add(' ')), focusable(h('div', { class: 'key wide' }, 'Delete'), key + ':del', () => set(get().slice(0, -1))));
 }
 function settingsBody() {
-  const speed = S.presets.length ? (S.prefs.preset || S.presets.default) : '';
+  const speed = S.prefs.preset || S.presets.default || '';
   return h('div', { class: 'scrolly' },
+    line('set:source', () => go('source'), h('span', {}, 'Stream source'), h('em', {}, S.sources?.length ? S.sources.map((a) => hostName(a.host) + (a.reachable ? '' : ' (not answering)')).join(', ') : 'Add AIOStreams')),
+    line('set:ready', () => setPref('readyOnly', S.prefs.readyOnly === false), h('span', {}, 'Only play copies ready to stream'), h('em', {}, S.prefs.readyOnly === false ? 'Off' : 'On')),
+    line('set:choose', () => setPref('choose', !S.prefs.choose), h('span', {}, 'When I press Play'), h('em', {}, S.prefs.choose ? 'Let me choose the copy' : 'Play the best copy')),
     line('set:speed', () => { const names = Object.keys(S.presets.presets || {}); if (!names.length) return; const i = names.indexOf(speed); S.prefs.preset = names[(i + 1) % names.length]; api('/prefs', { method: 'POST', body: { preset: S.prefs.preset } }).catch(() => notice("Couldn't save that.")); draw(); }, h('span', {}, 'Connection speed'), h('em', {}, speedName(speed))),
     line('set:privacy', () => {}, h('span', {}, 'Privacy'), h('em', {}, 'Nothing leaves this box')));
+}
+const hostName = (host) => (/^(127\.|localhost)/.test(host) ? 'Built in to this box' : host);
+function setPref(name, value) {
+  S.prefs[name] = value;
+  S.streams = null;
+  api('/prefs', { method: 'POST', body: { [name]: value } }).catch(() => notice("Couldn't save that."));
+  draw();
 }
 function speedName(s) { return { slow: 'Slow', standard: 'Standard', fast: 'Fast', max: 'Fastest' }[s] || s || ''; }
 function managerBody() {
@@ -329,11 +340,26 @@ async function loadPage(page) {
     const [films, shows] = await Promise.all([load(first('movie')), load(first('series'))]);
     S.sections = { r1: films, r2: shows };
   } else if (page === 'lists') { S.shelves = (await api('shelves')).shelves; S.lists = (await api('collections')).collections; }
-  else if (page === 'settings') { S.presets = await api('presets'); S.prefs = await api('/prefs'); }
+  else if (page === 'settings') { S.presets = await api('presets'); S.prefs = await api('/prefs'); S.sources = streamSources(await api('health')); }
+  else if (page === 'source') { S.sourceQr = await api('/source-qr', { method: 'POST' }); S.sources = streamSources(await api('health')); watchSource(S.sources.map((a) => a.host).join()); }
   else if (page === 'film' || page === 'show') await loadTitle();
   else if (page === 'versions') { if (!S.streams) await loadStreams(); }
 }
 const pickItems = (d) => d.items || d.metas || [];
+const streamSources = (h) => (h.addons || []).filter((a) => a.kind === 'stream');
+// The phone page does the work; when the source changes, say so and return to Settings.
+async function watchSource(before) {
+  if (S.page !== 'source') return;
+  const now = streamSources(await api('health').catch(() => ({ addons: S.sources })));
+  if (S.page !== 'source') return;
+  if (now.map((a) => a.host).join() !== before) {
+    S.sources = now;
+    S.history.pop();
+    notice('Now using ' + now.map((a) => hostName(a.host)).join(', '));
+    return go('settings', { back: true, key: 'set:source' });
+  }
+  setTimeout(() => watchSource(before), 4000);
+}
 async function firstFilledRow() {
   for (const s of S.shelves.filter((x) => !x.hidden)) { if (s.id === S.row) continue; await loadRow(s.id); if (S.rowItems.length) { S.row = s.id; return; } }
 }
@@ -379,8 +405,14 @@ async function loadStreams() {
   const it = S.full || S.item;
   const ep = S.ep || (it.type === 'series' ? it.nextEpisode || firstEpisode(it) : null);
   const path = `browse/streams/${q(it.type)}/${q(it.id)}` + (ep ? `/${ep.s}/${ep.e}` : '');
-  const preset = S.prefs.preset ? `?preset=${q(S.prefs.preset)}` : '';
-  S.streams = (await api(path + preset)).streams || [];
+  S.streams = (await api(path)).streams || [];
+}
+function wireEpisodes() {
+  document.querySelectorAll('[data-w="episodes"] .line').forEach((n) => {
+    if (n.dataset.wired) return;
+    n.dataset.wired = '1';
+    n.addEventListener('focus', () => { const [, s, e] = n.dataset.key.split(':'); S.ep = { s: +s, e: +e }; refreshBound(); });
+  });
 }
 function firstEpisode(it) { const v = (it.videos || [])[0]; return v ? { s: v.s, e: v.e } : null; }
 async function go(page, opts = {}) {
@@ -442,16 +474,18 @@ async function switchRow(id) {
 function press(to) {
   if (to === 'play') return S.page === 'home' ? playItem(S.item) : play(S.ep || {});
   if (to === 'title') return S.item && openTitle(S.item);
-  if (to === 'versions') { S.streams = S.streams || null; return go('versions'); }
+  if (to === 'versions') { S.streams = null; return go('versions'); }
+  if (to === 'back') return back();
   if (to === 'keep') return toggleKeep();
   if (to === 'addlist') return addToList();
   if (to) tabTo(to);
 }
 function playItem(it) { if (!it) return; const n = it.nextEpisode; return play(n ? { s: n.s, e: n.e } : {}); }
 async function play(opts) {
-  const it = S.full || S.item;
+  let it = S.full || S.item;
   if (!it || S.playing) return;
   const ep = opts.s ? { s: opts.s, e: opts.e } : it.type === 'series' ? it.nextEpisode || firstEpisode(it) : null;
+  if (S.prefs.choose && !Number.isInteger(opts.version) && S.page !== 'versions') { S.ep = ep; S.streams = null; return go('versions'); }
   S.playing = true;
   $('#press').hidden = false;
   try {

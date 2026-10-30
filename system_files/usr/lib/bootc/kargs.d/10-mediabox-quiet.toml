@@ -1,0 +1,2 @@
+# No boot messages or blinking cursor on the TV, at boot or between the interface and a film.
+kargs = ["quiet", "loglevel=3", "vt.global_cursor_default=0", "systemd.show_status=false", "rd.udev.log_level=3"]
