@@ -20,6 +20,9 @@ Environment=HOME=/var/lib/media
 ExecStartPre=/usr/libexec/mediabox/kodi-seed
 # Without this Kodi tries PulseAudio, then PipeWire, before ALSA (PlatformLinux.cpp).
 ExecStart=/usr/bin/kodi --windowing=gbm --audio-backend=alsa
+# PAMName moves kodi.bin into the login session's cgroup, so stopping the service doesn't reach a hung one,
+# which would then keep the display from the next Kodi.
+ExecStopPost=-/usr/bin/pkill -KILL -x kodi.bin
 Restart=always
 RestartSec=2
 

@@ -25,6 +25,17 @@ dnf5 install -y kodi libcec podman \
   intel-media-driver libva-intel-media-driver mesa-dri-drivers mesa-va-drivers-freeworld \
   plymouth plymouth-system-theme alsa-utils firewalld
 
+# Fedora's libavcodec-free has no H.264, HEVC or E-AC-3, so Kodi plays those with sound and no picture (and VA-API
+# needs these decoders too). RPM Fusion's full library replaces it; the check stops a build that silently loses them.
+dnf5 install -y --allowerasing ffmpeg-libs
+python3 - <<'PY'
+import ctypes, ctypes.util
+lib = ctypes.CDLL(ctypes.util.find_library('avcodec') or 'libavcodec.so')
+lib.avcodec_find_decoder_by_name.restype = ctypes.c_void_p
+missing = [n for n in ('h264', 'hevc', 'av1', 'vp9', 'aac', 'ac3', 'eac3', 'truehd', 'dca') if not lib.avcodec_find_decoder_by_name(n.encode())]
+assert not missing, f'libavcodec lacks decoders: {missing}'
+PY
+
 chmod +x /usr/libexec/mediabox/kodi-seed
 
 # Kodi talks to ALSA directly; keep the media user's session from starting PipeWire on the HDMI device.
