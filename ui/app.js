@@ -88,8 +88,9 @@ function bound(key) {
 function artOf(it) { return it?.backdrop || it?.poster || null; }
 
 // ---- Elements --------------------------------------------------------------------------------
+function clearPencil() { document.querySelectorAll('.pencil').forEach((n) => n.remove()); }
 function pencil(target) {
-  document.querySelectorAll('.pencil').forEach((n) => n.remove());
+  clearPencil();
   const ns = 'http://www.w3.org/2000/svg';
   const svg = document.createElementNS(ns, 'svg');
   svg.setAttribute('class', 'pencil'); svg.setAttribute('aria-hidden', 'true');
@@ -103,7 +104,7 @@ function focusable(el, key, onpress, target) {
   el.tabIndex = 0;
   el.dataset.key = key;
   el.addEventListener('click', onpress);
-  el.addEventListener('focus', () => { pencil(target || el); revealIn(el); });
+  el.addEventListener('focus', () => { if (el.classList.contains('tab')) clearPencil(); else pencil(target || el); revealIn(el); });
   return el;
 }
 // Scrollers keep what has focus in view, one whole item at a time.
