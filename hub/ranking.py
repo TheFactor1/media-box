@@ -2,13 +2,17 @@
 import re
 import unicodedata
 
-RES = [('2160p', r'2160p|\b4k\b|\buhd\b'), ('1080p', r'1080p'), ('720p', r'720p'), ('480p', r'480p')]
-RES_ORDER = {'480p': 480, '720p': 720, '1080p': 1080, '2160p': 2160}
+# Numbers first, so a release named 1080p wins over a vaguer label. AIOStreams labels: 4K UHD, QHD, FHD, HD, SD.
+RES = [('2160p', r'2160p|\b4k\b|\buhd\b'), ('1440p', r'1440p'), ('1080p', r'1080[pi]'), ('720p', r'720p'), ('576p', r'576[pi]'),
+       ('480p', r'480[pi]'), ('360p', r'360p'), ('1440p', r'\bqhd\b|\b2k\b'), ('1080p', r'\bfhd\b|full.?hd'), ('720p', r'\bhd\b'), ('480p', r'\bsd\b|\bdvd(rip)?\b')]
+RES_ORDER = {'360p': 360, '480p': 480, '576p': 576, '720p': 720, '1080p': 1080, '1440p': 1440, '2160p': 2160}
 HDR = [('DV', r'\bdv\b|dolby.?vision|\bdovi\b'), ('HDR10+', r'hdr10\+|hdr10plus'),
        ('HDR10', r'hdr10(?!\+|plus)|\bhdr\b'), ('HLG', r'\bhlg\b')]
 AUDIO = [('TrueHD', r'truehd'), ('Atmos', r'atmos'), ('DTS-HD', r'dts-?hd'), ('DTS:X', r'dts[:. -]?x\b'),
-         ('DD+', r'dd\+|\bddp|e-?ac-?3'), ('AAC', r'\baac\b')]
-SOURCE = [('remux', r'remux'), ('web-dl', r'web-?dl|web-?rip|\bweb\b'), ('bluray', r'blu-?ray|bdrip|brrip')]
+         ('DD+', r'dd\+|\bddp|e-?ac-?3'), ('DTS', r'\bdts\b(?!-?hd)'), ('DD', r'\bdd\b(?!\+)|\bac-?3\b|dolby.?digital'), ('AAC', r'\baac\b'), ('FLAC', r'\bflac\b')]
+SOURCE = [('remux', r'remux'), ('web-dl', r'web-?dl|web-?rip|\bweb\b'), ('bluray', r'blu-?ray|bdrip|brrip'), ('hdrip', r'hd-?rip'),
+          ('hdtv', r'hdtv'), ('dvd', r'dvd-?rip|\bdvd\b'), ('cam', r'\bcam(rip)?\b|\bhd-?ts\b|\btelesync\b|\bhd-?cam\b')]
+CODEC = [('AV1', r'\bav1\b'), ('HEVC', r'hevc|[hx]\.?265'), ('AVC', r'\bavc\b|[hx]\.?264'), ('XviD', r'xvid|divx')]
 # First match is the cut; every match goes into `editions`.
 CUTS = [('directors', r"director'?s?[ ._-]*cut"), ('extended', r'\bextended\b'), ('unrated', r'\bunrated\b|\buncut\b'),
         ('final', r'\bfinal[ ._-]*cut\b'), ('imax', r'\bimax\b'), ('criterion', r'\bcriterion\b'),
@@ -165,7 +169,7 @@ def badges(stream, ctx):
     # Cached markers: AIOStreams uses ⚡/⏳ or "⚡Ready"/"❌ Not Ready", Torrentio-style addons use [RD+] / [RD download].
     cached = False if re.search(r'uncached|not ready|❌|⏳|download\]', text) else True if re.search(r'⚡|\+\]|\bcached\b|\binstant\b', text) else None
     editions = every(text, CUTS)
-    return {'res': first(text, RES), 'hdr': every(text, HDR), 'audio': every(text, AUDIO), 'source': first(text, SOURCE),
+    return {'res': first(text, RES), 'hdr': every(text, HDR), 'audio': every(text, AUDIO), 'source': first(text, SOURCE), 'codec': first(text, CODEC),
             'sizeGb': gb, 'mbps': round(gb * 8000 / (ctx['runtime'] * 60), 1) if gb and ctx['runtime'] else None,
             'cached': cached, 'cut': editions[0] if editions else 'theatrical', 'editions': editions}
 

@@ -122,6 +122,15 @@ button, input, select, textarea { font: inherit; }
 .sheet-in { position: absolute; left: 0; top: -130px; width: 1920px; height: 1080px; }
 .sheet-shade { position: absolute; inset: 0; background: #1a1714; opacity: 0; pointer-events: none; }
 
+.seek { position: relative; width: 100%; height: 100%; cursor: pointer; }
+.seek-track { position: absolute; left: 0; right: 0; top: 13px; height: 8px; background: var(--rule); }
+.seek-fill { position: absolute; left: 0; top: 13px; height: 8px; background: var(--red); display: block; }
+.seek-tick { position: absolute; top: 9px; width: 2px; height: 16px; background: var(--ink); }
+.pmenu { height: 100%; padding: 28px; box-sizing: border-box; background: var(--paper); border-top: 4px double var(--ink); overflow: hidden; }
+.pmenu .line { white-space: nowrap; }
+.tucked { opacity: 0; pointer-events: none; transition: opacity .35s ease; }
+.el { transition: opacity .25s ease; }
+
 /* Editing */
 .editing .el { cursor: move; touch-action: none; }
 .editing .el:hover { outline: 2px dashed var(--blue); outline-offset: 0; }
@@ -197,7 +206,7 @@ const TITLES = [
 const EPISODES = ['Baseline', 'Contour', 'Benchmark', 'Triangulation', 'Datum', 'Fault Line', 'Tidewater', 'Meridian'];
 const COPIES = [['4K · Dolby Vision · Atmos', '36.4 GB', '38 Mb/s', 'Best match'], ['4K · HDR10 · Atmos', '58.1 GB', '61 Mb/s', 'Above your speed'], ['4K · HDR10 · 5.1', '19.8 GB', '21 Mb/s', ''], ['1080p · Atmos', '14.2 GB', '15 Mb/s', ''], ['1080p · 5.1', '8.1 GB', '8.5 Mb/s', ''], ['720p · Stereo', '2.0 GB', '2.1 Mb/s', '']];
 const SETTINGS = [['Connection speed', 'Fast'], ['Audio', 'Send to my receiver'], ['Subtitles', "Film's default"], ['Spoken language', 'Original'], ['Home rows', 'Choose and order'], ['Set up again', ''], ['Privacy', 'Nothing leaves this box']];
-const PAGE_NAMES = { home: 'Home', continue: 'Continue', next: 'Next up', new: 'New', movies: 'Movies', shows: 'Shows', browse: 'Browse', search: 'Search', settings: 'Settings', lists: 'Lists', film: 'Film page', show: 'Show page', versions: 'Other versions', setup: 'First run', masthead: 'Masthead' };
+const PAGE_NAMES = { home: 'Home', continue: 'Continue', next: 'Next up', new: 'New', movies: 'Movies', shows: 'Shows', browse: 'Browse', search: 'Search', settings: 'Settings', lists: 'Lists', film: 'Film page', show: 'Show page', versions: 'Other versions', setup: 'First run', player: 'Player', masthead: 'Masthead' };
 
 const caps = { spacing: '.1em', transform: 'uppercase' };
 const T = (id, label, x, y, w, h, size, text, o = {}) => ({ id, label, kind: 'text', x, y, w, h, size, text, font: 'body', weight: 400, color: '#1a1714', ...o });
@@ -261,6 +270,27 @@ const DEFAULTS = {
     B('addlist', 'Add to list button', 1220, 776, 300, 78, 'Add to list', 'addlist', false, { size: 30 }),
   ],
   versions: [T('kicker', 'Kicker', 96, 170, 1000, 30, 22, 'Market report · 14 copies found', KICK), T('headline', 'Headline', 96, 205, 1500, 90, 64, '', { font: 'display', weight: 900, bind: 'versionsTitle', nowrap: true }), W('board', 'Ranked copies', 'board', 96, 318, 1728, 688)],
+  // The film fills the screen; the controls are a sheet of paper that rises from the bottom when wanted.
+  player: [
+    P('film', 'Film (example frame)', 0, 0, 1920, 1080, '#20303c', { bind: 'color' }),
+    B('skip', 'Skip intro button', 1560, 720, 264, 74, 'Skip intro', 'skip', true),
+    R('sheet', 'Controls sheet', 0, 816, 1920, 264, '#f4efe4'),
+    R('sheetrule1', 'Sheet rule (top)', 96, 836, 1728, 2, '#1a1714'),
+    R('sheetrule2', 'Sheet rule (bottom)', 96, 842, 1728, 2, '#1a1714'),
+    T('title', 'Title', 96, 856, 1100, 56, 44, '', { font: 'display', weight: 900, bind: 'title', nowrap: true }),
+    T('kicker', 'Episode or year', 1220, 870, 604, 30, 22, '', { ...CRED, bind: 'playerKick', align: 'right' }),
+    T('now', 'Time so far', 96, 932, 110, 30, 24, '0:00', { weight: 600, live: 'now' }),
+    W('seek', 'Progress bar', 'seek', 216, 930, 1488, 34),
+    T('left', 'Time left', 1714, 932, 110, 30, 24, '', { weight: 600, align: 'right', live: 'left' }),
+    B('pp', 'Pause button', 96, 984, 170, 66, 'Pause', 'pp', true, { size: 26, live: 'pp' }),
+    B('back10', 'Back 10 seconds', 278, 984, 110, 66, '− 10', 'back10', false, { size: 26 }),
+    B('fwd30', 'Forward 30 seconds', 400, 984, 110, 66, '+ 30', 'fwd30', false, { size: 26 }),
+    B('audio', 'Audio button', 950, 984, 150, 66, 'Audio', 'menu:audio', false, { size: 26 }),
+    B('subs', 'Subtitles button', 1112, 984, 190, 66, 'Subtitles', 'menu:subs', false, { size: 26 }),
+    B('copy', 'Other versions button', 1314, 984, 250, 66, 'Other versions', 'versions', false, { size: 26 }),
+    B('stop', 'Stop button', 1576, 984, 248, 66, 'Back to the paper', 'stop', false, { size: 24 }),
+    W('menu', 'Audio and subtitles menu', 'playermenu', 1180, 170, 644, 620),
+  ],
   setup: [T('kick', 'Kicker', 800, 330, 900, 30, 22, 'First run', KICK), T('title', 'Headline', 800, 370, 1000, 120, 96, 'Set up this box', { font: 'display', weight: 900 }), T('body', 'Instructions', 800, 510, 960, 140, 36, 'Scan the code with your phone. You need your debrid key. Nothing is typed on the TV.', { color: '#3a342d' }), T('link', 'Link', 800, 670, 960, 40, 26, 'http://192.168.1.20:8097/setup', { font: 'body', color: '#4f4840' }), W('qr', 'QR code', 'qr', 160, 260, 560, 560), B('done', 'Prototype: finish setup', 800, 760, 360, 78, 'Prototype: finish', 'home', true, { size: 28 })],
 };
 
@@ -327,7 +357,7 @@ function snapshot(p) { undoStack.push([p, JSON.stringify(els(p))]); if (undoStac
 
 function bound(key) {
   const i = item;
-  return { kicker: i.kicker, title: i.title, credits: `${i.year} · ${i.genre} · ${i.note}`, over: i.over, filmkick: `${i.type === 'show' ? 'Series' : 'Film'} · ${i.year} · ${i.note}`, versionsTitle: `Every copy of ${i.title}, ranked`, color: i.color }[key];
+  return { playerKick: `${i.type === 'show' ? 'Season 2, Episode 4' : i.year} · ${i.genre}`, kicker: i.kicker, title: i.title, credits: `${i.year} · ${i.genre} · ${i.note}`, over: i.over, filmkick: `${i.type === 'show' ? 'Series' : 'Film'} · ${i.year} · ${i.note}`, versionsTitle: `Every copy of ${i.title}, ranked`, color: i.color }[key];
 }
 function listFor(name) {
   return { all: TITLES, prog: TITLES.filter((t) => t.prog), fresh: TITLES.filter((t) => t.fresh), films: TITLES.filter((t) => t.type === 'film'), shows: TITLES.filter((t) => t.type === 'show') }[name] || TITLES;
@@ -436,6 +466,17 @@ function widget(e) {
     case 'board': return h('div', { class: 'scrolly', style: { borderTop: '2px solid #1a1714' } }, COPIES.map((c, i) => { const r = h('div', { class: 'line set' + (i === 0 ? ' best' : ''), style: { animationDelay: (COPIES.length - i) * 60 + 'ms' }, onmouseenter: () => pencil(r), onclick: () => doPlay() }, h('b', {}, i + 1), h('span', {}, c[0]), h('i', { style: { fontStyle: 'normal', width: '150px', textAlign: 'right' } }, c[1]), h('i', { style: { fontStyle: 'normal', width: '150px', textAlign: 'right' } }, c[2]), h('em', { style: { width: '210px' } }, c[3])); return r; }));
     case 'keys': return h('div', { class: 'keys' }, [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'].map((k) => h('div', { class: 'key', onclick: () => { query += k.toLowerCase(); draw(); } }, k)), h('div', { class: 'key', style: { gridColumn: 'span 2', fontSize: '24px' }, onclick: () => { query = query.slice(0, -1); draw(); } }, 'Delete'));
     case 'results': { const q = query.trim().toLowerCase(); const hits = TITLES.filter((t) => t.title.toLowerCase().includes(q)); return h('div', { class: 'scrolly' }, (hits.length ? hits : []).map((t) => { const r = h('div', { class: 'line', onmouseenter: () => pencil(r), onclick: () => openTitle(t) }, h('span', { style: { fontFamily: 'var(--display)', fontWeight: 700 } }, t.title), h('em', {}, t.type === 'show' ? 'Series' : 'Film')); return r; }), hits.length ? null : h('div', { style: { fontStyle: 'italic', fontSize: '32px', padding: '20px' } }, 'No example titles match. Try "salt" or "the".')); }
+    case 'seek': {
+      const t = h('div', { class: 'seek', role: 'slider', 'aria-label': 'Progress', onclick: (ev) => { if (editing) return; const r = t.getBoundingClientRect(); player.t = Math.round((ev.clientX - r.left) / r.width * player.d); paintPlayer(); } },
+        h('div', { class: 'seek-track' }), h('i', { class: 'seek-fill' }), [.08, .31, .55, .82].map((c) => h('b', { class: 'seek-tick', style: { left: c * 100 + '%' } })));
+      return t;
+    }
+    case 'playermenu': {
+      if (!player.menu && !editing) return null;
+      const kind = player.menu || 'audio';
+      const list = kind === 'audio' ? ['English · Atmos', 'English · 5.1', 'Commentary', 'French · 5.1'] : ['Off', 'English', 'English (for the hard of hearing)', 'Spanish'];
+      return h('div', { class: 'pmenu' }, h('div', { class: 'head' }, kind === 'audio' ? 'Audio' : 'Subtitles'), list.map((x, i) => { const r = h('div', { class: 'line' + (player[kind] === i ? ' best' : ''), onmouseenter: () => pencil(r), onclick: () => { player[kind] = i; player.menu = null; draw(); } }, h('span', {}, x)); return r; }));
+    }
     case 'settings': return h('div', { class: 'scrolly' }, SETTINGS.map(([a, b]) => { const r = h('div', { class: 'line', onmouseenter: () => pencil(r) }, h('span', {}, a), h('em', {}, b)); return r; }));
     case 'qr': { const n = 21; const cells = []; for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) { const box = (a, b) => a < 7 && b < 7 && (a === 0 || a === 6 || b === 0 || b === 6 || (a > 1 && a < 5 && b > 1 && b < 5)); const on = box(x, y) || box(n - 1 - x, y) || box(x, n - 1 - y) || (x > 7 && y > 7 && (x * 7 + y * 13) % 3 === 0) || (x > 7 && y < 7 && (x + y) % 2 === 0) || (y > 7 && x < 7 && (x * y) % 2 === 0); cells.push(h('i', { style: { background: on ? '#000' : '#fff' } })); } return h('div', { class: 'qr', style: { width: '100%', height: '100%', gridAutoRows: '1fr' } }, cells); }
   }
@@ -534,6 +575,26 @@ function addToList() {
   const box = h('div', { id: 'picker' }, h('div', { class: 'pick' }, h('div', { class: 'head' }, 'Add ' + item.title + ' to'), manual.map((r) => h('div', { class: 'line', onclick: () => { if (!r.items.includes(item.id)) r.items.push(item.id); savePrefs(); close(); } }, h('span', {}, r.title), h('em', {}, r.items.includes(item.id) ? 'Already here' : r.items.length + ' titles'))), h('div', { class: 'line', onclick: () => { close(); go('lists'); } }, h('span', {}, '+ New list')), h('div', { class: 'line', onclick: close }, h('span', {}, 'Cancel'))));
   $('#stage').append(box);
 }
+// The prototype's pretend film: enough to feel the controls, with no video.
+const player = { t: 1311, d: 6425, on: true, menu: null, audio: 0, subs: 1, skipped: false, idle: 0 };
+const clockOf = (x) => { const h_ = Math.floor(x / 3600), m = Math.floor(x / 60) % 60, s_ = x % 60; return (h_ ? `${h_}:${String(m).padStart(2, '0')}` : m) + ':' + String(s_).padStart(2, '0'); };
+function paintPlayer() {
+  if (page !== 'player') return;
+  const set = (id, text) => { const n = document.querySelector(`#stage [data-id="${id}"][data-owner="player"]`); if (n) n.textContent = text; };
+  set('now', clockOf(player.t));
+  set('left', '-' + clockOf(player.d - player.t));
+  if (!editing) { const pp = document.querySelector('#stage [data-id="pp"][data-owner="player"]'); if (pp) { pp.firstChild.textContent = player.on ? 'Pause' : 'Play'; } }
+  const f = document.querySelector('#stage .seek-fill');
+  if (f) f.style.width = player.t / player.d * 100 + '%';
+  const showing = editing || !player.on || !!player.menu || Date.now() - player.idle < 4000;
+  document.querySelectorAll('#stage .el[data-owner="player"]').forEach((n) => {
+    if (n.dataset.id === 'film') return;
+    n.classList.toggle('tucked', !showing && n.dataset.id !== 'skip');
+    if (n.dataset.id === 'skip') n.hidden = player.skipped && !editing;
+  });
+}
+setInterval(() => { if (page === 'player' && player.on && !editing) { player.t = Math.min(player.d, player.t + 1); paintPlayer(); } }, 1000);
+addEventListener('pointermove', () => { if (page === 'player') { player.idle = Date.now(); paintPlayer(); } });
 function fontOf(e) { return e.font === 'display' ? 'var(--display)' : e.font === 'ui' ? 'var(--ui)' : 'var(--body)'; }
 
 function render(e, owner) {
@@ -570,7 +631,7 @@ function draw() {
   s.textContent = '';
   s.classList.toggle('editing', editing);
   s.append(h('div', { id: 'gridlines' }));
-  if (page !== 'setup') for (const e of els('masthead')) s.append(render(e, 'masthead'));
+  if (page !== 'setup' && page !== 'player') for (const e of els('masthead')) s.append(render(e, 'masthead'));
   for (const e of els(page)) { const n = render(e, page); if (!editing) n.classList.add('fade'); s.append(n); }
   s.append(h('div', { id: 'lights', onclick: comeBack }));
   $('#where').textContent = PAGE_NAMES[page];
@@ -580,6 +641,7 @@ function draw() {
   fit();
   fitAll();
   listCues();
+  paintPlayer();
 }
 function fit() {
   const v = $('#view').getBoundingClientRect();
@@ -634,15 +696,56 @@ function tabTo(p) {
 function act(to) {
   if (editing || !to) return;
   if (to === 'play') return doPlay();
+  if (page === 'player') {
+    player.idle = Date.now();
+    if (to === 'pp') player.on = !player.on;
+    else if (to === 'back10') player.t = Math.max(0, player.t - 10);
+    else if (to === 'fwd30') player.t = Math.min(player.d, player.t + 30);
+    else if (to === 'skip') { player.skipped = true; player.t += 75; }
+    else if (to.startsWith('menu:')) { const k = to.slice(5); player.menu = player.menu === k ? null : k; return draw(); }
+    else if (to === 'stop') return leavePlayer();
+    else if (to === 'versions') return go('versions');
+    return paintPlayer();
+  }
   if (to === 'title') return openTitle(item);
   if (to === 'addlist') return addToList();
   go(to);
 }
 function doPlay() {
   const s = $('#stage');
-  const press = h('div', { id: 'press' }, h('div', { class: 'rollers' }, h('div', { class: 'sheets' }), h('i', { class: 'roller', style: { top: 0 } }), h('i', { class: 'roller t2' })), h('div', { style: { font: '900 46px var(--display)' } }, 'Finding the best copy'));
-  s.append(press);
-  setTimeout(() => { const l = $('#lights'); l.textContent = ''; l.append(h('div', {}, item.title, h('small', {}, 'The film would play here. Click to come back.'))); l.classList.add('down'); }, 900);
+  s.append(h('div', { id: 'press' }, h('div', { class: 'rollers' }, h('div', { class: 'sheets' }), h('i', { class: 'roller', style: { top: 0 } }), h('i', { class: 'roller t2' })), h('div', { style: { font: '900 46px var(--display)' } }, 'Finding the best copy')));
+  setTimeout(() => {
+    const l = $('#lights');
+    l.textContent = '';
+    l.append(h('div', {}, item.title, h('small', {}, 'Starting')));
+    l.classList.add('down');
+    setTimeout(() => {
+      player.menu = null; player.skipped = false; player.on = true; player.idle = Date.now();
+      returnTo = page;
+      go('player');
+      const dark = $('#lights');
+      dark.style.transition = 'none';
+      dark.classList.add('down');
+      void dark.offsetWidth;
+      dark.style.transition = '';
+      dark.classList.remove('down');
+    }, 1300);
+  }, 900);
+}
+let returnTo = 'home';
+function leavePlayer() {
+  const l = $('#lights');
+  l.textContent = '';
+  l.classList.add('down');
+  setTimeout(() => {
+    go(returnTo === 'player' ? 'home' : returnTo);
+    const dark = $('#lights');
+    dark.style.transition = 'none';
+    dark.classList.add('down');
+    void dark.offsetWidth;
+    dark.style.transition = '';
+    dark.classList.remove('down');
+  }, 450);
 }
 function comeBack() { const l = $('#lights'); l.classList.remove('down'); document.querySelector('#press')?.remove(); }
 
@@ -722,7 +825,7 @@ function drawPanel() {
     h('button', { class: 'tool', onclick: () => add(B('c' + Date.now(), 'New button', 200, 200, 240, 74, 'Button', 'home', true, { custom: true })) }, 'Button'),
     h('button', { class: 'tool', onclick: () => add(R('c' + Date.now(), 'New rule', 200, 200, 600, 2, '#1a1714')) }, 'Rule')));
   p.append(h('h3', {}, 'Go to page'), h('div', { class: 'list' }, Object.keys(DEFAULTS).filter((k) => k !== 'masthead').map((k) => h('button', { class: page === k ? 'on' : '', onclick: () => go(k) }, PAGE_NAMES[k]))));
-  p.append(h('h3', {}, 'On this page'), h('div', { class: 'list' }, [...els(page).map((x) => [x, page]), ...(page === 'setup' ? [] : els('masthead').map((x) => [x, 'masthead']))].map(([x, o]) => h('button', { class: (sel && sel.id === x.id && sel.owner === o ? 'on ' : '') + (x.hidden ? 'off' : ''), onclick: () => { sel = { id: x.id, owner: o }; draw(); } }, x.label, x.hidden ? h('span', {}, 'hidden') : null))));
+  p.append(h('h3', {}, 'On this page'), h('div', { class: 'list' }, [...els(page).map((x) => [x, page]), ...(page === 'setup' || page === 'player' ? [] : els('masthead').map((x) => [x, 'masthead']))].map(([x, o]) => h('button', { class: (sel && sel.id === x.id && sel.owner === o ? 'on ' : '') + (x.hidden ? 'off' : ''), onclick: () => { sel = { id: x.id, owner: o }; draw(); } }, x.label, x.hidden ? h('span', {}, 'hidden') : null))));
 }
 function swatches(key, e) {
   const list = ['#1a1714', '#f4efe4', '#a3271c', '#4f4840', '#6b645a', '#b8ae9c', '#ddd6c7', '#fbf8f1', '#2b3a4a', '#2e5e5a', '#7a3b2e', '#1f4a7a'];

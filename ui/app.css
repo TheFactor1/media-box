@@ -105,11 +105,14 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor
 ::view-transition-group(root) { animation: none; }
 ::view-transition-old(root) { display: none; }
 ::view-transition-new(root) { animation: none; }
-::view-transition-group(page) { animation-duration: var(--turn, .5s); }
 ::view-transition-old(page), ::view-transition-new(page) { animation: none; mix-blend-mode: normal; transform-origin: left center; }
-html.turn-forward::view-transition-old(page) { animation: turnAway var(--turn, .5s) cubic-bezier(.45, .05, .55, .95) forwards; z-index: 2; }
-html.turn-back::view-transition-new(page) { animation: turnIn var(--turn, .5s) cubic-bezier(.2, .7, .3, 1) both; z-index: 2; }
-@keyframes turnAway { to { transform: perspective(2800px) rotateY(-112deg); filter: brightness(.68); } }
-@keyframes turnIn { from { transform: perspective(2800px) rotateY(-112deg); filter: brightness(.68); } }
+/* Transform only: a filter here makes the browser redraw the whole page every frame, which is what made it lag. */
+html.turn-forward::view-transition-old(page) { animation: turnAway .38s cubic-bezier(.45, .05, .55, .95) forwards; z-index: 2; }
+html.turn-back::view-transition-new(page) { animation: turnIn .38s cubic-bezier(.2, .7, .3, 1) both; z-index: 2; }
+@keyframes turnAway { to { transform: perspective(2800px) rotateY(-100deg); } }
+@keyframes turnIn { from { transform: perspective(2800px) rotateY(-100deg); } }
+/* For a box that can't manage the turn: a short slide and fade. */
+html.turn-simple::view-transition-new(page) { animation: turnSimple .16s ease-out both; }
+@keyframes turnSimple { from { opacity: 0; transform: translateX(24px); } }
 
 @media (prefers-reduced-motion: reduce) { *, ::view-transition-old(page), ::view-transition-new(page) { animation-duration: .01s !important; transition-duration: .01s !important; } }

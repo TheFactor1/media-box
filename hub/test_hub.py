@@ -1015,6 +1015,26 @@ class ReadyToStream(unittest.TestCase):
     def marker(self, text):
         return ranking.badges({'name': 'x', 'description': text}, {'runtime': 100})['cached']
 
+    def quality(self, name, description=''):
+        return ranking.badges({'name': name, 'description': description}, {'runtime': 100})
+
+    def test_aiostreams_quality_labels(self):
+        for name, res in (('🔥4K UHD', '2160p'), ('✨ QHD', '1440p'), ('🚀 FHD', '1080p'), ('💿 HD', '720p'), ('📼 SD', '480p')):
+            self.assertEqual(self.quality(name)['res'], res, name)
+
+    def test_real_numbers_beat_vague_labels(self):
+        self.assertEqual(self.quality('💿 HD', 'Film.1080p.WEB-DL')['res'], '1080p')
+
+    def test_a_rip_is_not_called_hd(self):
+        b = self.quality('💩 Unknown', '🎥 HDRip 🎞️ XviD')
+        self.assertIsNone(b['res'])
+        self.assertEqual((b['source'], b['codec']), ('hdrip', 'XviD'))
+
+    def test_other_details(self):
+        b = self.quality('🚀 FHD', '🎥 WEB-DL 🎞️ HEVC 🎧 DD 🔊 5.1')
+        self.assertEqual((b['source'], b['codec'], b['audio']), ('web-dl', 'HEVC', ['DD']))
+        self.assertEqual(self.quality('x', 'DD+ 5.1')['audio'], ['DD+'])
+
     def test_aiostreams_wording(self):
         self.assertIs(self.marker('1080p ⚡Ready (RD)'), True)
         self.assertIs(self.marker('1080p ❌ Not Ready (RD)'), False)

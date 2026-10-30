@@ -59,7 +59,13 @@ function leftOf(it) {
   return r?.durationMs > 0 && r.positionMs > 0 ? `${Math.max(1, Math.round((r.durationMs - r.positionMs) / 60000))} min left` : null;
 }
 const nextLabel = (it) => (it.nextEpisode ? `S${pad(it.nextEpisode.s)}E${pad(it.nextEpisode.e)}` : null);
-const badgeLine = (b) => (b ? [b.res, ...(b.hdr || []), ...(b.audio || [])].filter(Boolean).join(' · ') : '');
+const SOURCE_NAMES = { remux: 'Remux', 'web-dl': 'Web', bluray: 'Blu-ray', hdrip: 'HD rip', hdtv: 'TV', dvd: 'DVD', cam: 'Cam' };
+const RES_NAMES = { '2160p': '4K', '1440p': '1440p', '1080p': '1080p', '720p': '720p', '576p': '576p', '480p': '480p', '360p': '360p' };
+function badgeLine(b) {
+  if (!b) return '';
+  const known = [RES_NAMES[b.res], ...(b.hdr || []), SOURCE_NAMES[b.source], b.codec, ...(b.audio || [])].filter(Boolean);
+  return (b.res ? '' : 'Resolution not stated · ') + known.join(' · ');
+}
 
 function bound(key) {
   const it = S.full || S.item || {};
@@ -215,6 +221,7 @@ function settingsBody() {
     line('set:source', () => go('source'), h('span', {}, 'Stream source'), h('em', {}, S.sources?.length ? S.sources.map((a) => hostName(a.host) + (a.reachable ? '' : ' (not answering)')).join(', ') : 'Add AIOStreams')),
     line('set:ready', () => setPref('readyOnly', S.prefs.readyOnly === false), h('span', {}, 'Only play copies ready to stream'), h('em', {}, S.prefs.readyOnly === false ? 'Off' : 'On')),
     line('set:choose', () => setPref('choose', !S.prefs.choose), h('span', {}, 'When I press Play'), h('em', {}, S.prefs.choose ? 'Let me choose the copy' : 'Play the best copy')),
+    line('set:turn', () => { const o = ['auto', 'full', 'off'], c = S.prefs.turn || 'auto'; setPref('turn', o[(o.indexOf(c) + 1) % o.length]); }, h('span', {}, 'Page turn'), h('em', {}, { auto: S.slowBox ? 'Automatic (simple on this box)' : 'Automatic', full: 'Always full', off: 'Off' }[S.prefs.turn || 'auto'])),
     line('set:speed', () => { const names = Object.keys(S.presets.presets || {}); if (!names.length) return; const i = names.indexOf(speed); S.prefs.preset = names[(i + 1) % names.length]; api('/prefs', { method: 'POST', body: { preset: S.prefs.preset } }).catch(() => notice("Couldn't save that.")); draw(); }, h('span', {}, 'Connection speed'), h('em', {}, speedName(speed))),
     line('set:privacy', () => {}, h('span', {}, 'Privacy'), h('em', {}, 'Nothing leaves this box')));
 }
@@ -432,6 +439,22 @@ function back() {
   S.item = prev.item; S.ep = prev.ep; S.streams = null; if (prev.page !== 'film' && prev.page !== 'show' && prev.page !== 'versions') S.full = null;
   go(prev.page, { back: true, key: prev.key });
 }
+// A turn the box can't draw smoothly looks worse than none, so count its frames and step down by itself.
+function watchTurn(t) {
+  let frames = 0, on = true;
+  const count = () => { frames += 1; if (on) requestAnimationFrame(count); };
+  t.ready.then(() => {
+    const start = performance.now();
+    requestAnimationFrame(count);
+    t.finished.catch(() => {}).finally(() => {
+      on = false;
+      const fps = Math.round(frames / ((performance.now() - start) / 1000));
+      S.turnFps = fps;
+      if (fps < 40) S.slowBox = true;
+      api('/prefs', { method: 'POST', body: { lastTurnFps: fps, slowBox: !!S.slowBox } }).catch(() => {});
+    });
+  }).catch(() => {});
+}
 // Top tabs turn the page. The browser snapshots it, so the turn moves one flat picture and the masthead stays out of it.
 async function tabTo(page) {
   if (page === S.page) return;
@@ -442,12 +465,13 @@ async function tabTo(page) {
   if (page === 'home') S.full = null;
   await withLoading(() => loadPage(page));
   const paint = () => { mastEl.dataset.page = ''; draw('tab:' + page); };
-  if (!document.startViewTransition || reduce()) return paint();
-  document.documentElement.classList.add(backwards ? 'turn-back' : 'turn-forward');
-  document.documentElement.style.setProperty('--turn', SPEED * 1.25 + 'ms');
+  const style = S.prefs.turn === 'off' ? 'off' : S.prefs.turn === 'full' ? 'full' : S.slowBox ? 'simple' : 'full';
+  if (!document.startViewTransition || reduce() || style === 'off') return paint();
+  document.documentElement.classList.add(style === 'simple' ? 'turn-simple' : backwards ? 'turn-back' : 'turn-forward');
   const t = document.startViewTransition(paint);
+  if (style === 'full') watchTurn(t);
   t.ready.catch(() => {});
-  t.finished.catch(() => {}).finally(() => document.documentElement.classList.remove('turn-back', 'turn-forward'));
+  t.finished.catch(() => {}).finally(() => document.documentElement.classList.remove('turn-back', 'turn-forward', 'turn-simple'));
 }
 // Row tabs riffle: posters are dealt in, one after another, in the direction of travel.
 let rowTimer;
@@ -606,6 +630,7 @@ async function start() {
   fit();
   const { state, error } = await api('/state').catch(() => ({ state: {} }));
   S.prefs = await api('/prefs').catch(() => ({}));
+  S.slowBox = !!S.prefs.slowBox;
   const cold = !state?.page;
   const setup = await api('/setup-qr').catch(() => ({}));
   if (setup.url) { S.setup = setup; S.page = 'setup'; draw(); if (cold) document.body.classList.add('boot'); setTimeout(setupWatch, 5000); return; }
