@@ -7,4 +7,7 @@ for driver in /sys/class/drm/card*/device/driver; do
   [[ "$(basename "$(readlink -f "$driver")")" == vmwgfx ]] && export WLR_RENDERER=pixman
 done
 
+# The compositor can't start while another screen is showing, such as a film or a console login.
+until [[ "$(cat /sys/class/tty/tty0/active)" == tty1 ]]; do sleep 1; done
+
 exec /usr/bin/cage -s -- /usr/libexec/mediabox/ui-browser

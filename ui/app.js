@@ -406,6 +406,7 @@ function tick() { const c = $('#clock'); if (c) c.textContent = new Date().toLoc
 setInterval(tick, 20000);
 function saveState() {
   clearTimeout(saveState.t);
+  if (S.playing) return;  // the bridge is deciding where the film returns to
   saveState.t = setTimeout(() => api('/state', { method: 'POST', body: { page: S.page, item: S.item && { id: S.item.id, type: S.item.type, title: S.item.title, poster: S.item.poster, backdrop: S.item.backdrop }, row: S.row, ep: S.ep, season: S.season, key: document.activeElement?.dataset?.key, history: S.history.slice(-8) } }).catch(() => {}), 150);
 }
 
@@ -572,6 +573,30 @@ function press(to) {
   if (to) tabTo(to);
 }
 function playItem(it) { if (!it) return; const n = it.nextEpisode; return play(n ? { s: n.s, e: n.e } : {}); }
+// This page sleeps through the film. When it wakes, it finds its new place while the lights are still down, then they come up.
+async function filmOver() {
+  for (;;) {
+    const { stage } = await api('/play/status');
+    if (stage === 'done') break;
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  pageCache.clear();
+  const { state, error } = await api('/state');
+  S.playing = false;
+  $('#press').hidden = true;
+  S.full = null;
+  S.streams = null;
+  takeState(state);
+  await withLoading(() => loadPage(S.page));
+  mastEl.dataset.page = '';
+  draw(state.key);
+  lightsUp();
+  if (state.stopPress) notice(state.stopPress);
+  if (error) notice(error);
+}
+function takeState(state) {
+  S.page = state.page; S.item = state.item; S.row = state.row; S.ep = state.ep; S.history = state.history || [];
+}
 function showPress(it) {
   const art = $('#press-art');
   art.classList.remove('in');
@@ -611,14 +636,16 @@ async function play(opts) {
       if (note) $('#press-note').textContent = note;
       $('#press-fill').style.transform = `scaleX(${stage === 'ready' ? 1 : progress})`;
       if (stage === 'failed') throw new Error(error || "That copy wouldn't open.");
-      if (stage === 'ready') break;
+      if (stage === 'ready' || stage === 'done') break;
       await new Promise((r) => setTimeout(r, 300));
     }
     S.opening = null;
     $('#lights').classList.add('down');
+    await filmOver();
   } catch (e) {
     if (S.opening !== opening) return;
     S.opening = null;
+    lightsUp();
     $('#press').hidden = true;
     S.playing = false;
     notice(e.message);
@@ -746,7 +773,7 @@ async function start() {
   const setup = await api('/setup-qr').catch(() => ({}));
   if (setup.url) { S.setup = setup; S.page = 'setup'; draw(); if (cold) document.body.classList.add('boot'); lightsUp(); setTimeout(setupWatch, 5000); return; }
   if (!cold) {
-    S.page = state.page; S.item = state.item; S.row = state.row; S.ep = state.ep; S.history = state.history || [];
+    takeState(state);
     await withLoading(() => loadPage(S.page));
     if (S.page === 'home' && S.item) S.item = S.rowItems.find((x) => x.id === S.item.id) || await api(`browse/meta/${q(S.item.type)}/${q(S.item.id)}`).catch(() => S.rowItems[0] || null);
     if (state.season != null) S.season = state.season;

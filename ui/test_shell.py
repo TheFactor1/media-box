@@ -1,4 +1,6 @@
 import json
+import os
+import tempfile
 import unittest
 
 import shell
@@ -99,6 +101,17 @@ class AfterFilm(unittest.TestCase):
         self.assertEqual(shell.stop_press(600, 8000), 'Stop press. You stopped at 10:00, with 2 hours 3 minutes left.')
         self.assertIsNone(shell.stop_press(30, 6000))
         self.assertIsNone(shell.stop_press(5900, 6000))
+
+
+class Browser(unittest.TestCase):
+    def test_finds_chromium_and_its_helpers_only(self):
+        with tempfile.TemporaryDirectory() as proc:
+            for pid, command in (('10', b'/usr/lib64/chromium-browser/chromium-browser\0--type=broker\0'), ('13', b'/usr/lib64/chromium-browser/chromium-browser --type=gpu-process --user-data-dir=/var/lib/media/ui-profile'),
+                                 ('11', b'/usr/bin/cage\0--\0chromium\0'), ('12', b''), ('self', b'x')):
+                os.mkdir(os.path.join(proc, pid))
+                with open(os.path.join(proc, pid, 'cmdline'), 'wb') as f:
+                    f.write(command)
+            self.assertEqual(sorted(shell.browser_pids(proc)), [10, 13])
 
 
 class Recovery(unittest.TestCase):

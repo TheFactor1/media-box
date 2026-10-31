@@ -2,7 +2,7 @@
 Description=TV interface (Broadsheet, in a kiosk browser)
 Requires=mediabox-shell.service
 After=mediabox-shell.service systemd-user-sessions.service sound.target
-Conflicts=getty@tty1.service kodi.service mediabox-mpv.service
+Conflicts=getty@tty1.service kodi.service
 
 [Service]
 User=media

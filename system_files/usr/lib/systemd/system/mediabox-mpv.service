@@ -1,14 +1,15 @@
 [Unit]
 Description=Film playback (mpv directly on the display, started by the TV interface)
-Conflicts=getty@tty1.service kodi.service mediabox-ui.service
+# The interface stays alive on tty1, paused, so coming back is a screen switch and not a restart.
+Conflicts=kodi.service
 
 [Service]
 User=media
 Group=media
 SupplementaryGroups=audio video render input
 PAMName=login
-TTYPath=/dev/tty1
-StandardInput=tty
+TTYPath=/dev/tty3
+StandardInput=tty-force
 # mpv reads keys only with both ends on the terminal.
 StandardOutput=tty
 StandardError=journal
@@ -16,9 +17,10 @@ TTYReset=yes
 TTYVTDisallocate=yes
 Environment=HOME=/var/lib/media
 # A stopped compositor can leave the keyboard switched off.
-ExecStartPre=-/usr/bin/kbd_mode -u -C /dev/tty1
+ExecStartPre=-/usr/bin/kbd_mode -u -C /dev/tty3
 # Between the interface and the film the screen is the text console: keep it blank.
-ExecStartPre=-/usr/bin/sh -c 'printf "\\033[2J\\033[H\\033[?25l" > /dev/tty1'
+ExecStartPre=-/usr/bin/sh -c 'printf "\\033[2J\\033[H\\033[?25l" > /dev/tty3'
 # The film URL arrives over the socket from the bridge, so it never appears on a command line.
-ExecStart=/usr/bin/mpv --config=no --vo=gpu-next --gpu-context=drm --hwdec=auto-safe --fs --ao=alsa --audio-device=alsa/sysdefault --idle=once --force-window=immediate --ytdl=no --really-quiet --input-terminal=yes --terminal --pause --hr-seek=no --input-conf=/usr/lib/mediabox/ui/mpv-input.conf --no-osc --no-osd-bar --osd-level=0 --osd-fonts-dir=/usr/lib/mediabox/ui/fonts --script=/usr/lib/mediabox/ui/player.lua --input-ipc-server=/run/mediabox/mpv.sock
+# It starts with no picture: the film opens behind the loading page, and the bridge gives mpv the display once it's ready.
+ExecStart=/usr/bin/mpv --config=no --vo=null --gpu-context=drm --hwdec=no --fs --ao=alsa --audio-device=alsa/sysdefault --idle=yes --ytdl=no --really-quiet --input-terminal=yes --terminal --pause --hr-seek=no --input-conf=/usr/lib/mediabox/ui/mpv-input.conf --no-osc --no-osd-bar --osd-level=0 --osd-fonts-dir=/usr/lib/mediabox/ui/fonts --script=/usr/lib/mediabox/ui/player.lua --input-ipc-server=/run/mediabox/mpv.sock
 Restart=no

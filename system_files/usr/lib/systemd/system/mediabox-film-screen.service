@@ -1,0 +1,8 @@
+[Unit]
+Description=Shows the film's screen while it's running, and the TV interface's when stopped
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/chvt 3
+ExecStop=/usr/bin/chvt 1

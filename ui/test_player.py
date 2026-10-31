@@ -55,7 +55,8 @@ class Controls(unittest.TestCase):
 
     def start_film(self):
         self.g.events['playback-restart']()
-        self.g.props['demuxer-cache-duration'] = 10
+        self.g.props['user-data/mediabox/show'] = True
+        self.g.props['vo-configured'] = True
         self.g.clock = 3
         self.g.load_check()
         self.g.clock = 4
@@ -245,15 +246,32 @@ class Loading(unittest.TestCase):
     def start_film(self):
         pass
 
-    def test_film_waits_behind_the_card(self):
-        self.g.load_check()  # nothing ready yet
+    def test_film_waits_for_the_screen(self):
+        self.g.events['playback-restart']()
+        self.g.clock = 30
+        self.g.load_check()  # open, but the interface still has the screen
         self.assertTrue(self.g.props.pause)
-        self.g.events['playback-restart']()  # the first frame is ready
+        self.g.props['user-data/mediabox/show'] = True
+        self.g.clock = 31
+        self.g.load_check()  # given the screen, picture not up yet
+        self.assertTrue(self.g.props.pause)
+        self.g.props['vo-configured'] = True
         self.g.load_check()
         self.assertFalse(self.g.props.pause)
 
+    def test_end_of_film_quits_but_a_failed_copy_waits(self):
+        self.g.events['end-file']()
+        self.assertEqual(self.commands(), [])
+        self.g.props['user-data/mediabox/show'] = True
+        self.g.props['vo-configured'] = True
+        self.g.load_check()
+        self.g.events['end-file']()
+        self.assertEqual(self.commands(), ['quit'])
+
     def test_sound_fades_in_with_the_picture(self):
         self.assertEqual(self.g.props.volume, 0)
+        self.g.props['user-data/mediabox/show'] = True
+        self.g.props['vo-configured'] = True
         self.g.clock = 26
         self.g.load_check()
         self.g.clock = 26.3
@@ -264,6 +282,8 @@ class Loading(unittest.TestCase):
         self.assertEqual(self.g.props.volume, 100)
 
     def test_a_stuck_stream_still_starts(self):
+        self.g.props['user-data/mediabox/show'] = True
+        self.g.load_check()
         self.g.clock = 26
         self.g.load_check()
         self.assertFalse(self.g.props.pause)

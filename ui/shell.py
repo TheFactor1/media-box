@@ -9,6 +9,7 @@ import json
 import os
 import re
 import select
+import signal
 import socket
 import struct
 import subprocess
@@ -24,12 +25,11 @@ HUB = os.environ.get('MB_HUB', 'http://127.0.0.1:8097')
 PORT = int(os.environ.get('MB_PORT', '8099'))
 TOKEN_FILE = os.environ.get('MB_TOKEN_FILE', '/var/lib/hub/token')
 MPV_SOCKET = os.environ.get('MB_MPV_SOCKET', '/run/mediabox/mpv.sock')
-REHEARSAL_SOCKET = os.environ.get('MB_REHEARSAL_SOCKET', '/run/mediabox/rehearsal.sock')
 REHEARSAL_LIMIT = 25  # seconds the loading page waits for a film to open
 READY_BUFFER = 5  # seconds of film held before the screen changes hands
 PREFS_FILE = os.environ.get('MB_PREFS', '/var/lib/media/ui-prefs.json')
 NO_PLAY = bool(os.environ.get('MB_NO_PLAY'))  # for trying the page off the box: Play only reports what it would do
-UI_UNIT, MPV_UNIT = 'mediabox-ui.service', 'mediabox-mpv.service'
+UI_UNIT, MPV_UNIT, SCREEN_UNIT = 'mediabox-ui.service', 'mediabox-mpv.service', 'mediabox-film-screen.service'
 SAVE_EVERY = 30  # seconds between resume writes while playing
 MAX_BODY = 64 * 1024
 HOSTS = {f'127.0.0.1:{PORT}', f'localhost:{PORT}'}
@@ -106,6 +106,7 @@ class Player:
         self.automatic = True
         self.chose_versions = False
         self.reached = (0, 0)
+        self.page_seen = threading.Event()
         self.cancelled = threading.Event()
 
     def choose(self, req):
@@ -150,19 +151,33 @@ class Player:
             self.lock.release()
         return True
 
-    def open_a_copy(self, type_, id_, ep, stream, start):
+    def come_back(self):
+        """The film's unit switches back to the interface's screen as it stops. If the page doesn't wake, it's restarted: never a black screen."""
+        subprocess.run(['systemctl', 'stop', MPV_UNIT], check=False, timeout=30)
+        subprocess.run(['systemctl', 'stop', SCREEN_UNIT], check=False, timeout=30)
+        time.sleep(0.3)  # the compositor takes the display back first
+        self.page_seen.clear()
+        signal_browser(signal.SIGCONT)
+        refocus_interface()
+        self.stage = 'done'
+        subprocess.run(['systemctl', 'start', '--no-block', UI_UNIT], check=False, timeout=30)  # in case it died
+        if not self.page_seen.wait(5) and browser_pids():
+            subprocess.run(['systemctl', 'stop', UI_UNIT], check=False, timeout=30)
+            subprocess.run(['systemctl', 'start', '--no-block', UI_UNIT], check=False, timeout=30)
+
+    def open_a_copy(self, type_, id_, ep, stream, start, sock, reader):
         """The copy that opened, or None. A copy the viewer chose isn't swapped behind their back; the box's own pick falls back to its next best."""
         failed = stream
-        if rehearse(stream, start, self):
+        if rehearse(stream, start, self, sock, reader):
             return stream
-        if not self.automatic:
+        if not self.automatic or self.cancelled.is_set():
             return None
         status, raw = hub('GET', f'/browse/streams/{type_}/{id_}{ep}{prefs_query()}')
         for other in backups(json.loads(raw).get('streams', []) if status == 200 else [], failed.get('url')):
             if self.cancelled.is_set():
                 return None
             self.note, self.progress = 'Trying another copy', 0
-            if rehearse(other, start, self):
+            if rehearse(other, start, self, sock, reader):
                 return other
         return None
 
@@ -174,55 +189,60 @@ class Player:
             if status == 200:
                 pos = json.loads(raw or b'{}').get('positionMs') or 0
                 start = pos / 1000
-            stream = self.open_a_copy(_type, id_, ep, stream, start)
-            if self.cancelled.is_set():
-                self.stage = 'idle'
-                return
-            if not stream:  # the interface stays up, so a bad copy costs no trip through a black screen
-                self.error = "That copy wouldn't open. Try another version."
-                self.stage = 'failed'
-                return
-            self.stage = 'ready'
-            handed_over = True
-            time.sleep(0.45)  # lets the page's lights-down finish
-            subprocess.run(['systemctl', 'stop', UI_UNIT], check=False, timeout=30)
             subprocess.run(['systemctl', 'start', '--no-block', MPV_UNIT], check=False, timeout=30)
-            if self.watch(_type, id_, ep, stream, start):
-                self.state = after_film(self.state, *self.reached, self.chose_versions)
-            else:
-                self.error = "That copy wouldn't play."
+            sock = connect(MPV_SOCKET)
+            if sock is None:
+                raise OSError('mpv did not start')
+            with sock:
+                sock.settimeout(5)
+                reader = sock.makefile('r', encoding='utf-8', errors='replace')
+                for name, value in player_info(self.state, load_prefs()).items():
+                    send(sock, ['set_property', 'user-data/mediabox/' + name, value])
+                stream = self.open_a_copy(_type, id_, ep, stream, start, sock, reader)
+                if self.cancelled.is_set():
+                    self.stage = 'idle'
+                    return
+                if not stream:  # the interface stays up, so a bad copy costs no trip through a black screen
+                    self.error = "That copy wouldn't open. Try another version."
+                    self.stage = 'failed'
+                    return
+                self.stage = 'ready'
+                handed_over = True
+                time.sleep(0.45)  # lets the page's lights-down finish
+                # Chromium crashes if it draws while the screen is switched away, so it sleeps through the film. It keeps its place and uses no CPU.
+                signal_browser(signal.SIGSTOP)
+                subprocess.run(['systemctl', 'start', SCREEN_UNIT], check=False, timeout=30)
+                for name, value in (('hwdec', 'auto-safe'), ('vo', 'gpu-next'), ('user-data/mediabox/show', True)):
+                    send(sock, ['set_property', name, value])
+                if self.watch(_type, id_, ep, sock, reader):
+                    self.state = after_film(self.state, *self.reached, self.chose_versions)
+                else:
+                    self.error = "That copy wouldn't play."
         except Exception as e:  # the interface must come back whatever went wrong
             self.error = f"Playback failed ({type(e).__name__})."
             self.stage = 'failed'
         finally:
             if handed_over:
+                self.come_back()
+            else:
                 subprocess.run(['systemctl', 'stop', MPV_UNIT], check=False, timeout=30)
-                subprocess.run(['systemctl', 'start', '--no-block', UI_UNIT], check=False, timeout=30)
             self.lock.release()
 
-    def watch(self, type_, id_, ep, stream, start):
-        """Feeds mpv over its socket, so the URL is never on a command line or in a log. True once it really played."""
-        sock = connect(MPV_SOCKET)
-        if sock is None:
-            return False
+    def watch(self, type_, id_, ep, sock, reader):
+        """Follows the film on mpv's socket until it ends, saving the position. True once it really played."""
         played, position, duration, saved = False, 0, 0, time.monotonic()
         # The addons can be slow, and the film mustn't wait for them: the menu gains these whenever they arrive.
         found = []
         threading.Thread(target=lambda: found.append(addon_subtitles(type_, id_, ep)), daemon=True).start()
         finished = threading.Event()
         threading.Thread(target=remote_buttons, args=(finished,), daemon=True).start()
-        with sock:
-            for name, value in player_info(self.state, load_prefs()).items():
-                send(sock, ['set_property', 'user-data/mediabox/' + name, value])
-            feed(sock, stream, start)
-            sock.settimeout(5)
-            reader = sock.makefile('r', encoding='utf-8', errors='replace')
+        try:
             while True:
-                if found:
-                    send(sock, ['set_property', 'user-data/mediabox/subtitles', found.pop()])
-                send(sock, ['get_property', 'time-pos'], 1)
-                send(sock, ['get_property', 'duration'], 2)
-                try:
+                try:  # mpv quitting can break the socket at any of these, which just means the film is over
+                    if found:
+                        send(sock, ['set_property', 'user-data/mediabox/subtitles', found.pop()])
+                    send(sock, ['get_property', 'time-pos'], 1)
+                    send(sock, ['get_property', 'duration'], 2)
                     pending = {1, 2}
                     while pending:
                         line = reader.readline()
@@ -244,11 +264,53 @@ class Player:
                     save(id_, ep, position, duration)
                     saved = time.monotonic()
                 time.sleep(2)
-        finished.set()
+        finally:
+            finished.set()
         self.reached = (position, duration)
         if played and duration:
             save(id_, ep, position, duration)
         return played
+
+
+def browser_pids(proc='/proc'):
+    """Every Chromium process, helpers included."""
+    pids = []
+    for name in os.listdir(proc):
+        if not name.isdigit():
+            continue
+        try:
+            with open(os.path.join(proc, name, 'cmdline'), 'rb') as f:
+                # Chromium's helpers rewrite their command line as one string with spaces, not separate arguments.
+                command = f.read().split(b'\0')[0].split(b' ')[0]
+        except OSError:
+            continue
+        if b'chrom' in os.path.basename(command):
+            pids.append(int(name))
+    return pids
+
+
+def refocus_interface():
+    """The compositor gives the keyboard back to no one after a screen switch. Closing a window hands it to the page, so a black one
+    opens and closes while the lights are still down."""
+    run_dir = f'/run/user/{os.getuid()}'
+    sockets = [s for s in glob.glob(run_dir + '/wayland-*') if not s.endswith('.lock')]
+    if not sockets:
+        return
+    env = {**os.environ, 'XDG_RUNTIME_DIR': run_dir, 'WAYLAND_DISPLAY': os.path.basename(sockets[0])}
+    try:
+        subprocess.run(['mpv', '--no-config', '--vo=wlshm', '--force-window=immediate', '--geometry=1280x720', '--no-keepaspect-window', '--no-audio', '--really-quiet',
+                        '--no-terminal', '--length=0.3', 'av://lavfi:color=c=black:s=1280x720:r=10'], env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                       stderr=subprocess.DEVNULL, timeout=5, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+def signal_browser(signum):
+    for pid in browser_pids():
+        try:
+            os.kill(pid, signum)
+        except OSError:
+            pass
 
 
 def backups(streams, failed_url, count=2):
@@ -318,41 +380,27 @@ def rehearsal_progress(duration, position, cached, idle):
     return 1 if idle else min(1, 0.5 + 0.5 * (cached or 0) / READY_BUFFER)
 
 
-def rehearse(stream, start, player):
-    """Opens the film with no picture or sound while the interface keeps the screen. False only when the film itself won't open:
-    if the rehearsal can't run at all, the film still gets its chance on screen."""
+def rehearse(stream, start, player, sock, reader):
+    """Opens the film while the interface keeps the screen, with no picture or sound yet. False if it won't open or Back was pressed."""
+    feed(sock, stream, start)
+    deadline = time.monotonic() + REHEARSAL_LIMIT
     try:
-        proc = subprocess.Popen(['mpv', '--no-config', '--vo=null', '--ao=null', '--hwdec=no', '--pause', '--idle=once', '--ytdl=no', '--really-quiet', '--no-terminal',
-                                 '--input-ipc-server=' + REHEARSAL_SOCKET], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    except OSError:
-        return True
-    try:
-        sock = connect(REHEARSAL_SOCKET, 5)
-        if sock is None:
-            return True
-        with sock:
-            feed(sock, stream, start)
-            sock.settimeout(5)
-            reader = sock.makefile('r', encoding='utf-8', errors='replace')
-            deadline = time.monotonic() + REHEARSAL_LIMIT
-            try:
-                while True:
-                    report = [ask(sock, reader, name) for name in ('duration', 'time-pos', 'demuxer-cache-duration', 'demuxer-cache-idle')]
-                    if player.cancelled.is_set():
-                        return False
-                    player.progress = rehearsal_progress(*report)
-                    verdict = rehearsal_verdict(*report, time.monotonic() >= deadline)
-                    if verdict != 'wait':
-                        return verdict == 'go'
-                    time.sleep(0.25)
-            except (EOFError, OSError, ValueError):  # mpv quits by itself when the film won't load
+        while True:
+            report = [ask(sock, reader, name) for name in ('duration', 'time-pos', 'demuxer-cache-duration', 'demuxer-cache-idle')]
+            if player.cancelled.is_set():
                 return False
-    finally:
-        proc.kill()
-        proc.wait()
+            player.progress = rehearsal_progress(*report)
+            verdict = rehearsal_verdict(*report, time.monotonic() >= deadline)
+            if verdict != 'wait':
+                return verdict == 'go'
+            time.sleep(0.25)
+    except (LookupError, EOFError, OSError, ValueError):
+        return False
 
 
 def feed(sock, stream, start):
+    """Over the socket, so the URL is never on a command line or in a log."""
+    send(sock, ['set_property', 'http-header-fields', []])
     for name, value in (stream.get('headers') or {}).items():
         send(sock, ['change-list', 'http-header-fields', 'append', f'{name}: {value}'])
     if start > 0:
@@ -368,6 +416,8 @@ def ask(sock, reader, name):
         if not line:
             raise EOFError
         msg = json.loads(line)
+        if msg.get('event') == 'end-file' and msg.get('reason') == 'error':
+            raise LookupError('the film would not load')
         if msg.get('request_id') == 1:
             return msg.get('data')
 
@@ -585,6 +635,7 @@ class Handler(BaseHTTPRequestHandler):
                 with open(os.path.join(HERE, name), 'rb') as f:
                     return self.reply(200, f.read(), kind)
             if path == '/state':
+                PLAYER.page_seen.set()
                 if method == 'POST':
                     PLAYER.state = json.loads(self.body() or b'{}')
                     return self.reply_json(200, {'ok': True})
@@ -609,6 +660,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == '/setup-qr' and method == 'GET':
                 return self.reply_json(200, setup_qr())
             if path == '/play/status' and method == 'GET':
+                PLAYER.page_seen.set()
                 out = {'stage': PLAYER.stage, 'progress': PLAYER.progress, 'note': PLAYER.note, 'error': PLAYER.error if PLAYER.stage == 'failed' else None}
                 if PLAYER.stage == 'failed':
                     PLAYER.error, PLAYER.stage = None, 'idle'

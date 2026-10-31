@@ -1,6 +1,6 @@
 -- The film's controls: The Banner, from the Player B page of docs/broadsheet-prototype.html, drawn on mpv's OSD at 1920x1080.
 -- The sheet's look is chosen once each time it rises and held until it hides, so cuts and flashes can't make it flicker.
--- mpv starts paused behind black: the bridge has already opened the film off-screen, so this only hides the second opening.
+-- mpv opens the film paused with no display, behind the loading page. The bridge then gives it the screen, and it starts from black.
 local overlay = mp.create_osd_overlay('ass-events')
 overlay.res_x, overlay.res_y = 1920, 1080
 
@@ -366,6 +366,10 @@ local function sideways(dx)
 end
 
 mp.set_property_number('volume', 0)
+-- It waits idle if a copy fails to load, for the bridge to try another. Once a film is on screen, its end is the end.
+mp.register_event('end-file', function()
+    if not loading then mp.commandv('quit') end
+end)
 -- Resuming lands on the nearest keyframe, not the exact second: decoding up to the exact spot is what keeps big files on black.
 mp.register_event('playback-restart', function()
     if not restarted then mp.set_property('hr-seek', 'default') end
@@ -376,8 +380,11 @@ local load_timer
 load_timer = mp.add_periodic_timer(0.1, function()
     local age = mp.get_time() - born
     paint()
-    -- The film has already opened off-screen, so the first frame is enough: black is the thing to keep short.
-    if restarted or age >= BLACK_AT_MOST then
+    if not mp.get_property_native('user-data/mediabox/show', false) then
+        born = mp.get_time()
+        return
+    end
+    if mp.get_property_bool('vo-configured') or age >= BLACK_AT_MOST then
         load_timer:kill()
         loading = false
         mp.set_property_bool('pause', false)
