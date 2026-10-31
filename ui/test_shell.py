@@ -106,10 +106,17 @@ class Subtitles(unittest.TestCase):
 class Controls(unittest.TestCase):
     def test_info_for_the_sheet(self):
         info = shell.player_info({'item': {'title': 'Heat'}, 'ep': {'s': 2, 'e': 3}}, {'playerLook': 'paper'})
-        self.assertEqual(info, {'title': 'Heat', 'kicker': 'Season 2, episode 3', 'look': 'paper'})
+        self.assertEqual(info, {'title': 'Heat', 'kicker': 'Season 2, episode 3', 'deck': '', 'look': 'paper'})
 
     def test_unknown_look_is_automatic(self):
-        self.assertEqual(shell.player_info({}, {'playerLook': 'x'}), {'title': '', 'kicker': '', 'look': 'auto'})
+        self.assertEqual(shell.player_info({}, {'playerLook': 'x'}), {'title': '', 'kicker': '', 'deck': '', 'look': 'auto'})
+
+    def test_deck_fits_one_line(self):
+        self.assertEqual(shell.deck('A thief. He runs away for a very long time.'), 'A thief.')
+        long = 'word ' * 40
+        out = shell.deck(long)
+        self.assertTrue(len(out) <= 111 and out.endswith('word…'))
+        self.assertEqual(shell.deck(None), '')
 
     def test_other_versions_keeps_the_way_back(self):
         out = shell.to_versions({'page': 'film', 'item': {'id': 'tt1'}, 'history': [{'page': 'home'}]})

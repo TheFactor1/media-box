@@ -210,7 +210,7 @@ const COPIES = [['4K · Dolby Vision · Atmos', '36.4 GB', '38 Mb/s', 'Best matc
 const EDITION_NEXT = [['The Long Quiet', 'Episode 5'], ['Saltwater', '1 hour 12 left'], ['North of Nowhere', 'New episode']];
 const EDITION_BRIEF = ['Two new episodes of North of Nowhere arrived overnight.', 'Ironwood, from your Westerns list, has a first season.', 'The box updated itself at 3 AM. Nothing needs doing.', 'Your stream source is answering normally.'];
 const SETTINGS = [['Player controls', 'Match the scene'], ['Connection speed', 'Fast'],['Audio', 'Send to my receiver'], ['Subtitles', "Film's default"], ['Spoken language', 'Original'], ['Home rows', 'Choose and order'], ['Set up again', ''], ['Privacy', 'Nothing leaves this box']];
-const PAGE_NAMES = { home: 'Home', continue: 'Continue', next: 'Next up', new: 'New', movies: 'Movies', shows: 'Shows', browse: 'Browse', search: 'Search', settings: 'Settings', lists: 'Lists', film: 'Film page', show: 'Show page', versions: 'Other versions', setup: 'First run', player: 'Player', edition: 'Daily edition', masthead: 'Masthead' };
+const PAGE_NAMES = { home: 'Home', continue: 'Continue', next: 'Next up', new: 'New', movies: 'Movies', shows: 'Shows', browse: 'Browse', search: 'Search', settings: 'Settings', lists: 'Lists', film: 'Film page', show: 'Show page', versions: 'Other versions', setup: 'First run', player: 'Player', edition: 'Daily edition', pl_cinema: 'Player A: Android', pl_banner: 'Player B: Banner', pl_clipping: 'Player C: Clipping', pl_ticker: 'Player D: Ticker', masthead: 'Masthead' };
 
 const caps = { spacing: '.1em', transform: 'uppercase' };
 const T = (id, label, x, y, w, h, size, text, o = {}) => ({ id, label, kind: 'text', x, y, w, h, size, text, font: 'body', weight: 400, color: '#1a1714', ...o });
@@ -274,6 +274,74 @@ const DEFAULTS = {
     B('addlist', 'Add to list button', 1220, 776, 300, 78, 'Add to list', 'addlist', false, { size: 30 }),
   ],
   versions: [T('kicker', 'Kicker', 96, 170, 1000, 30, 22, 'Market report · 14 copies found', KICK), T('headline', 'Headline', 96, 205, 1500, 90, 64, '', { font: 'display', weight: 900, bind: 'versionsTitle', nowrap: true }), W('copyfilters', 'Sort and filters', 'copyfilters', 96, 300, 1728, 52), W('board', 'Ranked copies', 'board', 96, 364, 1728, 610)],
+  // Player control options to choose between. Every piece is something mpv's overlay can draw: shapes, text, fades built from bands.
+  pl_cinema: [
+    P('film', 'Film (example frame)', 0, 0, 1920, 1080, 'linear-gradient(170deg,#6f7355 0%,#3c4a42 30%,#18282a 70%,#0c1719 100%)'),
+    B('next', 'Next option (prototype only)', 1320, 36, 504, 60, 'A: From the Android Player. Next', 'pl_banner', false, { size: 22 }),
+    P('scrim', 'Fade behind the controls', 0, 640, 1920, 440, 'linear-gradient(180deg,#0000 0%,#000000d9 100%)'),
+    T('title', 'Title', 96, 700, 1400, 76, 60, 'The Long Quiet', { font: 'display', weight: 900, nowrap: true, color: '#f4efe4' }),
+    T('kick', 'Episode', 96, 784, 1000, 30, 24, 'Season 2, Episode 4', { color: '#cfc7b8', weight: 600 }),
+    R('track', 'Progress track', 96, 880, 1728, 4, '#ffffff55'), R('fill', 'Progress', 96, 880, 640, 4, '#e8695a'), R('knob', 'Progress mark', 730, 870, 12, 24, '#f4efe4'),
+    T('now', 'Time so far', 96, 898, 200, 32, 24, '21:51', { color: '#f4efe4', weight: 600 }), T('left', 'Time left', 1624, 898, 200, 32, 24, '-1:25:14', { color: '#f4efe4', weight: 600, align: 'right' }),
+    B('pp', 'Pause', 96, 944, 84, 84, '❚❚', 'pl_cinema', true, { round: true, fill: '#f4efe4', color: '#1a1714', size: 26 }),
+    B('b10', 'Back 10', 196, 944, 84, 84, '−10', 'pl_cinema', false, { round: true, fill: '#ffffff26', color: '#f4efe4', size: 24 }),
+    B('f30', 'Forward 30', 296, 944, 84, 84, '+30', 'pl_cinema', false, { round: true, fill: '#ffffff26', color: '#f4efe4', size: 24 }),
+    B('audio', 'Audio', 1440, 944, 84, 84, '♪', 'pl_cinema', false, { round: true, fill: '#ffffff26', color: '#f4efe4', size: 32 }),
+    B('subs', 'Subtitles', 1540, 944, 84, 84, 'CC', 'pl_cinema', false, { round: true, fill: '#ffffff26', color: '#f4efe4', size: 24 }),
+    B('copy', 'Other versions', 1640, 944, 84, 84, '≡', 'pl_cinema', false, { round: true, fill: '#ffffff26', color: '#f4efe4', size: 34 }),
+    B('stop', 'Back', 1740, 944, 84, 84, '✕', 'pl_cinema', false, { round: true, fill: '#ffffff26', color: '#f4efe4', size: 28 }),
+  ],
+  pl_banner: [
+    P('film', 'Film (example frame)', 0, 0, 1920, 1080, 'linear-gradient(170deg,#6f7355 0%,#3c4a42 30%,#18282a 70%,#0c1719 100%)'),
+    B('next', 'Next option (prototype only)', 1320, 110, 504, 60, 'B: The Banner. Next', 'pl_clipping', false, { size: 22 }),
+    R('rule1', 'Top rule', 96, 44, 1728, 2, '#f4efe4'), R('rule2', 'Top rule', 96, 50, 1728, 2, '#f4efe4'),
+    T('flag', 'Paper name', 96, 62, 800, 30, 22, 'The Media Box Times · Now showing', { ...CRED, color: '#f4efe4' }),
+    T('ep', 'Episode', 1024, 62, 800, 30, 22, 'Season 2, Episode 4', { ...CRED, color: '#f4efe4', align: 'right' }),
+    P('scrim', 'Fade behind the controls', 0, 560, 1920, 520, 'linear-gradient(180deg,#0000 0%,#000000d9 100%)'),
+    T('title', 'Headline', 96, 716, 1728, 124, 100, 'The Long Quiet', { font: 'display', weight: 900, nowrap: true, color: '#f4efe4' }),
+    T('deck', 'Summary', 96, 842, 1500, 44, 30, "The keeper's radio is still answering, long after the town went dark.", { italic: true, color: '#cfc7b8', nowrap: true }),
+    R('rule3', 'Progress rule', 96, 904, 1728, 2, '#f4efe4'), R('rule4', 'Progress rule', 96, 910, 1728, 2, '#f4efe4'), R('fill', 'Progress', 96, 902, 640, 12, '#e8695a'),
+    T('now', 'Time so far', 96, 924, 200, 32, 24, '21:51', { color: '#f4efe4', weight: 600 }), T('left', 'Time left', 1624, 924, 200, 32, 24, '-1:25:14', { color: '#f4efe4', weight: 600, align: 'right' }),
+    B('pp', 'Pause', 96, 976, 110, 50, 'Pause', 'pl_banner', false, { size: 22, fill: 'transparent', color: '#f4efe4', ...caps }),
+    B('b10', '−10', 226, 976, 80, 50, '−10', 'pl_banner', false, { size: 22, fill: 'transparent', color: '#f4efe4', ...caps }),
+    B('f30', '+30', 326, 976, 80, 50, '+30', 'pl_banner', false, { size: 22, fill: 'transparent', color: '#f4efe4', ...caps }),
+    B('audio', 'Audio', 960, 976, 110, 50, 'Audio', 'pl_banner', false, { size: 22, fill: 'transparent', color: '#f4efe4', ...caps }),
+    B('subs', 'Subtitles', 1086, 976, 160, 50, 'Subtitles', 'pl_banner', false, { size: 22, fill: 'transparent', color: '#f4efe4', ...caps }),
+    B('copy', 'Other versions', 1262, 976, 240, 50, 'Other versions', 'pl_banner', false, { size: 22, fill: 'transparent', color: '#f4efe4', ...caps }),
+    B('stop', 'Back to the paper', 1518, 976, 306, 50, 'Back to the paper', 'pl_banner', false, { size: 22, fill: 'transparent', color: '#f4efe4', ...caps }),
+    R('under', 'Selected button', 96, 1030, 110, 3, '#e8695a'),
+  ],
+  pl_clipping: [
+    P('film', 'Film (example frame)', 0, 0, 1920, 1080, 'linear-gradient(170deg,#6f7355 0%,#3c4a42 30%,#18282a 70%,#0c1719 100%)'),
+    B('next', 'Next option (prototype only)', 1320, 36, 504, 60, 'C: The Clipping. Next', 'pl_ticker', false, { size: 22 }),
+    R('card', 'Paper clipping', 96, 620, 860, 400, '#f4efe4f2'),
+    T('kick', 'Episode', 128, 640, 796, 30, 22, 'Season 2, Episode 4', KICK),
+    T('title', 'Headline', 128, 672, 796, 80, 62, 'The Long Quiet', { font: 'display', weight: 900, nowrap: true }),
+    T('deck', 'Summary', 128, 754, 796, 36, 24, "The keeper's radio is still answering.", { italic: true, color: '#3a342d', nowrap: true }),
+    R('rule1', 'Progress track', 128, 804, 796, 2, '#1a1714'), R('fill', 'Progress', 128, 801, 300, 8, '#a3271c'),
+    T('now', 'Time so far', 128, 816, 200, 30, 22, '21:51', { weight: 600 }), T('left', 'Time left', 724, 816, 200, 30, 22, '-1:25:14', { weight: 600, align: 'right' }),
+    B('pp', 'Pause', 128, 866, 150, 60, 'Pause', 'pl_clipping', true, { size: 24 }),
+    B('b10', 'Back 10', 290, 866, 90, 60, '−10', 'pl_clipping', false, { size: 24 }),
+    B('f30', 'Forward 30', 392, 866, 90, 60, '+30', 'pl_clipping', false, { size: 24 }),
+    B('audio', 'Audio', 618, 866, 110, 60, 'Audio', 'pl_clipping', false, { size: 24 }),
+    B('subs', 'Subtitles', 740, 866, 184, 60, 'Subtitles', 'pl_clipping', false, { size: 24 }),
+    B('copy', 'Other versions', 128, 940, 240, 60, 'Other versions', 'pl_clipping', false, { size: 24 }),
+    B('stop', 'Back to the paper', 664, 940, 260, 60, 'Back to the paper', 'pl_clipping', false, { size: 24 }),
+  ],
+  pl_ticker: [
+    P('film', 'Film (example frame)', 0, 0, 1920, 1080, 'linear-gradient(170deg,#6f7355 0%,#3c4a42 30%,#18282a 70%,#0c1719 100%)'),
+    B('next', 'Next option (prototype only)', 1320, 36, 504, 60, 'D: The Ticker. Back to A', 'pl_cinema', false, { size: 22 }),
+    R('strip', 'Paper strip', 0, 980, 1920, 100, '#f4efe4f2'), R('rule1', 'Strip rule', 0, 980, 1920, 2, '#1a1714'), R('rule2', 'Strip rule', 0, 986, 1920, 2, '#1a1714'),
+    T('title', 'Title', 96, 1012, 340, 44, 32, 'The Long Quiet', { font: 'display', weight: 900, nowrap: true }),
+    B('pp', 'Pause', 440, 1004, 110, 56, 'Pause', 'pl_ticker', true, { size: 22 }),
+    T('now', 'Time so far', 566, 1018, 90, 30, 22, '21:51', { weight: 600 }),
+    R('track', 'Progress track', 650, 1031, 490, 2, '#1a1714'), R('fill', 'Progress', 650, 1028, 180, 8, '#a3271c'),
+    T('left', 'Time left', 1150, 1018, 110, 30, 22, '-1:25:14', { weight: 600 }),
+    B('audio', 'Audio', 1276, 1004, 100, 56, 'Audio', 'pl_ticker', false, { size: 22 }),
+    B('subs', 'Subtitles', 1386, 1004, 140, 56, 'Subtitles', 'pl_ticker', false, { size: 22 }),
+    B('copy', 'Other versions', 1536, 1004, 110, 56, 'Copies', 'pl_ticker', false, { size: 22 }),
+    B('stop', 'Back to the paper', 1656, 1004, 168, 56, 'Back', 'pl_ticker', false, { size: 22 }),
+  ],
   // The day's front page: shown once a day, on the first start or wake after 4 AM. Everything on it comes from the box itself.
   edition: [
     T('name', 'Masthead name', 96, 38, 1728, 130, 104, 'The Media Box Times', { font: 'display', weight: 900, nowrap: true, align: 'center' }),
@@ -673,7 +741,7 @@ function render(e, owner) {
     if (e.spacing) style.letterSpacing = e.spacing;
     if (e.nowrap || e.spacing) style.whiteSpace = 'nowrap';
     if (e.spacing) style.textOverflow = 'ellipsis';
-    if (e.kind === 'btn') { style.background = e.fill; n = h('div', { class: 'el btn', style, tabindex: 0, onmouseenter: () => pencil(n), onclick: () => act(e.to) }, e.text); }
+    if (e.kind === 'btn') { style.background = e.fill; if (e.round) style.borderRadius = '50%'; n = h('div', { class: 'el btn', style, tabindex: 0, onmouseenter: () => pencil(n), onclick: () => act(e.to) }, e.text); }
     else if (e.kind === 'tab') { const on = page === e.to || (e.to === 'home' && ['film', 'show', 'versions'].includes(page)); if (on) style.color = '#1a1714'; if (e.to === 'search') { style.color = '#1a1714'; style.justifyContent = 'center'; } n = h('div', { class: 'el tab', style, tabindex: 0, role: 'button', 'aria-label': e.to === 'search' ? 'Search' : null, onclick: () => { if (!editing) tabTo(e.to); } }, e.to === 'search' ? searchIcon() : e.text); if (on && e.to !== 'search') n.classList.add('on'); }
     else {
       const txt = e.id === 'query' && owner === 'search' ? query : e.bind ? bound(e.bind) : e.text;
@@ -691,7 +759,7 @@ function draw() {
   s.textContent = '';
   s.classList.toggle('editing', editing);
   s.append(h('div', { id: 'gridlines' }));
-  if (page !== 'setup' && page !== 'player' && page !== 'edition') for (const e of els('masthead')) s.append(render(e, 'masthead'));
+  if (page !== 'setup' && page !== 'player' && page !== 'edition' && !page.startsWith('pl_')) for (const e of els('masthead')) s.append(render(e, 'masthead'));
   for (const e of els(page)) { const n = render(e, page); if (!editing) n.classList.add('fade'); s.append(n); }
   s.append(h('div', { id: 'lights', onclick: comeBack }));
   $('#where').textContent = PAGE_NAMES[page];
@@ -900,7 +968,8 @@ function editionDue() {
   try { if (localStorage.getItem('edition') === day) return false; localStorage.setItem('edition', day); } catch {}
   return true;
 }
-if (editionDue()) page = 'edition';
+editionDue();
+page = 'pl_banner';  // opens on the player options while they're being chosen
 draw();
 loadSaved();
 </script>

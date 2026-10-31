@@ -1,4 +1,4 @@
--- The film's controls: the Broadsheet sheet from docs/broadsheet-prototype.html, drawn on mpv's OSD at 1920x1080.
+-- The film's controls: The Banner, from the Player B page of docs/broadsheet-prototype.html, drawn on mpv's OSD at 1920x1080.
 -- The sheet's look is chosen once each time it rises and held until it hides, so cuts and flashes can't make it flicker.
 -- mpv starts paused behind black: the bridge has already opened the film off-screen, so this only hides the second opening.
 local overlay = mp.create_osd_overlay('ass-events')
@@ -13,9 +13,9 @@ local SAMPLE_WAIT = 0.25   -- a slow frame grab mustn't hold the controls back
 local IDLE = 4
 local DISPLAY, BODY = 'Playfair Display', 'Source Serif 4'
 local BUTTONS = {
-    { id = 'pp', x = 96, w = 170 }, { id = 'back', x = 278, w = 110, text = '− 10' }, { id = 'fwd', x = 400, w = 110, text = '+ 30' },
-    { id = 'audio', x = 950, w = 150, text = 'Audio' }, { id = 'subs', x = 1112, w = 190, text = 'Subtitles' },
-    { id = 'copy', x = 1314, w = 250, text = 'Other versions' }, { id = 'stop', x = 1576, w = 248, text = 'Back to the paper' },
+    { id = 'pp', x = 96, w = 110 }, { id = 'back', x = 226, w = 80, text = '−10' }, { id = 'fwd', x = 326, w = 80, text = '+30' },
+    { id = 'audio', x = 960, w = 110, text = 'Audio' }, { id = 'subs', x = 1086, w = 160, text = 'Subtitles' },
+    { id = 'copy', x = 1262, w = 240, text = 'Other versions' }, { id = 'stop', x = 1518, w = 306, text = 'Back to the paper' },
 }
 local MENU_ROWS = 9
 -- mpv redraws the OSD only with a new film frame, about 24 a second: too few for a big move to look smooth, enough for a fade with a small rise.
@@ -45,9 +45,9 @@ local function box(x, y, w, h, rgb, alpha)
     return string.format('{\\an7\\pos(0,0)\\bord0\\shad0\\1c&H%s&\\1a&H%s&\\p1}m %d %d l %d %d %d %d %d %d{\\p0}', colour(rgb), faded(alpha or '00'), x, y + offset, x + w, y + offset, x + w, y + h + offset, x, y + h + offset)
 end
 
-local function text(x, y, align, font, size, rgb, content, bold, clip)
-    return string.format('{\\an%d\\pos(%d,%d)\\bord0\\shad0\\fn%s\\fs%d\\b%d\\1c&H%s&\\1a&H%s&%s}%s', align, x, y + offset, font, size, bold and 1 or 0, colour(rgb), faded('00'),
-        clip and string.format('\\clip(%d,%d,%d,%d)', clip[1], clip[2] + offset, clip[3], clip[4] + offset) or '', escape(content))
+local function text(x, y, align, font, size, rgb, content, bold, clip, tags)
+    return string.format('{\\an%d\\pos(%d,%d)\\bord0\\shad0\\fn%s\\fs%d\\b%d\\1c&H%s&\\1a&H%s&%s%s}%s', align, x, y + offset, font, size, bold and 1 or 0, colour(rgb), faded('00'),
+        clip and string.format('\\clip(%d,%d,%d,%d)', clip[1], clip[2] + offset, clip[3], clip[4] + offset) or '', tags or '', escape(content))
 end
 
 local function clock(seconds)
@@ -70,27 +70,45 @@ local function draw_menu(out)
     end
 end
 
+-- A fade built from bands, because the overlay has no gradients. first and last are the top and bottom bands' alpha.
+local function bands(out, y, height, count, first, last)
+    for i = 0, count - 1 do
+        local alpha = first + (last - first) * i / (count - 1)
+        out[#out + 1] = box(0, y + math.floor(height * i / count), 1920, math.ceil(height / count), look.sheet, string.format('%02X', math.floor(alpha)))
+    end
+end
+
+local function caps(x, y, align, rgb, content, clip)
+    -- Not string.upper: in some locales it changes the bytes of characters like · and −.
+    local upper = content:gsub('[a-z]', function(c) return string.char(c:byte() - 32) end)
+    return text(x, y, align, BODY, 22, rgb, upper, true, clip, '\\fsp2')
+end
+
+-- The Banner: the film's name set as a headline over a fade, with no box in front of the picture.
 local function draw_sheet(out)
     local now, total = mp.get_property_number('time-pos', 0), mp.get_property_number('duration', 0)
-    for _, part in ipairs({
-        box(0, 816, 1920, 264, look.sheet, look.alpha), box(96, 836, 1728, 2, look.ink), box(96, 842, 1728, 2, look.ink),
-        text(96, 884, 4, DISPLAY, 44, look.ink, mp.get_property_native('user-data/mediabox/title', ''), true, { 96, 846, 1196, 926 }),
-        text(1824, 885, 6, BODY, 22, look.quiet, mp.get_property_native('user-data/mediabox/kicker', '')),
-        text(96, 947, 4, BODY, 24, look.ink, clock(now), true),
-        text(1824, 947, 6, BODY, 24, look.ink, '-' .. clock(total - now), true),
-    }) do
-        out[#out + 1] = part
-    end
+    local title = mp.get_property_native('user-data/mediabox/title', '')
+    bands(out, 0, 120, 6, 0x70, 0xFF)
+    bands(out, 560, 520, 26, 0xFF, tonumber(look.alpha, 16))
+    out[#out + 1] = box(96, 44, 1728, 2, look.ink)
+    out[#out + 1] = box(96, 50, 1728, 2, look.ink)
+    out[#out + 1] = caps(96, 77, 4, look.ink, 'The Media Box Times · Now showing')
+    out[#out + 1] = caps(1824, 77, 6, look.ink, mp.get_property_native('user-data/mediabox/kicker', ''))
+    out[#out + 1] = text(96, 778, 4, DISPLAY, #title > 44 and 56 or #title > 28 and 72 or 100, look.ink, title, true, { 96, 700, 1824, 842 })
+    out[#out + 1] = text(96, 864, 4, BODY, 30, look.quiet, mp.get_property_native('user-data/mediabox/deck', ''), false, { 96, 842, 1824, 888 }, '\\i1')
     local share = total > 0 and math.min(1, now / total) or 0
-    local bar = on_seek and 12 or 6
-    out[#out + 1] = box(216, 947 - bar / 2, 1488, bar, look.track)
-    out[#out + 1] = box(216, 947 - bar / 2, math.floor(1488 * share), bar, look.red)
-    if on_seek then out[#out + 1] = box(216 + math.floor(1488 * share) - 5, 933, 10, 28, look.ink) end
+    out[#out + 1] = box(96, 904, 1728, 2, look.ink)
+    out[#out + 1] = box(96, 910, 1728, 2, look.ink)
+    local bar = on_seek and 20 or 12
+    out[#out + 1] = box(96, 908 - bar / 2, math.floor(1728 * share), bar, look.red)
+    if on_seek then out[#out + 1] = box(96 + math.floor(1728 * share) - 5, 892, 10, 32, look.ink) end
+    out[#out + 1] = text(96, 940, 4, BODY, 24, look.ink, clock(now), true)
+    out[#out + 1] = text(1824, 940, 6, BODY, 24, look.ink, '-' .. clock(total - now), true)
     for i, b in ipairs(BUTTONS) do
         local lit = i == focus and not on_seek
-        out[#out + 1] = box(b.x, 984, b.w, 66, lit and look.ink or look.soft)
         local label = b.text or (mp.get_property_bool('pause') and 'Play' or 'Pause')
-        out[#out + 1] = text(b.x + math.floor(b.w / 2), 1017, 5, BODY, b.id == 'stop' and 24 or 26, lit and look.inverse or look.ink, label, true)
+        out[#out + 1] = caps(b.x + math.floor(b.w / 2), 1001, 5, lit and look.ink or look.quiet, label)
+        if lit then out[#out + 1] = box(b.x, 1030, b.w, 3, look.red) end
     end
     if menu then draw_menu(out) end
 end
@@ -241,7 +259,7 @@ local function open_menu(kind)
     for i, r in ipairs(rows) do
         if r.selected then at = i end
     end
-    menu = { kind = kind, title = kind == 'sub' and 'SUBTITLES' or 'AUDIO', rows = rows, at = at }
+    menu = { kind = kind, title = kind == 'sub' and 'CHOOSE SUBTITLES' or 'CHOOSE AUDIO', rows = rows, at = at }
 end
 
 local function press_enter()
@@ -348,7 +366,11 @@ local function sideways(dx)
 end
 
 mp.set_property_number('volume', 0)
-mp.register_event('playback-restart', function() restarted = true end)
+-- Resuming lands on the nearest keyframe, not the exact second: decoding up to the exact spot is what keeps big files on black.
+mp.register_event('playback-restart', function()
+    if not restarted then mp.set_property('hr-seek', 'default') end
+    restarted = true
+end)
 
 local load_timer
 load_timer = mp.add_periodic_timer(0.1, function()

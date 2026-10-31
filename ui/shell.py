@@ -387,12 +387,22 @@ def save(id_, ep, position, duration):
     hub('PUT', f'/resume/{id_}{ep}', json.dumps({'positionMs': int(position * 1000), 'durationMs': int(duration * 1000)}).encode(), timeout=10)
 
 
+def deck(overview, most=110):
+    """The line under the headline: the summary's first sentence if it fits on one line, else cut at a word."""
+    text = ' '.join(str(overview or '').split())
+    first = re.match(r'.+?[.!?](?=\s|$)', text)
+    if first and len(first[0]) <= most:
+        return first[0]
+    return text if len(text) <= most else text[:most].rsplit(' ', 1)[0].rstrip(' ,;:') + '…'
+
+
 def player_info(state, prefs):
     """What the film's controls show, and which look they use."""
     ep = state.get('ep') or {}
     look = prefs.get('playerLook')
     return {'title': str((state.get('item') or {}).get('title') or ''),
             'kicker': f"Season {ep['s']}, episode {ep['e']}" if ep.get('s') and ep.get('e') else '',
+            'deck': deck((state.get('item') or {}).get('overview')),
             'look': look if look in ('night', 'paper') else 'auto'}
 
 

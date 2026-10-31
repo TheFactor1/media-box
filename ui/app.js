@@ -589,7 +589,7 @@ async function play(opts) {
   try {
     S.ep = ep;
     clearTimeout(saveState.t);
-    await api('/state', { method: 'POST', body: { page: S.page, item: { id: it.id, type: it.type, title: it.title, poster: it.poster, backdrop: it.backdrop }, row: S.row, ep, season: S.season, key: document.activeElement?.dataset?.key, history: S.history.slice(-8) } });
+    await api('/state', { method: 'POST', body: { page: S.page, item: { id: it.id, type: it.type, title: it.title, poster: it.poster, backdrop: it.backdrop, overview: it.overview }, row: S.row, ep, season: S.season, key: document.activeElement?.dataset?.key, history: S.history.slice(-8) } });
     await api('/play', { method: 'POST', body: { id: it.id, type: it.type, ...(ep || {}), ...(Number.isInteger(opts.version) ? { version: opts.version } : {}) } });
     if (S.opening !== opening) return void api('/play/cancel', { method: 'POST' }).catch(() => {});  // Back was pressed while the copy was being found
     // The name stays up until the film has really opened off-screen; only then do the lights go down.

@@ -20,5 +20,5 @@ ExecStartPre=-/usr/bin/kbd_mode -u -C /dev/tty1
 # Between the interface and the film the screen is the text console: keep it blank.
 ExecStartPre=-/usr/bin/sh -c 'printf "\\033[2J\\033[H\\033[?25l" > /dev/tty1'
 # The film URL arrives over the socket from the bridge, so it never appears on a command line.
-ExecStart=/usr/bin/mpv --config=no --vo=gpu-next --gpu-context=drm --hwdec=auto-safe --fs --ao=alsa --audio-device=alsa/sysdefault --idle=once --force-window=immediate --ytdl=no --really-quiet --input-terminal=yes --terminal --pause --input-conf=/usr/lib/mediabox/ui/mpv-input.conf --no-osc --no-osd-bar --osd-level=0 --osd-fonts-dir=/usr/lib/mediabox/ui/fonts --script=/usr/lib/mediabox/ui/player.lua --input-ipc-server=/run/mediabox/mpv.sock
+ExecStart=/usr/bin/mpv --config=no --vo=gpu-next --gpu-context=drm --hwdec=auto-safe --fs --ao=alsa --audio-device=alsa/sysdefault --idle=once --force-window=immediate --ytdl=no --really-quiet --input-terminal=yes --terminal --pause --hr-seek=no --input-conf=/usr/lib/mediabox/ui/mpv-input.conf --no-osc --no-osd-bar --osd-level=0 --osd-fonts-dir=/usr/lib/mediabox/ui/fonts --script=/usr/lib/mediabox/ui/player.lua --input-ipc-server=/run/mediabox/mpv.sock
 Restart=no

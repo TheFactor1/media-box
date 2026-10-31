@@ -19,6 +19,7 @@ mp = {
   get_property_bool = function(n) return props[n] end,
   get_property_native = function(n, d) local v = props[n]; if v == nil then return d end; return v end,
   set_property_native = function(n, v) props[n] = v end,
+  set_property = function(n, v) props[n] = v end,
   set_property_bool = function(n, v) props[n] = v end,
   set_property_number = function(n, v) props[n] = v end,
   register_event = function(n, f) events[n] = f end,
@@ -104,7 +105,7 @@ class Controls(unittest.TestCase):
         self.press('BS')
         self.screen()
         self.press('DOWN')
-        self.assertIn('SUBTITLES', self.screen())
+        self.assertIn('CHOOSE SUBTITLES', self.screen())
 
     def test_media_buttons(self):
         self.g.props['user-data/mediabox/look'] = 'night'
@@ -127,6 +128,14 @@ class Controls(unittest.TestCase):
         self.assertIn('Passed through', self.screen())
         self.press('i')
         self.assertNotIn('vaapi', self.screen())
+
+    def test_banner_shows_the_film_and_marks_the_choice(self):
+        self.g.props['user-data/mediabox/deck'] = 'A summary.'
+        self.rise_over(20)
+        screen = self.screen()
+        self.assertIn('}A summary.', screen)
+        self.assertIn('THE MEDIA BOX TIMES', screen)
+        self.assertIn('OTHER VERSIONS', screen)
 
     def test_look_holds_while_showing(self):
         self.rise_over(20)
@@ -196,11 +205,11 @@ class Controls(unittest.TestCase):
         for _ in range(4):
             self.press('RIGHT')
         self.press('ENTER')
-        self.assertIn('SUBTITLES', self.screen())
+        self.assertIn('CHOOSE SUBTITLES', self.screen())
         self.press('UP')
         self.press('ENTER')
         self.assertEqual(self.g.props.sid, 'no')
-        self.assertNotIn('SUBTITLES', self.screen())
+        self.assertNotIn('CHOOSE SUBTITLES', self.screen())
 
     def open_subtitles(self):
         self.rise_over(20)
