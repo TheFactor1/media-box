@@ -28,7 +28,9 @@ mp = {
     if every == 0.5 then tick = f elseif every == 0.1 then load_check = f else anim = f end
     return { kill = function() end, resume = function() end }
   end,
-  command_native_async = function(_, f) grab = f end,
+  command_native_async = function(c, f)
+    if c.name == 'sub-add' then added = c else grab = f end
+  end,
 }
 function frame(level, format)
   return { w = 96, h = 54, stride = 384, format = format or 'bgr0', data = string.rep(string.char(level, level, level, 0), 96 * 54) }
@@ -145,6 +147,27 @@ class Controls(unittest.TestCase):
         self.press('ENTER')
         self.assertEqual(self.g.props.sid, 'no')
         self.assertNotIn('SUBTITLES', self.screen())
+
+    def open_subtitles(self):
+        self.rise_over(20)
+        for _ in range(4):
+            self.press('RIGHT')
+        self.press('ENTER')
+
+    def test_addon_subtitle_is_fetched_only_when_chosen(self):
+        self.g.props['user-data/mediabox/subtitles'] = self.lua.eval("{ { url = 'https://s/en', lang = 'eng', label = 'English' } }")
+        self.open_subtitles()
+        self.assertIn('English', self.screen())
+        self.assertIsNone(self.g.added)
+        self.press('DOWN')
+        self.press('ENTER')
+        self.assertEqual((self.g.added.url, self.g.added.flags, self.g.added.lang), ('https://s/en', 'select', 'eng'))
+
+    def test_fetched_subtitle_is_not_listed_twice(self):
+        self.g.props['user-data/mediabox/subtitles'] = self.lua.eval("{ { url = 'https://s/en', lang = 'eng', label = 'English' } }")
+        self.g.props['track-list'] = self.lua.eval("{ { type = 'sub', id = 3, title = 'English', ['external-filename'] = 'https://s/en', selected = true } }")
+        self.open_subtitles()
+        self.assertEqual(self.screen().count('English'), 1)
 
     def test_title_cannot_inject_drawing_codes(self):
         self.rise_over(20)

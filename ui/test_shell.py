@@ -45,6 +45,17 @@ class Copies(unittest.TestCase):
         self.assertNotIn('all=1', shell.prefs_query())
 
 
+class Subtitles(unittest.TestCase):
+    def test_short_named_menu(self):
+        subs = [{'url': f'https://s/{i}', 'lang': 'eng'} for i in range(5)] + [{'url': 'https://s/fr', 'lang': 'fre'}]
+        out = shell.pick_subtitles(subs)
+        self.assertEqual([x['label'] for x in out], ['English', 'English 2', 'English 3', 'French'])
+
+    def test_addon_junk_is_dropped(self):
+        subs = [{'url': 'file:///etc/passwd', 'lang': 'eng'}, {'url': 'https://s/a\nb', 'lang': 'eng'}, {'url': 7}, {'lang': 'eng'}, {'url': 'https://s/ok', 'lang': '{x}'}]
+        self.assertEqual(shell.pick_subtitles(subs), [{'url': 'https://s/ok', 'lang': 'und', 'label': 'Other'}])
+
+
 class Controls(unittest.TestCase):
     def test_info_for_the_sheet(self):
         info = shell.player_info({'item': {'title': 'Heat'}, 'ep': {'s': 2, 'e': 3}}, {'playerLook': 'paper'})

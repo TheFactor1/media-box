@@ -181,13 +181,20 @@ local function hide()
 end
 
 local function open_menu(kind)
-    local rows = {}
+    local rows, fetched = {}, {}
     if kind == 'sub' then rows[1] = { label = 'Off', id = 'no', selected = not mp.get_property_native('sid') } end
     for _, t in ipairs(mp.get_property_native('track-list') or {}) do
         if t.type == kind then
             local name = t.title or t.lang or ('Track ' .. t.id)
             if t.title and t.lang then name = t.title .. ' · ' .. t.lang end
             rows[#rows + 1] = { label = name, id = t.id, selected = t.selected }
+            if t['external-filename'] then fetched[t['external-filename']] = true end
+        end
+    end
+    -- Offered by the addons, and only fetched if chosen, so a long list costs nothing. Once fetched it is an ordinary track above.
+    if kind == 'sub' then
+        for _, s in ipairs(mp.get_property_native('user-data/mediabox/subtitles') or {}) do
+            if not fetched[s.url] then rows[#rows + 1] = { label = s.label, url = s.url, lang = s.lang } end
         end
     end
     if #rows == 0 then return end
@@ -201,7 +208,11 @@ end
 local function press_enter()
     if menu then
         local row = menu.rows[menu.at]
-        mp.set_property_native(menu.kind == 'sub' and 'sid' or 'aid', row.id)
+        if row.url then
+            mp.command_native_async({ name = 'sub-add', url = row.url, flags = 'select', title = row.label, lang = row.lang }, function() end)
+        else
+            mp.set_property_native(menu.kind == 'sub' and 'sid' or 'aid', row.id)
+        end
         menu = nil
     elseif on_seek then
         mp.commandv('cycle', 'pause')

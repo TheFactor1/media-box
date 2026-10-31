@@ -42,6 +42,11 @@ CSP = "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self';
 ALLOWED = re.compile(r'^(health|shelves|shelf/[^/]+|library(/[^/]+)?|new|keep|presets|search|collections(/.*)?|franchise/[^/]+'
                      r'|resume/[^/]+(/\d+/\d+)?|browse/(catalogs|catalog/[^/]+/[^/]+|meta/[^/]+/[^/]+|cast/[^/]+/[^/]+|streams/[^/]+/[^/]+(/\d+/\d+)?))$')
 IMDB = re.compile(r'^tt\d+$')
+LANGUAGES = {'en': 'English', 'eng': 'English', 'es': 'Spanish', 'spa': 'Spanish', 'fr': 'French', 'fre': 'French', 'fra': 'French', 'de': 'German',
+             'ger': 'German', 'deu': 'German', 'it': 'Italian', 'ita': 'Italian', 'pt': 'Portuguese', 'por': 'Portuguese', 'ru': 'Russian', 'rus': 'Russian',
+             'ja': 'Japanese', 'jpn': 'Japanese', 'ko': 'Korean', 'kor': 'Korean', 'zh': 'Chinese', 'chi': 'Chinese', 'zho': 'Chinese', 'ar': 'Arabic',
+             'ara': 'Arabic', 'nl': 'Dutch', 'dut': 'Dutch', 'nld': 'Dutch', 'sv': 'Swedish', 'swe': 'Swedish', 'pl': 'Polish', 'pol': 'Polish',
+             'tr': 'Turkish', 'tur': 'Turkish', 'hi': 'Hindi', 'hin': 'Hindi', 'und': 'Other'}
 
 
 def token():
@@ -128,7 +133,7 @@ class Player:
             time.sleep(0.45)  # lets the page's lights-down finish
             subprocess.run(['systemctl', 'stop', UI_UNIT], check=False, timeout=30)
             subprocess.run(['systemctl', 'start', '--no-block', MPV_UNIT], check=False, timeout=30)
-            if not self.watch(id_, ep, stream, start):
+            if not self.watch(_type, id_, ep, stream, start):
                 self.error = "That copy wouldn't play."
         except Exception as e:  # the interface must come back whatever went wrong
             self.error = f"Playback failed ({type(e).__name__})."
@@ -137,12 +142,15 @@ class Player:
             subprocess.run(['systemctl', 'start', '--no-block', UI_UNIT], check=False, timeout=30)
             self.lock.release()
 
-    def watch(self, id_, ep, stream, start):
+    def watch(self, type_, id_, ep, stream, start):
         """Feeds mpv over its socket, so the URL is never on a command line or in a log. True once it really played."""
         sock = connect(MPV_SOCKET)
         if sock is None:
             return False
         played, position, duration, saved = False, 0, 0, time.monotonic()
+        # The addons can be slow, and the film mustn't wait for them: the menu gains these whenever they arrive.
+        found = []
+        threading.Thread(target=lambda: found.append(addon_subtitles(type_, id_, ep)), daemon=True).start()
         with sock:
             for name, value in (stream.get('headers') or {}).items():
                 send(sock, ['change-list', 'http-header-fields', 'append', f'{name}: {value}'])
@@ -154,6 +162,8 @@ class Player:
             sock.settimeout(5)
             reader = sock.makefile('r', encoding='utf-8', errors='replace')
             while True:
+                if found:
+                    send(sock, ['set_property', 'user-data/mediabox/subtitles', found.pop()])
                 send(sock, ['get_property', 'time-pos'], 1)
                 send(sock, ['get_property', 'duration'], 2)
                 try:
@@ -211,6 +221,32 @@ def player_info(state, prefs):
     return {'title': str((state.get('item') or {}).get('title') or ''),
             'kicker': f"Season {ep['s']}, episode {ep['e']}" if ep.get('s') and ep.get('e') else '',
             'look': look if look in ('night', 'paper') else 'auto'}
+
+
+def addon_subtitles(type_, id_, ep):
+    status, raw = hub('GET', f'/browse/subtitles/{type_}/{id_}{ep}', timeout=20)
+    try:
+        return pick_subtitles(json.loads(raw).get('subtitles', [])) if status == 200 else []
+    except (ValueError, AttributeError):
+        return []
+
+
+def pick_subtitles(subs):
+    """A short menu from whatever the addons sent, which can run to hundreds: three per language, by language name.
+    Addon data: the URL must be plain http(s), because mpv is told to fetch it."""
+    by_language = {}
+    for sub in subs:
+        url, lang = sub.get('url'), sub.get('lang')
+        if not (isinstance(url, str) and re.fullmatch(r'https?://[!-~]+', url, re.I)):
+            continue
+        lang = lang.lower()[:12] if isinstance(lang, str) and re.fullmatch(r'[A-Za-z-]+', lang) else 'und'
+        by_language.setdefault(lang, []).append(url)
+    out = []
+    for lang in sorted(by_language, key=lambda x: LANGUAGES.get(x, x)):
+        name = LANGUAGES.get(lang, lang.upper())
+        for i, url in enumerate(by_language[lang][:3]):
+            out.append({'url': url, 'lang': lang, 'label': name + (f' {i + 1}' if i else '')})
+    return out[:40]
 
 
 def to_versions(state):
