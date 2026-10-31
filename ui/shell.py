@@ -4,10 +4,13 @@ The page itself never holds the token or a stream URL. Python 3.12 standard libr
 Run: MB_HUB=http://127.0.0.1:8097 python3 -I shell.py
 """
 import base64
+import glob
 import json
 import os
 import re
+import select
 import socket
+import struct
 import subprocess
 import threading
 import time
@@ -99,6 +102,8 @@ class Player:
         self.error = None
         self.stage = 'idle'  # what the loading page is waiting on: preparing, then ready or failed
         self.progress = 0
+        self.note = None
+        self.automatic = True
         self.cancelled = threading.Event()
 
     def choose(self, req):
@@ -128,7 +133,8 @@ class Player:
         if not self.lock.acquire(blocking=False):
             raise LookupError('something is already playing')
         self.error = None
-        self.stage, self.progress = 'preparing', 0
+        self.stage, self.progress, self.note = 'preparing', 0, None
+        self.automatic = req.get('version') is None
         self.cancelled.clear()
         threading.Thread(target=self.run, args=chosen, daemon=True).start()
 
@@ -141,6 +147,22 @@ class Player:
             self.lock.release()
         return True
 
+    def open_a_copy(self, type_, id_, ep, stream, start):
+        """The copy that opened, or None. A copy the viewer chose isn't swapped behind their back; the box's own pick falls back to its next best."""
+        failed = stream
+        if rehearse(stream, start, self):
+            return stream
+        if not self.automatic:
+            return None
+        status, raw = hub('GET', f'/browse/streams/{type_}/{id_}{ep}{prefs_query()}')
+        for other in backups(json.loads(raw).get('streams', []) if status == 200 else [], failed.get('url')):
+            if self.cancelled.is_set():
+                return None
+            self.note, self.progress = 'Trying another copy', 0
+            if rehearse(other, start, self):
+                return other
+        return None
+
     def run(self, _type, id_, ep, stream):
         handed_over = False
         try:
@@ -149,11 +171,11 @@ class Player:
             if status == 200:
                 pos = json.loads(raw or b'{}').get('positionMs') or 0
                 start = pos / 1000
-            opened = rehearse(stream, start, self)
+            stream = self.open_a_copy(_type, id_, ep, stream, start)
             if self.cancelled.is_set():
                 self.stage = 'idle'
                 return
-            if not opened:  # the interface stays up, so a bad copy costs no trip through a black screen
+            if not stream:  # the interface stays up, so a bad copy costs no trip through a black screen
                 self.error = "That copy wouldn't open. Try another version."
                 self.stage = 'failed'
                 return
@@ -182,6 +204,8 @@ class Player:
         # The addons can be slow, and the film mustn't wait for them: the menu gains these whenever they arrive.
         found = []
         threading.Thread(target=lambda: found.append(addon_subtitles(type_, id_, ep)), daemon=True).start()
+        finished = threading.Event()
+        threading.Thread(target=remote_buttons, args=(finished,), daemon=True).start()
         with sock:
             for name, value in player_info(self.state, load_prefs()).items():
                 send(sock, ['set_property', 'user-data/mediabox/' + name, value])
@@ -215,9 +239,60 @@ class Player:
                     save(id_, ep, position, duration)
                     saved = time.monotonic()
                 time.sleep(2)
+        finished.set()
         if played and duration:
             save(id_, ep, position, duration)
         return played
+
+
+def backups(streams, failed_url, count=2):
+    """The next best different copies with a link."""
+    seen, out = {failed_url}, []
+    for stream in streams:
+        url = stream.get('url')
+        if url and url not in seen:
+            seen.add(url)
+            out.append(stream)
+    return out[:count]
+
+
+# Remote buttons the terminal can't see, as Linux numbers them, with the mpv key each one becomes. Arrows, Enter and Esc stay with the terminal.
+REMOTE_KEYS = {158: 'BS', 352: 'ENTER', 353: 'ENTER', 164: 'PLAYPAUSE', 207: 'PLAY', 200: 'PLAY', 119: 'PAUSE', 201: 'PAUSE', 128: 'STOP', 166: 'STOP',
+               168: 'REWIND', 208: 'FORWARD', 358: 'i', 139: 'm', 370: 's', 392: 'a'}
+INPUT_EVENT = struct.Struct('qqHHi')  # 64-bit Linux
+EV_KEY = 1
+
+
+def remote_key(kind, code, value):
+    """The mpv key for one input event, or None. Presses and held repeats count, releases don't."""
+    return REMOTE_KEYS.get(code) if kind == EV_KEY and value in (1, 2) else None
+
+
+def remote_buttons(finished):
+    """Passes media remote buttons to mpv while a film plays. Only the buttons in REMOTE_KEYS are looked at; nothing is stored or logged."""
+    files = []
+    for path in glob.glob('/dev/input/event*'):
+        try:
+            files.append(os.open(path, os.O_RDONLY | os.O_NONBLOCK))
+        except OSError:
+            pass
+    sock = connect(MPV_SOCKET, 5) if files else None
+    try:
+        while sock and not finished.is_set():
+            ready, _, _ = select.select(files, [], [], 0.5)
+            for fd in ready:
+                raw = os.read(fd, INPUT_EVENT.size * 32)
+                for _, _, kind, code, value in INPUT_EVENT.iter_unpack(raw[:len(raw) - len(raw) % INPUT_EVENT.size]):
+                    key = remote_key(kind, code, value)
+                    if key:
+                        send(sock, ['keypress', key])
+    except OSError:  # a remote unplugged, or mpv gone: the film's own keys still work
+        pass
+    finally:
+        if sock:
+            sock.close()
+        for fd in files:
+            os.close(fd)
 
 
 def rehearsal_verdict(duration, position, cached, idle, expired):
@@ -489,7 +564,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == '/setup-qr' and method == 'GET':
                 return self.reply_json(200, setup_qr())
             if path == '/play/status' and method == 'GET':
-                out = {'stage': PLAYER.stage, 'progress': PLAYER.progress, 'error': PLAYER.error if PLAYER.stage == 'failed' else None}
+                out = {'stage': PLAYER.stage, 'progress': PLAYER.progress, 'note': PLAYER.note, 'error': PLAYER.error if PLAYER.stage == 'failed' else None}
                 if PLAYER.stage == 'failed':
                     PLAYER.error, PLAYER.stage = None, 'idle'
                 return self.reply_json(200, out)

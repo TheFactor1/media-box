@@ -72,7 +72,7 @@ class Controls(unittest.TestCase):
         return list(self.g.commands.values())
 
     def rise_over(self, level, fmt='bgr0'):
-        self.press('ENTER')
+        self.press('m')
         self.g.grab(True, self.g.frame(level, fmt))
 
     def test_dark_scene_gets_night_and_bright_gets_paper(self):
@@ -81,6 +81,52 @@ class Controls(unittest.TestCase):
         self.press('BS')
         self.rise_over(230)
         self.assertIn(PAPER, self.screen())
+
+    def test_sheet_fades_in(self):
+        self.g.props['user-data/mediabox/look'] = 'night'
+        self.press('ENTER')
+        self.g.clock = self.g.clock + 0.15
+        self.g.anim()
+        self.assertIn('&H96&', self.g.overlay.data)  # half way: the sheet's alpha, part faded
+        self.assertIn(NIGHT, self.screen())
+        self.assertIn('&H2E&', self.g.overlay.data)  # settled
+
+    def test_remote_keys_with_the_sheet_down(self):
+        self.g.props['user-data/mediabox/look'] = 'night'
+        self.press('ENTER')
+        self.assertEqual(self.commands(), ['cycle pause'])
+        self.press('BS')
+        self.screen()
+        self.press('UP')
+        self.assertIn(NIGHT, self.screen())
+        self.press('LEFT')  # on the progress bar, so this seeks
+        self.assertEqual(self.commands()[-1], 'seek -10')
+        self.press('BS')
+        self.screen()
+        self.press('DOWN')
+        self.assertIn('SUBTITLES', self.screen())
+
+    def test_media_buttons(self):
+        self.g.props['user-data/mediabox/look'] = 'night'
+        self.press('FORWARD')
+        self.press('PLAYPAUSE')
+        self.assertEqual(self.commands(), ['seek 30', 'cycle pause'])
+        self.press('PAUSE')
+        self.assertTrue(self.g.props.pause)
+        self.press('PLAY')
+        self.assertFalse(self.g.props.pause)
+        self.press('STOP')
+        self.screen()
+        self.assertEqual(self.commands()[-1], 'quit')
+
+    def test_stats_toggle_and_show_passthrough(self):
+        self.g.props['audio-out-params/format'] = 'spdif-truehd'
+        self.g.props['hwdec-current'] = 'vaapi'
+        self.press('i')
+        self.assertIn('vaapi', self.screen())
+        self.assertIn('Passed through', self.screen())
+        self.press('i')
+        self.assertNotIn('vaapi', self.screen())
 
     def test_look_holds_while_showing(self):
         self.rise_over(20)
@@ -116,6 +162,11 @@ class Controls(unittest.TestCase):
         self.press('BS')
         self.assertEqual(self.screen(), '')
         self.press('BS')
+        self.assertNotIn('quit', self.commands())  # fades first
+        self.g.clock = self.g.clock + 0.175
+        self.g.anim()
+        self.assertAlmostEqual(self.g.props.volume, 50)
+        self.screen()
         self.assertEqual(self.commands()[-1], 'quit')
 
     def test_hides_when_idle_but_not_when_paused(self):
@@ -135,6 +186,7 @@ class Controls(unittest.TestCase):
         for _ in range(5):
             self.press('RIGHT')
         self.press('ENTER')
+        self.screen()
         self.assertEqual(self.commands(), ['script-message mediabox-versions', 'quit'])
 
     def test_subtitle_menu_picks_off(self):
@@ -187,11 +239,7 @@ class Loading(unittest.TestCase):
     def test_film_waits_behind_the_card(self):
         self.g.load_check()  # nothing ready yet
         self.assertTrue(self.g.props.pause)
-        self.g.events['playback-restart']()
-        self.g.clock = 3
-        self.g.load_check()  # position and length, but no picture buffered
-        self.assertTrue(self.g.props.pause)
-        self.g.props['demuxer-cache-duration'] = 10
+        self.g.events['playback-restart']()  # the first frame is ready
         self.g.load_check()
         self.assertFalse(self.g.props.pause)
 

@@ -6,6 +6,8 @@ Wants=network-online.target
 [Service]
 User=media
 Group=media
+# Reads media remote buttons while a film plays; see remote_buttons in shell.py.
+SupplementaryGroups=input
 Environment=HOME=/var/lib/media
 StateDirectory=media
 # mpv's control socket lives here; both units run as media.

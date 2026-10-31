@@ -18,11 +18,13 @@ local BUTTONS = {
     { id = 'copy', x = 1314, w = 250, text = 'Other versions' }, { id = 'stop', x = 1576, w = 248, text = 'Back to the paper' },
 }
 local MENU_ROWS = 9
-local SLIDE_TIME, FADE_TIME = 0.22, 0.6
-local BLACK_AT_MOST, BUFFER = 25, 2   -- seconds; the short buffer is safe because the film has already opened once
+-- mpv redraws the OSD only with a new film frame, about 24 a second: too few for a big move to look smooth, enough for a fade with a small rise.
+local RISE_TIME, RISE_BY, FADE_TIME, LEAVE_TIME = 0.3, 24, 0.6, 0.35
+local BLACK_AT_MOST = 25   -- seconds
 
 local showing, rising, focus, on_seek, menu, last_key = false, false, 1, false, nil, 0
 local look = LOOKS.night
+local opacity, leaving, stats = 1, false, false
 local shown, offset, curtain, loading, restarted, born, last_frame = 0, 0, 1, true, false, mp.get_time(), 0
 local anim_timer
 
@@ -34,12 +36,17 @@ local function colour(rgb)
     return rgb:sub(5, 6) .. rgb:sub(3, 4) .. rgb:sub(1, 2)
 end
 
+-- An ASS alpha (00 is solid) with the sheet's current fade applied.
+local function faded(alpha)
+    return string.format('%02X', math.floor(255 - (255 - tonumber(alpha, 16)) * opacity))
+end
+
 local function box(x, y, w, h, rgb, alpha)
-    return string.format('{\\an7\\pos(0,0)\\bord0\\shad0\\1c&H%s&\\1a&H%s&\\p1}m %d %d l %d %d %d %d %d %d{\\p0}', colour(rgb), alpha or '00', x, y + offset, x + w, y + offset, x + w, y + h + offset, x, y + h + offset)
+    return string.format('{\\an7\\pos(0,0)\\bord0\\shad0\\1c&H%s&\\1a&H%s&\\p1}m %d %d l %d %d %d %d %d %d{\\p0}', colour(rgb), faded(alpha or '00'), x, y + offset, x + w, y + offset, x + w, y + h + offset, x, y + h + offset)
 end
 
 local function text(x, y, align, font, size, rgb, content, bold, clip)
-    return string.format('{\\an%d\\pos(%d,%d)\\bord0\\shad0\\fn%s\\fs%d\\b%d\\1c&H%s&\\1a&H00&%s}%s', align, x, y + offset, font, size, bold and 1 or 0, colour(rgb),
+    return string.format('{\\an%d\\pos(%d,%d)\\bord0\\shad0\\fn%s\\fs%d\\b%d\\1c&H%s&\\1a&H%s&%s}%s', align, x, y + offset, font, size, bold and 1 or 0, colour(rgb), faded('00'),
         clip and string.format('\\clip(%d,%d,%d,%d)', clip[1], clip[2] + offset, clip[3], clip[4] + offset) or '', escape(content))
 end
 
@@ -88,14 +95,42 @@ local function draw_sheet(out)
     if menu then draw_menu(out) end
 end
 
+-- What is really playing, as the Android Player's stats show it. Only read while on screen.
+local function stat(name)
+    return mp.get_property(name, '–')
+end
+
+local function draw_stats(out)
+    local through = (mp.get_property('audio-out-params/format', '') or ''):find('spdif') and 'Passed through to the receiver' or 'Decoded here'
+    local lines = {
+        { 'Picture', stat('video-params/w') .. ' × ' .. stat('video-params/h') .. ' · ' .. stat('video-codec') },
+        { 'Colour', stat('video-params/gamma') .. ' · ' .. stat('video-params/primaries') .. ' · peak ' .. stat('video-params/sig-peak') },
+        { 'Decoder', stat('hwdec-current') },
+        { 'Frame rate', 'film ' .. stat('container-fps') .. ' · display ' .. stat('display-fps') },
+        { 'Dropped', stat('frame-drop-count') .. ' shown · ' .. stat('decoder-frame-drop-count') .. ' decoded' },
+        { 'Sound', stat('audio-codec-name') .. ' · ' .. stat('audio-params/channel-count') .. ' channels' },
+        { 'Sound output', through },
+        { 'Held', stat('demuxer-cache-duration') .. ' seconds' },
+    }
+    offset, opacity = 0, 1
+    out[#out + 1] = box(96, 60, 1000, 60 + #lines * 44, LOOKS.night.sheet, '20')
+    for i, line in ipairs(lines) do
+        local y = 60 + i * 44
+        out[#out + 1] = text(124, y, 4, BODY, 24, LOOKS.night.quiet, line[1])
+        out[#out + 1] = text(344, y, 4, BODY, 24, LOOKS.night.ink, line[2], true, { 344, y - 22, 1076, y + 22 })
+    end
+end
+
 local function paint()
     local out = {}
     if shown > 0 then
-        offset = math.floor(264 * (1 - shown * shown * (3 - 2 * shown)))
+        opacity = shown * shown * (3 - 2 * shown)
+        offset = math.floor(RISE_BY * (1 - opacity))
         draw_sheet(out)
     end
+    if stats then draw_stats(out) end
     if curtain > 0 then
-        offset = 0
+        offset, opacity = 0, 1
         out[#out + 1] = box(0, 0, 1920, 1080, '000000', string.format('%02X', math.floor(255 * (1 - curtain))))
     end
     overlay.data = table.concat(out, '\n')
@@ -133,15 +168,27 @@ anim_timer = mp.add_periodic_timer(1 / 30, function()
     local now = mp.get_time()
     local dt = now - last_frame
     last_frame = now
-    shown = showing and math.min(1, shown + dt / SLIDE_TIME) or math.max(0, shown - dt / SLIDE_TIME)
-    if not loading and curtain > 0 then
+    shown = showing and math.min(1, shown + dt / RISE_TIME) or math.max(0, shown - dt / RISE_TIME)
+    if leaving then
+        curtain = math.min(1, curtain + dt / LEAVE_TIME)
+        mp.set_property_number('volume', 100 * (1 - curtain))
+        if curtain == 1 then mp.commandv('quit') end
+    elseif not loading and curtain > 0 then
         curtain = math.max(0, curtain - dt / FADE_TIME)
         mp.set_property_number('volume', 100 * (1 - curtain))  -- picture and sound arrive together
     end
     paint()
-    if curtain == 0 and shown == (showing and 1 or 0) then anim_timer:kill() end
+    if not leaving and curtain == 0 and shown == (showing and 1 or 0) then anim_timer:kill() end
 end)
 anim_timer:kill()
+
+-- Out of the film: picture and sound go down together, then mpv quits.
+local function leave()
+    if leaving then return end
+    leaving = true
+    animate()
+    mp.add_timeout(LEAVE_TIME + 0.5, function() mp.commandv('quit') end)  -- in case the fade can't run
+end
 
 local function rise(chosen)
     look = chosen
@@ -217,8 +264,8 @@ local function press_enter()
         elseif id == 'subs' then open_menu('sub')
         elseif id == 'copy' then
             mp.commandv('script-message', 'mediabox-versions')
-            mp.commandv('quit')
-        elseif id == 'stop' then mp.commandv('quit') end
+            leave()
+        elseif id == 'stop' then leave() end
     end
 end
 
@@ -235,7 +282,7 @@ end
 local function back()
     if menu then menu = nil
     elseif showing then hide()
-    else mp.commandv('quit') end
+    else leave() end
 end
 
 -- First press of anything but left, right and back only raises the sheet.
@@ -250,9 +297,43 @@ local function key(name, action, opts)
     end, opts)
 end
 
-local function when_up(action)
+local function pause_key()
+    mp.commandv('cycle', 'pause')
+    wake()
+end
+
+-- With the sheet down, as on the Android Player: OK pauses, Up goes to the progress bar, Down opens subtitles.
+local function ok_key()
+    if showing then press_enter() else pause_key() end
+end
+
+local function up_key()
+    if showing then vertical(-1)
+    else
+        on_seek = true
+        wake()
+    end
+end
+
+local function down_key()
+    if showing then vertical(1)
+    else
+        open_menu('sub')
+        wake()
+    end
+end
+
+local function menu_key(kind)
     return function()
-        if showing then action() else wake() end
+        open_menu(kind)
+        wake()
+    end
+end
+
+local function jump(by)
+    return function()
+        mp.commandv('seek', by)
+        wake()
     end
 end
 
@@ -273,9 +354,8 @@ local load_timer
 load_timer = mp.add_periodic_timer(0.1, function()
     local age = mp.get_time() - born
     paint()
-    local buffered = mp.get_property_number('demuxer-cache-duration', 0) >= BUFFER or mp.get_property_bool('demuxer-cache-idle')
-    local ready = restarted and mp.get_property_number('duration', 0) > 0 and buffered
-    if ready or age >= BLACK_AT_MOST then
+    -- The film has already opened off-screen, so the first frame is enough: black is the thing to keep short.
+    if restarted or age >= BLACK_AT_MOST then
         load_timer:kill()
         loading = false
         mp.set_property_bool('pause', false)
@@ -283,17 +363,31 @@ load_timer = mp.add_periodic_timer(0.1, function()
     end
 end)
 
-key('ENTER', when_up(press_enter))
-key('SPACE', function() mp.commandv('cycle', 'pause'); wake() end)
+key('ENTER', ok_key)
+key('SPACE', pause_key)
+key('PLAYPAUSE', pause_key)
+key('PLAY', function() mp.set_property_bool('pause', false); wake() end)
+key('PAUSE', function() mp.set_property_bool('pause', true); wake() end)
+key('STOP', leave)
+key('REWIND', jump(-10), { repeatable = true })
+key('FORWARD', jump(30), { repeatable = true })
+key('s', menu_key('sub'))
+key('a', menu_key('audio'))
+key('m', wake)
+key('i', function()
+    stats = not stats
+    paint()
+end)
 key('LEFT', sideways(-1), { repeatable = true })
 key('RIGHT', sideways(1), { repeatable = true })
-key('UP', when_up(function() vertical(-1) end), { repeatable = true })
-key('DOWN', when_up(function() vertical(1) end), { repeatable = true })
+key('UP', up_key, { repeatable = true })
+key('DOWN', down_key, { repeatable = true })
 key('ESC', back)
 key('BS', back)
 key('q', back)
 
 mp.add_periodic_timer(0.5, function()
+    if stats and not showing then paint() end
     if not showing then return end
     if not menu and not mp.get_property_bool('pause') and mp.get_time() - last_key >= IDLE then return hide() end
     paint()

@@ -244,7 +244,7 @@ function shownCopies() {
   const all = playable();
   const out = all.filter(keep);
   if (by) out.sort(by);
-  return out.slice(0, 30).map((x) => ({ ...x, top: x.i === 0 }));
+  return out.slice(0, 200).map((x) => ({ ...x, top: x.i === 0 }));
 }
 function copyFilterBar() {
   const f = filterOf(), opts = copyOptions();
@@ -492,6 +492,10 @@ function wireEpisodes() {
   });
 }
 function firstEpisode(it) { const v = (it.videos || [])[0]; return v ? { s: v.s, e: v.e } : null; }
+// The one move for changing pages: a little sideways, in the direction of travel, and fading up. One layer, so it is nearly free to draw.
+function pageMove(dir) {
+  pageEl.animate([{ opacity: 0, transform: `translateX(${dir * 28}px)` }, { opacity: 1, transform: 'none' }], { duration: 170, easing: 'ease-out' });
+}
 async function go(page, opts = {}) {
   if (!opts.back) S.history.push({ page: S.page, item: S.item, ep: S.ep, key: document.activeElement?.dataset?.key });
   S.page = page;
@@ -499,7 +503,9 @@ async function go(page, opts = {}) {
   mastEl.dataset.page = '';
   await withLoading(() => loadPage(page));
   draw(opts.key);
-  if (!reduce() && (page === 'film' || page === 'show')) pageEl.querySelectorAll('.el').forEach((n, i) => n.animate([{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], { duration: 320, delay: Math.min(i, 8) * 30, easing: 'ease-out', fill: 'backwards' }));
+  if (reduce()) return;
+  if (opts.back || (page !== 'film' && page !== 'show')) return pageMove(opts.back ? -1 : 1);
+  pageEl.querySelectorAll('.el').forEach((n, i) => n.animate([{ opacity: 0, transform: 'translateY(16px)' }, { opacity: 1, transform: 'none' }], { duration: 320, delay: Math.min(i, 8) * 30, easing: 'ease-out', fill: 'backwards' }));
 }
 function openTitle(it) { S.item = it; S.full = null; S.ep = null; S.streams = null; return go(it.type === 'series' ? 'show' : 'film'); }
 function back() {
@@ -520,7 +526,7 @@ async function tabTo(page) {
   await withLoading(() => loadPage(page));
   mastEl.dataset.page = '';
   draw('tab:' + page);
-  if (!reduce()) pageEl.animate([{ opacity: 0, transform: `translateX(${backwards ? -28 : 28}px)` }, { opacity: 1, transform: 'none' }], { duration: 170, easing: 'ease-out' });
+  if (!reduce()) pageMove(backwards ? -1 : 1);
 }
 // Row tabs riffle: posters are dealt in, one after another, in the direction of travel.
 let rowTimer;
@@ -588,8 +594,9 @@ async function play(opts) {
     if (S.opening !== opening) return void api('/play/cancel', { method: 'POST' }).catch(() => {});  // Back was pressed while the copy was being found
     // The name stays up until the film has really opened off-screen; only then do the lights go down.
     for (;;) {
-      const { stage, error, progress } = await api('/play/status');
+      const { stage, error, progress, note } = await api('/play/status');
       if (S.opening !== opening) return;
+      if (note) $('#press-note').textContent = note;
       $('#press-fill').style.transform = `scaleX(${stage === 'ready' ? 1 : progress})`;
       if (stage === 'failed') throw new Error(error || "That copy wouldn't open.");
       if (stage === 'ready') break;
@@ -712,13 +719,20 @@ async function setupWatch() {
   }
   if (S.page === 'setup') { S.setup = null; S.page = 'home'; await withLoading(() => loadPage('home')); draw(); }
 }
+// The page opens in the dark and the lights come up once it is drawn, so coming back from a film is one fade, not a blank page filling in.
+let lightsTimer;
+function lightsUp() {
+  clearTimeout(lightsTimer);
+  $('#lights').classList.remove('down');
+}
 async function start() {
+  lightsTimer = setTimeout(lightsUp, 8000);  // whatever goes wrong below, the screen must not stay black
   fit();
   const { state, error } = await api('/state').catch(() => ({ state: {} }));
   S.prefs = await api('/prefs').catch(() => ({}));
   const cold = !state?.page;
   const setup = await api('/setup-qr').catch(() => ({}));
-  if (setup.url) { S.setup = setup; S.page = 'setup'; draw(); if (cold) document.body.classList.add('boot'); setTimeout(setupWatch, 5000); return; }
+  if (setup.url) { S.setup = setup; S.page = 'setup'; draw(); if (cold) document.body.classList.add('boot'); lightsUp(); setTimeout(setupWatch, 5000); return; }
   if (!cold) {
     S.page = state.page; S.item = state.item; S.row = state.row; S.ep = state.ep; S.history = state.history || [];
     await withLoading(() => loadPage(S.page));
@@ -726,6 +740,7 @@ async function start() {
     if (state.season != null) S.season = state.season;
   } else { document.body.classList.add('boot'); await withLoading(() => loadPage('home')); }
   draw(state?.key);
+  lightsUp();
   setTimeout(() => document.body.classList.remove('boot'), 900);
   if (error) notice(error);
 }

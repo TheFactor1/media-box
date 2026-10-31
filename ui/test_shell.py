@@ -74,6 +74,24 @@ class Opening(unittest.TestCase):
         self.assertFalse(player.cancel_opening())
 
 
+class Recovery(unittest.TestCase):
+    def test_backups_skip_the_failed_copy_and_torrents(self):
+        streams = [{'url': 'a'}, {'url': None}, {'url': 'b'}, {'url': 'b'}, {'url': 'c'}, {'url': 'd'}]
+        self.assertEqual([s['url'] for s in shell.backups(streams, 'a')], ['b', 'c'])
+
+
+class Remote(unittest.TestCase):
+    def test_presses_and_repeats_pass_but_not_releases(self):
+        self.assertEqual(shell.remote_key(shell.EV_KEY, 158, 1), 'BS')
+        self.assertEqual(shell.remote_key(shell.EV_KEY, 208, 2), 'FORWARD')
+        self.assertIsNone(shell.remote_key(shell.EV_KEY, 158, 0))
+        self.assertIsNone(shell.remote_key(4, 158, 1))
+
+    def test_typing_on_a_keyboard_is_not_looked_at(self):
+        for code in (28, 30, 103, 105, 106, 108, 1):  # Enter, A, the arrows, Esc
+            self.assertIsNone(shell.remote_key(shell.EV_KEY, code, 1))
+
+
 class Subtitles(unittest.TestCase):
     def test_short_named_menu(self):
         subs = [{'url': f'https://s/{i}', 'lang': 'eng'} for i in range(5)] + [{'url': 'https://s/fr', 'lang': 'fre'}]
