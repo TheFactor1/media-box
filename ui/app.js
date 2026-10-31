@@ -22,10 +22,22 @@ function h(tag, props = {}, ...kids) {
 }
 
 // ---- Talking to the bridge ------------------------------------------------------------------
+// Pages seen in the last few minutes change at once, as in the prototype, instead of waiting on the hub. Any change clears this,
+// and the page restarts after every film, so positions are never stale. Copies and health are always asked for fresh.
+const pageCache = new Map();
+const CACHE_MS = 5 * 60 * 1000;
 async function api(path, opts = {}) {
-  const r = await fetch(path.startsWith('/') ? path : '/api/' + path, { method: opts.method || 'GET', headers: opts.body ? { 'Content-Type': 'application/json' } : {}, body: opts.body ? JSON.stringify(opts.body) : undefined });
-  const data = await r.json().catch(() => ({}));
+  const method = opts.method || 'GET';
+  if (method !== 'GET') pageCache.clear();
+  const cacheable = method === 'GET' && !path.startsWith('/') && !/^(browse\/streams|health)/.test(path);
+  const hit = cacheable && pageCache.get(path);
+  if (hit && Date.now() - hit.at < CACHE_MS) return JSON.parse(hit.text);  // parsed each time, because pages change what they're given
+  const r = await fetch(path.startsWith('/') ? path : '/api/' + path, { method, headers: opts.body ? { 'Content-Type': 'application/json' } : {}, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  const text = await r.text();
+  let data = {};
+  try { data = JSON.parse(text); } catch {}
   if (!r.ok) throw new Error(data.reason || "That didn't work. Try again.");
+  if (cacheable) pageCache.set(path, { at: Date.now(), text });
   return data;
 }
 const q = encodeURIComponent;
@@ -742,6 +754,8 @@ async function start() {
   draw(state?.key);
   lightsUp();
   setTimeout(() => document.body.classList.remove('boot'), 900);
+  if (state?.stopPress) notice(state.stopPress);
   if (error) notice(error);
+  setTimeout(() => Object.values(GRIDS).forEach((path) => api(path).catch(() => {})), 1500);  // so the first visit to each tab is instant too
 }
 document.fonts?.ready.then(start, start);

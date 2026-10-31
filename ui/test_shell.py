@@ -74,6 +74,33 @@ class Opening(unittest.TestCase):
         self.assertFalse(player.cancel_opening())
 
 
+class AfterFilm(unittest.TestCase):
+    ITEM = {'id': 'tt1', 'type': 'movie'}
+
+    def test_copy_list_returns_to_the_film_page(self):
+        state = {'page': 'versions', 'item': self.ITEM, 'key': 'copy:22', 'history': [{'page': 'home'}, {'page': 'film'}]}
+        out = shell.after_film(state, 600, 6000, False)
+        self.assertEqual((out['page'], out['key']), ('film', 'film:play'))
+        self.assertEqual([h['page'] for h in out['history']], ['home'])
+
+    def test_home_returns_to_the_title_with_back_to_home(self):
+        state = {'page': 'home', 'item': {'id': 'tt2', 'type': 'series'}, 'key': 'row:3', 'history': []}
+        out = shell.after_film(state, 600, 6000, False)
+        self.assertEqual((out['page'], out['key']), ('show', 'show:play'))
+        self.assertEqual(out['history'][0]['key'], 'row:3')
+
+    def test_other_versions_goes_to_the_top_of_the_list(self):
+        state = {'page': 'versions', 'item': self.ITEM, 'key': 'copy:22'}
+        out = shell.after_film(state, 600, 6000, True)
+        self.assertEqual((out['page'], out['key']), ('versions', None))
+
+    def test_stop_press(self):
+        self.assertEqual(shell.stop_press(4324, 7444), 'Stop press. You stopped at 1:12:04, with 52 minutes left.')
+        self.assertEqual(shell.stop_press(600, 8000), 'Stop press. You stopped at 10:00, with 2 hours 3 minutes left.')
+        self.assertIsNone(shell.stop_press(30, 6000))
+        self.assertIsNone(shell.stop_press(5900, 6000))
+
+
 class Recovery(unittest.TestCase):
     def test_backups_skip_the_failed_copy_and_torrents(self):
         streams = [{'url': 'a'}, {'url': None}, {'url': 'b'}, {'url': 'b'}, {'url': 'c'}, {'url': 'd'}]

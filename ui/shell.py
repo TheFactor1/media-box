@@ -104,6 +104,8 @@ class Player:
         self.progress = 0
         self.note = None
         self.automatic = True
+        self.chose_versions = False
+        self.reached = (0, 0)
         self.cancelled = threading.Event()
 
     def choose(self, req):
@@ -135,6 +137,7 @@ class Player:
         self.error = None
         self.stage, self.progress, self.note = 'preparing', 0, None
         self.automatic = req.get('version') is None
+        self.chose_versions = False
         self.cancelled.clear()
         threading.Thread(target=self.run, args=chosen, daemon=True).start()
 
@@ -184,7 +187,9 @@ class Player:
             time.sleep(0.45)  # lets the page's lights-down finish
             subprocess.run(['systemctl', 'stop', UI_UNIT], check=False, timeout=30)
             subprocess.run(['systemctl', 'start', '--no-block', MPV_UNIT], check=False, timeout=30)
-            if not self.watch(_type, id_, ep, stream, start):
+            if self.watch(_type, id_, ep, stream, start):
+                self.state = after_film(self.state, *self.reached, self.chose_versions)
+            else:
                 self.error = "That copy wouldn't play."
         except Exception as e:  # the interface must come back whatever went wrong
             self.error = f"Playback failed ({type(e).__name__})."
@@ -225,7 +230,7 @@ class Player:
                             raise EOFError
                         msg = json.loads(line)
                         if msg.get('event') == 'client-message' and msg.get('args') == ['mediabox-versions']:
-                            self.state = to_versions(self.state)
+                            self.chose_versions = True
                         if msg.get('request_id') in pending:
                             pending.discard(msg['request_id'])
                             if isinstance(msg.get('data'), (int, float)):
@@ -240,6 +245,7 @@ class Player:
                     saved = time.monotonic()
                 time.sleep(2)
         finished.set()
+        self.reached = (position, duration)
         if played and duration:
             save(id_, ep, position, duration)
         return played
@@ -432,10 +438,39 @@ def pick_subtitles(subs):
     return out[:40]
 
 
+def stop_press(position, duration):
+    """The line shown on return from a film left partway, or None for a quick exit or the very end."""
+    if not duration or position < 60 or position / duration >= 0.95:
+        return None
+    seconds = int(position)
+    at = f'{seconds // 3600}:{seconds // 60 % 60:02d}:{seconds % 60:02d}' if seconds >= 3600 else f'{seconds // 60}:{seconds % 60:02d}'
+    left = max(1, round((duration - position) / 60))
+    hours, minutes = left // 60, left % 60
+    words = [f'{hours} hour{"s" if hours != 1 else ""}'] * bool(hours) + [f'{minutes} minute{"s" if minutes != 1 else ""}'] * bool(minutes)
+    return f'Stop press. You stopped at {at}, with {" ".join(words)} left.'
+
+
+def after_film(state, position, duration, chose_versions):
+    """Where a film returns to: the title's own page with Play ready, not the copy list or a row. Back still leads where it did."""
+    if chose_versions:
+        return to_versions(state)
+    item = state.get('item')
+    if not item:
+        return state
+    target = 'show' if item.get('type') == 'series' else 'film'
+    page, history = state.get('page'), list(state.get('history') or [])
+    if page == 'versions':
+        if history and history[-1].get('page') == target:
+            history.pop()
+    elif page != target:
+        history.append({'page': page, 'item': item, 'ep': state.get('ep'), 'key': state.get('key')})
+    return {**state, 'page': target, 'key': target + ':play', 'history': history, 'stopPress': stop_press(position, duration)}
+
+
 def to_versions(state):
     """Other versions, pressed during the film: the interface comes back on the copies, with Back leading where it was."""
     if state.get('page') == 'versions':
-        return state
+        return {**state, 'key': None}
     back = {'page': state.get('page'), 'item': state.get('item'), 'ep': state.get('ep'), 'key': state.get('key')}
     return {**state, 'page': 'versions', 'key': None, 'history': [*(state.get('history') or []), back]}
 
