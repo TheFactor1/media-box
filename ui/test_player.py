@@ -8,8 +8,8 @@ except ImportError:
     lupa = None
 
 STUB = r"""
-props = { pause = false, ['time-pos'] = 100, duration = 1000, ['user-data/mediabox/look'] = 'auto', ['user-data/mediabox/title'] = 'A {bad} title' }
-bindings, commands, timers, clock, grab = {}, {}, {}, 0, nil
+props = { pause = true, ['time-pos'] = 100, duration = 1000, ['user-data/mediabox/look'] = 'auto', ['user-data/mediabox/title'] = 'A {bad} title' }
+bindings, commands, timers, events, clock, grab = {}, {}, {}, {}, 0, nil
 overlay = { update = function() end, data = '' }
 mp = {
   create_osd_overlay = function() return overlay end,
@@ -18,11 +18,16 @@ mp = {
   get_property_bool = function(n) return props[n] end,
   get_property_native = function(n) return props[n] end,
   set_property_native = function(n, v) props[n] = v end,
+  set_property_bool = function(n, v) props[n] = v end,
+  register_event = function(n, f) events[n] = f end,
   get_time = function() return clock end,
   commandv = function(...) commands[#commands + 1] = table.concat({...}, ' ') end,
   add_forced_key_binding = function(k, _, f) bindings[k] = f end,
   add_timeout = function(_, f) timers[#timers + 1] = f end,
-  add_periodic_timer = function(_, f) tick = f end,
+  add_periodic_timer = function(every, f)
+    if every == 0.5 then tick = f elseif every == 0.1 then load_check = f else anim = f end
+    return { kill = function() end, resume = function() end }
+  end,
   command_native_async = function(_, f) grab = f end,
 }
 function frame(level, format)
@@ -41,11 +46,22 @@ class Controls(unittest.TestCase):
         with open(os.path.join(HERE, 'player.lua'), encoding='utf-8') as f:
             self.lua.execute(f.read())
         self.g = self.lua.globals()
+        self.start_film()
+
+    def start_film(self):
+        self.g.events['playback-restart']()
+        self.g.props['demuxer-cache-duration'] = 10
+        self.g.clock = 3
+        self.g.load_check()
+        self.g.clock = 4
+        self.g.anim()
 
     def press(self, name):
         self.g.bindings[name]()
 
     def screen(self):
+        self.g.clock = self.g.clock + 1  # lets any slide finish
+        self.g.anim()
         return self.g.overlay.data
 
     def commands(self):
@@ -100,11 +116,10 @@ class Controls(unittest.TestCase):
 
     def test_hides_when_idle_but_not_when_paused(self):
         self.rise_over(20)
-        self.g.clock = 3
         self.g.tick()
         self.assertNotEqual(self.screen(), '')
         self.g.props.pause = True
-        self.g.clock = 10
+        self.g.clock = 20
         self.g.tick()
         self.assertNotEqual(self.screen(), '')
         self.g.props.pause = False
@@ -134,6 +149,41 @@ class Controls(unittest.TestCase):
     def test_title_cannot_inject_drawing_codes(self):
         self.rise_over(20)
         self.assertIn('A \\{bad\\} title', self.screen())
+
+
+@unittest.skipIf(lupa is None, 'lupa is not installed')
+class Loading(unittest.TestCase):
+    setUp = Controls.setUp
+    commands = Controls.commands
+
+    def start_film(self):
+        pass
+
+    def test_film_waits_behind_the_card(self):
+        self.g.load_check()  # nothing ready yet
+        self.assertTrue(self.g.props.pause)
+        self.g.events['playback-restart']()
+        self.g.clock = 3
+        self.g.load_check()  # position and length, but no picture buffered
+        self.assertTrue(self.g.props.pause)
+        self.g.props['demuxer-cache-duration'] = 10
+        self.g.clock = 1
+        self.g.load_check()  # all ready, but the card hasn't had its time
+        self.assertTrue(self.g.props.pause)
+        self.g.clock = 3
+        self.g.load_check()
+        self.assertFalse(self.g.props.pause)
+
+    def test_a_stuck_stream_still_starts(self):
+        self.g.clock = 26
+        self.g.load_check()
+        self.assertFalse(self.g.props.pause)
+
+    def test_keys_wait_except_back(self):
+        self.g.bindings['ENTER']()
+        self.assertIsNone(self.g.grab)
+        self.g.bindings['BS']()
+        self.assertEqual(self.commands(), ['quit'])
 
 
 if __name__ == '__main__':

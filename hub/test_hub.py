@@ -295,6 +295,11 @@ class HubTest(Fixture):
         conn.close()
         streams = self.get('/browse/streams/movie/tt1?preset=fast')['streams']
         self.assertEqual(streams[-1]['url'], None)  # infoHash-only goes last
+        self.assertNotIn('http://cdn/remux', [s['url'] for s in streams])  # over the speed cap
+        listed = self.get('/browse/streams/movie/tt1?preset=fast&all=1')['streams']
+        over = [s for s in listed if s['url'] == 'http://cdn/remux']
+        self.assertTrue(over and over[0]['badges']['overLimit'])
+        self.assertEqual(listed[0]['url'], streams[0]['url'])  # the best copy within the setting still leads
 
     def test_4_resume(self):
         self.assertEqual(self.call('PUT', '/resume/tt1', {'positionMs': 60000, 'durationMs': 6000000, 'updatedAt': 2000})[0], 200)

@@ -39,6 +39,12 @@ class Choose(unittest.TestCase):
             shell.episode('1/../..', 3)
 
 
+class Copies(unittest.TestCase):
+    def test_the_copy_list_asks_for_everything(self):
+        self.assertIn('all=1', shell.list_query())
+        self.assertNotIn('all=1', shell.prefs_query())
+
+
 class Controls(unittest.TestCase):
     def test_info_for_the_sheet(self):
         info = shell.player_info({'item': {'title': 'Heat'}, 'ep': {'s': 2, 'e': 3}}, {'playerLook': 'paper'})

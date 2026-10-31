@@ -214,9 +214,19 @@ def select(raw, ctx, p):
         out = [x for x in out if x['badges']['cached'] is not False]
     ranked = sorted(out, key=key, reverse=True)
     relaxed = []
+
+    def finish(kept):  # choosing by hand: copies over the speed setting stay on the list, after the ones within it
+        if not p.get('show_all'):
+            return kept
+        within = {id(x) for x in kept}
+        rest = [x for x in ranked if id(x) not in within]
+        for x in rest:
+            x['badges']['overLimit'] = True
+        return kept + rest
+
     for step in [None] + [k for k in RELAX if p.get(k)]:
         relaxed += [step] if step else []
         kept = [x for x in ranked if allowed(x['badges'], p, relaxed)]
         if any(x['url'] for x in kept):
-            return kept, relaxed
-    return [], relaxed
+            return finish(kept), relaxed
+    return finish([]), relaxed

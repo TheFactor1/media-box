@@ -96,6 +96,9 @@ What this costs: no permanent copies. If a provider drops a file, the next Play 
 ### Decided 2026-10-27: Kodi is the engine, not Nuvio or Stremio
 Nuvio's official desktop has no Linux build; the NuvioLinux fork is a v0.1 alpha rendering mpv through a GL window. Stremio's Linux shell needs X11/Wayland. In both cases the player sits inside a window on a compositor, and no Linux compositor gives a windowed player HDR output or reliable TrueHD passthrough. Only a player that owns the display (Kodi on GBM) reaches the quality bar. What we want from Nuvio is its layout (→ skin) and its browse-anything model (→ Stremio-protocol addon), both of which fit inside Kodi.
 
+### Decided 2026-10-30: don't fork Nuvio; borrow ideas only
+Kodi is being replaced by our own interface, but the reasoning above still holds: the player must own the display, so Fedora, Broadsheet and mpv stay. Nuvio Desktop now lists Linux packages, but it is still alpha and we haven't tested it. Nuvio is GPL-3.0, so ideas are free to reuse and copied code is not. Next from the comparison: addon subtitles in the player, then next episode, then ratings.
+
 ### Existing home server (EliteMini) services, sorted (from `docker ps`, 2026-10-27)
 | Bucket | Services | Why |
 |---|---|---|

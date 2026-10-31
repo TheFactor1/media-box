@@ -1,5 +1,6 @@
 -- The film's controls: the Broadsheet sheet from docs/broadsheet-prototype.html, drawn on mpv's OSD at 1920x1080.
 -- The sheet's look is chosen once each time it rises and held until it hides, so cuts and flashes can't make it flicker.
+-- mpv starts paused behind a loading card: the film starts only once its position, length and a few seconds of picture are in.
 local overlay = mp.create_osd_overlay('ass-events')
 overlay.res_x, overlay.res_y = 1920, 1080
 
@@ -17,9 +18,13 @@ local BUTTONS = {
     { id = 'copy', x = 1314, w = 250, text = 'Other versions' }, { id = 'stop', x = 1576, w = 248, text = 'Back to the paper' },
 }
 local MENU_ROWS = 9
+local SLIDE_TIME, FADE_TIME = 0.22, 0.6
+local CARD_AT_LEAST, CARD_AT_MOST, BUFFER = 2.5, 25, 5   -- seconds
 
 local showing, rising, focus, on_seek, menu, last_key = false, false, 1, false, nil, 0
 local look = LOOKS.night
+local shown, offset, curtain, loading, restarted, born, last_frame = 0, 0, 1, true, false, mp.get_time(), 0
+local anim_timer
 
 local function escape(text)
     return (tostring(text or ''):gsub('[\r\n]', ' '):gsub('\\', '\\\239\187\191'):gsub('{', '\\{'):gsub('}', '\\}'))
@@ -30,12 +35,12 @@ local function colour(rgb)
 end
 
 local function box(x, y, w, h, rgb, alpha)
-    return string.format('{\\an7\\pos(0,0)\\bord0\\shad0\\1c&H%s&\\1a&H%s&\\p1}m %d %d l %d %d %d %d %d %d{\\p0}', colour(rgb), alpha or '00', x, y, x + w, y, x + w, y + h, x, y + h)
+    return string.format('{\\an7\\pos(0,0)\\bord0\\shad0\\1c&H%s&\\1a&H%s&\\p1}m %d %d l %d %d %d %d %d %d{\\p0}', colour(rgb), alpha or '00', x, y + offset, x + w, y + offset, x + w, y + h + offset, x, y + h + offset)
 end
 
-local function text(x, y, align, font, size, rgb, content, bold, clip)
-    return string.format('{\\an%d\\pos(%d,%d)\\bord0\\shad0\\fn%s\\fs%d\\b%d\\1c&H%s&\\1a&H00&%s}%s', align, x, y, font, size, bold and 1 or 0, colour(rgb),
-        clip and string.format('\\clip(%d,%d,%d,%d)', clip[1], clip[2], clip[3], clip[4]) or '', escape(content))
+local function text(x, y, align, font, size, rgb, content, bold, clip, alpha)
+    return string.format('{\\an%d\\pos(%d,%d)\\bord0\\shad0\\fn%s\\fs%d\\b%d\\1c&H%s&\\1a&H%s&%s}%s', align, x, y + offset, font, size, bold and 1 or 0, colour(rgb), alpha or '00',
+        clip and string.format('\\clip(%d,%d,%d,%d)', clip[1], clip[2] + offset, clip[3], clip[4] + offset) or '', escape(content))
 end
 
 local function clock(seconds)
@@ -58,20 +63,31 @@ local function draw_menu(out)
     end
 end
 
-local function paint()
-    if not showing then
-        overlay.data = ''
-        overlay:update()
-        return
-    end
+-- The loading card: opaque, so nothing of the film shows until it fades off.
+local function draw_card(out)
+    local alpha = string.format('%02X', math.floor(255 * (1 - curtain)))
+    offset = 0
+    out[#out + 1] = box(0, 0, 1920, 1080, '000000', alpha)
+    local title = mp.get_property('user-data/mediabox/title', '')
+    if title == '' then return end
+    local kicker = mp.get_property('user-data/mediabox/kicker', '')
+    out[#out + 1] = text(960, 480, 5, DISPLAY, 72, 'F4EFE4', title, true, { 96, 400, 1824, 545 }, alpha)
+    out[#out + 1] = box(760, 548, 400, 2, 'F4EFE4', alpha)
+    out[#out + 1] = box(760, 554, 400, 2, 'F4EFE4', alpha)
+    out[#out + 1] = text(960, 600, 5, BODY, 28, 'CFC7B8', kicker ~= '' and kicker or 'Getting the film ready', false, nil, alpha)
+end
+
+local function draw_sheet(out)
     local now, total = mp.get_property_number('time-pos', 0), mp.get_property_number('duration', 0)
-    local out = {
+    for _, part in ipairs({
         box(0, 816, 1920, 264, look.sheet, look.alpha), box(96, 836, 1728, 2, look.ink), box(96, 842, 1728, 2, look.ink),
         text(96, 884, 4, DISPLAY, 44, look.ink, mp.get_property('user-data/mediabox/title', ''), true, { 96, 846, 1196, 926 }),
         text(1824, 885, 6, BODY, 22, look.quiet, mp.get_property('user-data/mediabox/kicker', '')),
         text(96, 947, 4, BODY, 24, look.ink, clock(now), true),
         text(1824, 947, 6, BODY, 24, look.ink, '-' .. clock(total - now), true),
-    }
+    }) do
+        out[#out + 1] = part
+    end
     local share = total > 0 and math.min(1, now / total) or 0
     local bar = on_seek and 12 or 6
     out[#out + 1] = box(216, 947 - bar / 2, 1488, bar, look.track)
@@ -84,6 +100,15 @@ local function paint()
         out[#out + 1] = text(b.x + math.floor(b.w / 2), 1017, 5, BODY, b.id == 'stop' and 24 or 26, lit and look.inverse or look.ink, label, true)
     end
     if menu then draw_menu(out) end
+end
+
+local function paint()
+    local out = {}
+    if shown > 0 then
+        offset = math.floor(264 * (1 - shown * shown * (3 - 2 * shown)))
+        draw_sheet(out)
+    end
+    if curtain > 0 then draw_card(out) end
     overlay.data = table.concat(out, '\n')
     overlay:update()
 end
@@ -109,11 +134,28 @@ local function brightness(frame)
     return sum / count / 255
 end
 
+-- Runs only while something is moving. Steps by real time, so a dropped frame shortens the move instead of stretching it.
+local function animate()
+    last_frame = mp.get_time()
+    anim_timer:resume()
+end
+
+anim_timer = mp.add_periodic_timer(1 / 30, function()
+    local now = mp.get_time()
+    local dt = now - last_frame
+    last_frame = now
+    shown = showing and math.min(1, shown + dt / SLIDE_TIME) or math.max(0, shown - dt / SLIDE_TIME)
+    if not loading then curtain = math.max(0, curtain - dt / FADE_TIME) end
+    paint()
+    if curtain == 0 and shown == (showing and 1 or 0) then anim_timer:kill() end
+end)
+anim_timer:kill()
+
 local function rise(chosen)
     look = chosen
     showing, rising = true, false
     last_key = mp.get_time()
-    paint()
+    animate()
 end
 
 -- Brings the sheet up. Anything uncertain (no frame, odd format, too slow) falls back to night.
@@ -135,7 +177,7 @@ end
 
 local function hide()
     showing, menu, on_seek, focus = false, nil, false, 1
-    paint()
+    animate()
 end
 
 local function open_menu(kind)
@@ -187,9 +229,19 @@ local function vertical(dy)
     else on_seek = dy < 0 end
 end
 
+local function back()
+    if menu then menu = nil
+    elseif showing then hide()
+    else mp.commandv('quit') end
+end
+
 -- First press of anything but left, right and back only raises the sheet.
 local function key(name, action, opts)
     mp.add_forced_key_binding(name, 'mediabox-' .. name, function()
+        if loading then
+            if action == back then mp.commandv('quit') end
+            return
+        end
         action()
         if showing or rising then wake() end
     end, opts)
@@ -211,11 +263,21 @@ local function sideways(dx)
     end
 end
 
-local function back()
-    if menu then menu = nil
-    elseif showing then hide()
-    else mp.commandv('quit') end
-end
+mp.register_event('playback-restart', function() restarted = true end)
+
+local load_timer
+load_timer = mp.add_periodic_timer(0.1, function()
+    local age = mp.get_time() - born
+    paint()
+    local buffered = mp.get_property_number('demuxer-cache-duration', 0) >= BUFFER or mp.get_property_bool('demuxer-cache-idle')
+    local ready = restarted and mp.get_property_number('duration', 0) > 0 and buffered
+    if (ready and age >= CARD_AT_LEAST) or age >= CARD_AT_MOST then
+        load_timer:kill()
+        loading = false
+        mp.set_property_bool('pause', false)
+        animate()
+    end
+end)
 
 key('ENTER', when_up(press_enter))
 key('SPACE', function() mp.commandv('cycle', 'pause'); wake() end)

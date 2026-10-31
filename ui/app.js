@@ -63,7 +63,7 @@ const SOURCE_NAMES = { remux: 'Remux', 'web-dl': 'Web', bluray: 'Blu-ray', hdrip
 const RES_NAMES = { '2160p': '4K', '1440p': '1440p', '1080p': '1080p', '720p': '720p', '576p': '576p', '480p': '480p', '360p': '360p' };
 function copyDetail(b) {
   if (!b) return '';
-  return [...(b.hdr || []), SOURCE_NAMES[b.source], b.codec, ...(b.audio || [])].filter(Boolean).join(' · ') || (b.res ? '' : 'Resolution not stated');
+  return [...(b.hdr || []), SOURCE_NAMES[b.source], b.codec, ...(b.audio || []), b.overLimit && 'Above your connection speed'].filter(Boolean).join(' · ') || (b.res ? '' : 'Resolution not stated');
 }
 function badgeLine(b) {
   if (!b) return '';

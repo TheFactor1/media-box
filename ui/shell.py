@@ -103,7 +103,7 @@ class Player:
             if status != 200:
                 raise LookupError(json.loads(raw or b'{}').get('reason') or "couldn't find a copy")
             return type_, id_, ep, json.loads(raw)
-        status, raw = hub('GET', f'/browse/streams/{type_}/{id_}{ep}{query}')
+        status, raw = hub('GET', f'/browse/streams/{type_}/{id_}{ep}{list_query()}')
         streams = [s for s in json.loads(raw).get('streams', []) if s.get('url')] if status == 200 else []
         if not isinstance(pick, int) or not 0 <= pick < len(streams):
             raise LookupError('that copy is no longer available')
@@ -241,6 +241,12 @@ def prefs_query():
     return '?' + urllib.parse.urlencode(args) if args else ''
 
 
+def list_query():
+    """Choosing a copy shows every copy: the speed setting decides the automatic pick, not what can be picked."""
+    query = prefs_query()
+    return query + ('&' if query else '?') + 'all=1'
+
+
 def qr_svg(url):
     from qrcodegen import QrCode
     code = QrCode.encode_text(url, QrCode.Ecc.MEDIUM)
@@ -358,7 +364,7 @@ class Handler(BaseHTTPRequestHandler):
             if target is None:
                 return self.reply_json(404, {'reason': 'no such call'})
             if '/browse/streams/' in target:
-                target = target.split('?')[0] + prefs_query()
+                target = target.split('?')[0] + list_query()
             status, raw = hub(method, target, self.body())
             if status == 200 and '/browse/streams/' in target:
                 raw = strip_urls(raw)

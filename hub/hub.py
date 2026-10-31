@@ -530,6 +530,8 @@ class Hub:
         p = dict(self.presets[name])
         if qs.get('ready') == '1':
             p['ready_only'] = True
+        if qs.get('all') == '1':
+            p['show_all'] = True
         if 'max_mbps' in qs:
             try:
                 p['max_mbps'] = float(qs['max_mbps'])
