@@ -13,12 +13,14 @@ bindings, commands, timers, events, clock, grab = {}, {}, {}, {}, 0, nil
 overlay = { update = function() end, data = '' }
 mp = {
   create_osd_overlay = function() return overlay end,
-  get_property = function(n, d) local v = props[n]; if v == nil then return d end; return v end,
+  -- As mpv does: user-data read as a string comes back JSON-quoted.
+  get_property = function(n, d) local v = props[n]; if v == nil then return d end; if n:find('user-data/') then return '"' .. v .. '"' end; return v end,
   get_property_number = function(n, d) return props[n] or d end,
   get_property_bool = function(n) return props[n] end,
-  get_property_native = function(n) return props[n] end,
+  get_property_native = function(n, d) local v = props[n]; if v == nil then return d end; return v end,
   set_property_native = function(n, v) props[n] = v end,
   set_property_bool = function(n, v) props[n] = v end,
+  set_property_number = function(n, v) props[n] = v end,
   register_event = function(n, f) events[n] = f end,
   get_time = function() return clock end,
   commandv = function(...) commands[#commands + 1] = table.concat({...}, ' ') end,
@@ -171,7 +173,7 @@ class Controls(unittest.TestCase):
 
     def test_title_cannot_inject_drawing_codes(self):
         self.rise_over(20)
-        self.assertIn('A \\{bad\\} title', self.screen())
+        self.assertIn('}A \\{bad\\} title', self.screen())  # and no quote marks around it
 
 
 @unittest.skipIf(lupa is None, 'lupa is not installed')
@@ -190,12 +192,19 @@ class Loading(unittest.TestCase):
         self.g.load_check()  # position and length, but no picture buffered
         self.assertTrue(self.g.props.pause)
         self.g.props['demuxer-cache-duration'] = 10
-        self.g.clock = 1
-        self.g.load_check()  # all ready, but the card hasn't had its time
-        self.assertTrue(self.g.props.pause)
-        self.g.clock = 3
         self.g.load_check()
         self.assertFalse(self.g.props.pause)
+
+    def test_sound_fades_in_with_the_picture(self):
+        self.assertEqual(self.g.props.volume, 0)
+        self.g.clock = 26
+        self.g.load_check()
+        self.g.clock = 26.3
+        self.g.anim()
+        self.assertAlmostEqual(self.g.props.volume, 50)
+        self.g.clock = 27
+        self.g.anim()
+        self.assertEqual(self.g.props.volume, 100)
 
     def test_a_stuck_stream_still_starts(self):
         self.g.clock = 26

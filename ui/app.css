@@ -88,15 +88,16 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor
 
 #lights { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; transition: opacity .42s ease-in-out; z-index: 90; }
 #lights.down { opacity: 1; }
-#press { position: absolute; inset: 130px 0 0; background: var(--paper); z-index: 65; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; }
-.rollers { position: relative; width: 900px; height: 170px; overflow: hidden; }
-.sheets { position: absolute; left: 0; top: 71px; width: 2100px; height: 28px; background: repeating-linear-gradient(90deg, #fff 0 270px, transparent 270px 300px); border-block: 2px solid var(--ink); animation: feed 1.6s linear infinite; }
-@keyframes feed { to { transform: translateX(-300px); } }
-.roller { position: absolute; left: 410px; top: 0; width: 80px; height: 80px; border-radius: 50%; background: var(--ink); animation: spin 1.6s linear infinite; }
-.roller::after { content: ""; position: absolute; left: 36px; top: 6px; width: 8px; height: 20px; background: var(--paper); }
-.roller.lower { top: 90px; background: var(--red); }
-@keyframes spin { to { transform: rotate(360deg); } }
-#press-line { font: 900 46px/1.2 var(--display); }
+#press { position: absolute; inset: 130px 0 0; background: var(--paper); z-index: 65; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; animation: press-in .25s ease-out; }
+#press[hidden] { display: none; }
+@keyframes press-in { from { opacity: 0; } }
+#press-art { width: 800px; height: 450px; object-fit: cover; opacity: 0; transition: opacity .4s ease; }
+#press-art.in { opacity: 1; }
+#press-art[hidden] { display: none; }
+#press-rule { width: 800px; height: 6px; border-block: 2px solid var(--ink); box-sizing: border-box; flex: none; overflow: hidden; }
+#press-fill { display: block; height: 100%; width: 100%; background: var(--red); transform: scaleX(0); transform-origin: left; transition: transform .35s ease-out; }
+#press-line { font: 900 72px/1.2 var(--display); max-width: 1700px; flex: none; text-align: center; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+#press-note { font: 600 26px/1.2 'Source Serif', serif; color: var(--quiet, #4f4840); }
 
 /* Morning edition: a cold start only. */
 .boot #masthead .el { animation: fade .5s ease backwards; }

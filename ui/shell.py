@@ -21,6 +21,9 @@ HUB = os.environ.get('MB_HUB', 'http://127.0.0.1:8097')
 PORT = int(os.environ.get('MB_PORT', '8099'))
 TOKEN_FILE = os.environ.get('MB_TOKEN_FILE', '/var/lib/hub/token')
 MPV_SOCKET = os.environ.get('MB_MPV_SOCKET', '/run/mediabox/mpv.sock')
+REHEARSAL_SOCKET = os.environ.get('MB_REHEARSAL_SOCKET', '/run/mediabox/rehearsal.sock')
+REHEARSAL_LIMIT = 25  # seconds the loading page waits for a film to open
+READY_BUFFER = 5  # seconds of film held before the screen changes hands
 PREFS_FILE = os.environ.get('MB_PREFS', '/var/lib/media/ui-prefs.json')
 NO_PLAY = bool(os.environ.get('MB_NO_PLAY'))  # for trying the page off the box: Play only reports what it would do
 UI_UNIT, MPV_UNIT = 'mediabox-ui.service', 'mediabox-mpv.service'
@@ -94,6 +97,9 @@ class Player:
         self.lock = threading.Lock()
         self.state = {}      # the page's place, kept here because Chromium is killed for every film
         self.error = None
+        self.stage = 'idle'  # what the loading page is waiting on: preparing, then ready or failed
+        self.progress = 0
+        self.cancelled = threading.Event()
 
     def choose(self, req):
         """(type, id, episode path, {url, headers}) from what the page asked for. The page sends an id, never a URL."""
@@ -117,19 +123,42 @@ class Player:
     def start(self, req):
         chosen = self.choose(req)
         if NO_PLAY:
+            self.stage = 'ready'
             return
         if not self.lock.acquire(blocking=False):
             raise LookupError('something is already playing')
         self.error = None
+        self.stage, self.progress = 'preparing', 0
+        self.cancelled.clear()
         threading.Thread(target=self.run, args=chosen, daemon=True).start()
 
+    def cancel_opening(self):
+        """Back on the loading page. Too late once the screen is changing hands. Waits so Play can be pressed again straight away."""
+        if self.stage != 'preparing':
+            return False
+        self.cancelled.set()
+        if self.lock.acquire(timeout=2):
+            self.lock.release()
+        return True
+
     def run(self, _type, id_, ep, stream):
+        handed_over = False
         try:
             start = 0
             status, raw = hub('GET', f'/resume/{id_}{ep}')
             if status == 200:
                 pos = json.loads(raw or b'{}').get('positionMs') or 0
                 start = pos / 1000
+            opened = rehearse(stream, start, self)
+            if self.cancelled.is_set():
+                self.stage = 'idle'
+                return
+            if not opened:  # the interface stays up, so a bad copy costs no trip through a black screen
+                self.error = "That copy wouldn't open. Try another version."
+                self.stage = 'failed'
+                return
+            self.stage = 'ready'
+            handed_over = True
             time.sleep(0.45)  # lets the page's lights-down finish
             subprocess.run(['systemctl', 'stop', UI_UNIT], check=False, timeout=30)
             subprocess.run(['systemctl', 'start', '--no-block', MPV_UNIT], check=False, timeout=30)
@@ -137,9 +166,11 @@ class Player:
                 self.error = "That copy wouldn't play."
         except Exception as e:  # the interface must come back whatever went wrong
             self.error = f"Playback failed ({type(e).__name__})."
+            self.stage = 'failed'
         finally:
-            subprocess.run(['systemctl', 'stop', MPV_UNIT], check=False, timeout=30)
-            subprocess.run(['systemctl', 'start', '--no-block', UI_UNIT], check=False, timeout=30)
+            if handed_over:
+                subprocess.run(['systemctl', 'stop', MPV_UNIT], check=False, timeout=30)
+                subprocess.run(['systemctl', 'start', '--no-block', UI_UNIT], check=False, timeout=30)
             self.lock.release()
 
     def watch(self, type_, id_, ep, stream, start):
@@ -152,13 +183,9 @@ class Player:
         found = []
         threading.Thread(target=lambda: found.append(addon_subtitles(type_, id_, ep)), daemon=True).start()
         with sock:
-            for name, value in (stream.get('headers') or {}).items():
-                send(sock, ['change-list', 'http-header-fields', 'append', f'{name}: {value}'])
             for name, value in player_info(self.state, load_prefs()).items():
                 send(sock, ['set_property', 'user-data/mediabox/' + name, value])
-            if start > 0:
-                send(sock, ['set_property', 'start', str(start)])
-            send(sock, ['loadfile', stream['url']])
+            feed(sock, stream, start)
             sock.settimeout(5)
             reader = sock.makefile('r', encoding='utf-8', errors='replace')
             while True:
@@ -191,6 +218,77 @@ class Player:
         if played and duration:
             save(id_, ep, position, duration)
         return played
+
+
+def rehearsal_verdict(duration, position, cached, idle, expired):
+    """go, wait or fail, from what mpv reports about a film opening off-screen. A slow film that has opened still goes when time runs out."""
+    opened = bool(duration) and position is not None
+    if opened and (idle or (cached or 0) >= READY_BUFFER):
+        return 'go'
+    if expired:
+        return 'go' if opened else 'fail'
+    return 'wait'
+
+
+def rehearsal_progress(duration, position, cached, idle):
+    """How far the loading page's rule has filled, 0 to 1: a quarter while opening, then by the film held."""
+    if not duration or position is None:
+        return 0.25
+    return 1 if idle else min(1, 0.5 + 0.5 * (cached or 0) / READY_BUFFER)
+
+
+def rehearse(stream, start, player):
+    """Opens the film with no picture or sound while the interface keeps the screen. False only when the film itself won't open:
+    if the rehearsal can't run at all, the film still gets its chance on screen."""
+    try:
+        proc = subprocess.Popen(['mpv', '--no-config', '--vo=null', '--ao=null', '--hwdec=no', '--pause', '--idle=once', '--ytdl=no', '--really-quiet', '--no-terminal',
+                                 '--input-ipc-server=' + REHEARSAL_SOCKET], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except OSError:
+        return True
+    try:
+        sock = connect(REHEARSAL_SOCKET, 5)
+        if sock is None:
+            return True
+        with sock:
+            feed(sock, stream, start)
+            sock.settimeout(5)
+            reader = sock.makefile('r', encoding='utf-8', errors='replace')
+            deadline = time.monotonic() + REHEARSAL_LIMIT
+            try:
+                while True:
+                    report = [ask(sock, reader, name) for name in ('duration', 'time-pos', 'demuxer-cache-duration', 'demuxer-cache-idle')]
+                    if player.cancelled.is_set():
+                        return False
+                    player.progress = rehearsal_progress(*report)
+                    verdict = rehearsal_verdict(*report, time.monotonic() >= deadline)
+                    if verdict != 'wait':
+                        return verdict == 'go'
+                    time.sleep(0.25)
+            except (EOFError, OSError, ValueError):  # mpv quits by itself when the film won't load
+                return False
+    finally:
+        proc.kill()
+        proc.wait()
+
+
+def feed(sock, stream, start):
+    for name, value in (stream.get('headers') or {}).items():
+        send(sock, ['change-list', 'http-header-fields', 'append', f'{name}: {value}'])
+    if start > 0:
+        send(sock, ['set_property', 'start', str(start)])
+    send(sock, ['loadfile', stream['url']])
+
+
+def ask(sock, reader, name):
+    """One property's value, or None while mpv doesn't have it yet."""
+    send(sock, ['get_property', name], 1)
+    while True:
+        line = reader.readline()
+        if not line:
+            raise EOFError
+        msg = json.loads(line)
+        if msg.get('request_id') == 1:
+            return msg.get('data')
 
 
 def connect(path, seconds=15):
@@ -390,6 +488,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply_json(200, {'url': url, 'svg': qr_svg(url)})
             if path == '/setup-qr' and method == 'GET':
                 return self.reply_json(200, setup_qr())
+            if path == '/play/status' and method == 'GET':
+                out = {'stage': PLAYER.stage, 'progress': PLAYER.progress, 'error': PLAYER.error if PLAYER.stage == 'failed' else None}
+                if PLAYER.stage == 'failed':
+                    PLAYER.error, PLAYER.stage = None, 'idle'
+                return self.reply_json(200, out)
+            if path == '/play/cancel' and method == 'POST':
+                return self.reply_json(200, {'cancelled': PLAYER.cancel_opening()})
             if path == '/play' and method == 'POST':
                 try:
                     PLAYER.start(json.loads(self.body() or b'{}'))

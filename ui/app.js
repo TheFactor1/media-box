@@ -554,20 +554,52 @@ function press(to) {
   if (to) tabTo(to);
 }
 function playItem(it) { if (!it) return; const n = it.nextEpisode; return play(n ? { s: n.s, e: n.e } : {}); }
+function showPress(it) {
+  const art = $('#press-art');
+  art.classList.remove('in');
+  art.hidden = !it.backdrop;
+  art.onload = () => art.classList.add('in');
+  art.onerror = () => { art.hidden = true; };
+  if (it.backdrop) art.src = it.backdrop;
+  $('#press-fill').style.transform = 'scaleX(.08)';
+}
+function cancelOpening() {
+  S.opening = null;
+  S.playing = false;
+  $('#press').hidden = true;
+  api('/play/cancel', { method: 'POST' }).catch(() => {});
+}
 async function play(opts) {
   let it = S.full || S.item;
   if (!it || S.playing) return;
   const ep = opts.s ? { s: opts.s, e: opts.e } : it.type === 'series' ? it.nextEpisode || firstEpisode(it) : null;
   if (S.prefs.choose && !Number.isInteger(opts.version) && S.page !== 'versions') { S.ep = ep; S.streams = null; return go('versions'); }
   S.playing = true;
+  const opening = (S.opening = {});
+  showPress(it);
+  $('#press-line').textContent = it.title;
+  $('#press-note').textContent = ep ? `Season ${ep.s}, episode ${ep.e}` : 'Getting the film ready';
   $('#press').hidden = false;
   try {
     S.ep = ep;
     clearTimeout(saveState.t);
     await api('/state', { method: 'POST', body: { page: S.page, item: { id: it.id, type: it.type, title: it.title, poster: it.poster, backdrop: it.backdrop }, row: S.row, ep, season: S.season, key: document.activeElement?.dataset?.key, history: S.history.slice(-8) } });
     await api('/play', { method: 'POST', body: { id: it.id, type: it.type, ...(ep || {}), ...(Number.isInteger(opts.version) ? { version: opts.version } : {}) } });
+    if (S.opening !== opening) return void api('/play/cancel', { method: 'POST' }).catch(() => {});  // Back was pressed while the copy was being found
+    // The name stays up until the film has really opened off-screen; only then do the lights go down.
+    for (;;) {
+      const { stage, error, progress } = await api('/play/status');
+      if (S.opening !== opening) return;
+      $('#press-fill').style.transform = `scaleX(${stage === 'ready' ? 1 : progress})`;
+      if (stage === 'failed') throw new Error(error || "That copy wouldn't open.");
+      if (stage === 'ready') break;
+      await new Promise((r) => setTimeout(r, 300));
+    }
+    S.opening = null;
     $('#lights').classList.add('down');
   } catch (e) {
+    if (S.opening !== opening) return;
+    S.opening = null;
     $('#press').hidden = true;
     S.playing = false;
     notice(e.message);
@@ -644,6 +676,11 @@ function nextFocus(dir) {
   return best;
 }
 addEventListener('keydown', (ev) => {
+  if (S.playing) {  // the loading page: Back cancels, and nothing else may move the page behind it
+    ev.preventDefault();
+    if (S.opening && ['Escape', 'GoBack', 'BrowserBack', 'Backspace'].includes(ev.key)) cancelOpening();
+    return;
+  }
   const dirs = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
   if (dirs[ev.key]) {
     ev.preventDefault();

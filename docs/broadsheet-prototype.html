@@ -84,6 +84,7 @@ button, input, select, textarea { font: inherit; }
 .set { animation: setup .34s ease-out backwards; }
 @keyframes setup { from { opacity: 0; transform: translateY(16px); } }
 .line { display: flex; align-items: baseline; gap: 24px; height: 76px; padding: 0 14px; border-bottom: 1px solid var(--rule); font-size: 28px; line-height: 76px; cursor: pointer; white-space: nowrap; position: relative; }
+.brief { margin: 0 0 16px; padding-bottom: 16px; border-bottom: 1px solid var(--rule); font-size: 26px; line-height: 1.25; }
 .line b { flex: none; font: 900 34px/76px var(--display); width: 56px; }
 .line span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .line em { font-style: normal; font-weight: 600; font-size: 20px; color: var(--red); }
@@ -206,8 +207,10 @@ const TITLES = [
 ];
 const EPISODES = ['Baseline', 'Contour', 'Benchmark', 'Triangulation', 'Datum', 'Fault Line', 'Tidewater', 'Meridian'];
 const COPIES = [['4K · Dolby Vision · Atmos', '36.4 GB', '38 Mb/s', 'Best match'], ['4K · HDR10 · Atmos', '58.1 GB', '61 Mb/s', 'Above your speed'], ['4K · HDR10 · 5.1', '19.8 GB', '21 Mb/s', ''], ['1080p · Atmos', '14.2 GB', '15 Mb/s', ''], ['1080p · 5.1', '8.1 GB', '8.5 Mb/s', ''], ['720p · Stereo', '2.0 GB', '2.1 Mb/s', '']];
+const EDITION_NEXT = [['The Long Quiet', 'Episode 5'], ['Saltwater', '1 hour 12 left'], ['North of Nowhere', 'New episode']];
+const EDITION_BRIEF = ['Two new episodes of North of Nowhere arrived overnight.', 'Ironwood, from your Westerns list, has a first season.', 'The box updated itself at 3 AM. Nothing needs doing.', 'Your stream source is answering normally.'];
 const SETTINGS = [['Player controls', 'Match the scene'], ['Connection speed', 'Fast'],['Audio', 'Send to my receiver'], ['Subtitles', "Film's default"], ['Spoken language', 'Original'], ['Home rows', 'Choose and order'], ['Set up again', ''], ['Privacy', 'Nothing leaves this box']];
-const PAGE_NAMES = { home: 'Home', continue: 'Continue', next: 'Next up', new: 'New', movies: 'Movies', shows: 'Shows', browse: 'Browse', search: 'Search', settings: 'Settings', lists: 'Lists', film: 'Film page', show: 'Show page', versions: 'Other versions', setup: 'First run', player: 'Player', masthead: 'Masthead' };
+const PAGE_NAMES = { home: 'Home', continue: 'Continue', next: 'Next up', new: 'New', movies: 'Movies', shows: 'Shows', browse: 'Browse', search: 'Search', settings: 'Settings', lists: 'Lists', film: 'Film page', show: 'Show page', versions: 'Other versions', setup: 'First run', player: 'Player', edition: 'Daily edition', masthead: 'Masthead' };
 
 const caps = { spacing: '.1em', transform: 'uppercase' };
 const T = (id, label, x, y, w, h, size, text, o = {}) => ({ id, label, kind: 'text', x, y, w, h, size, text, font: 'body', weight: 400, color: '#1a1714', ...o });
@@ -271,6 +274,23 @@ const DEFAULTS = {
     B('addlist', 'Add to list button', 1220, 776, 300, 78, 'Add to list', 'addlist', false, { size: 30 }),
   ],
   versions: [T('kicker', 'Kicker', 96, 170, 1000, 30, 22, 'Market report · 14 copies found', KICK), T('headline', 'Headline', 96, 205, 1500, 90, 64, '', { font: 'display', weight: 900, bind: 'versionsTitle', nowrap: true }), W('copyfilters', 'Sort and filters', 'copyfilters', 96, 300, 1728, 52), W('board', 'Ranked copies', 'board', 96, 364, 1728, 610)],
+  // The day's front page: shown once a day, on the first start or wake after 4 AM. Everything on it comes from the box itself.
+  edition: [
+    T('name', 'Masthead name', 96, 38, 1728, 130, 104, 'The Media Box Times', { font: 'display', weight: 900, nowrap: true, align: 'center' }),
+    R('rule1', 'Rule (top)', 96, 172, 1728, 2, '#1a1714'), R('rule2', 'Rule (bottom)', 96, 178, 1728, 2, '#1a1714'),
+    T('date', 'Date', 96, 190, 1000, 30, 22, '', { ...CRED, bind: 'editionDate' }),
+    T('issue', 'Edition', 1124, 190, 700, 30, 22, 'Daily edition', { ...CRED, align: 'right' }),
+    R('rule3', 'Rule under the date', 96, 226, 1728, 1, '#1a1714'),
+    T('leadkick', 'Lead kicker', 96, 244, 1084, 30, 22, 'New season', KICK),
+    P('leadart', 'Lead picture', 96, 282, 1084, 372, '#4d6b2e'),
+    T('leadhead', 'Lead headline', 96, 668, 1084, 96, 72, 'Glasshouse is back', { font: 'display', weight: 900, nowrap: true }),
+    T('leadsum', 'Lead summary', 96, 770, 1084, 92, 32, 'Season three opens with the roof already broken. All of it is ready to watch.', { color: '#3a342d', italic: true }),
+    B('watch', 'Watch button', 96, 886, 300, 74, 'See the season', 'leadtitle', true),
+    B('home', 'Go to Home button', 412, 886, 240, 74, 'Go to Home', 'home', false),
+    R('column', 'Column rule', 1210, 244, 1, 780, '#1a1714'),
+    W('upnext', "What's next", 'editionnext', 1240, 244, 584, 320),
+    W('brief', 'In brief', 'editionbrief', 1240, 588, 584, 436),
+  ],
   // The film fills the screen; the controls are a sheet of paper that rises from the bottom when wanted.
   player: [
     P('film', 'Film (example frame)', 0, 0, 1920, 1080, '#20303c', { bind: 'color' }),
@@ -359,7 +379,7 @@ function snapshot(p) { undoStack.push([p, JSON.stringify(els(p))]); if (undoStac
 
 function bound(key) {
   const i = item;
-  return { playerKick: `${i.type === 'show' ? 'Season 2, Episode 4' : i.year} · ${i.genre}`, kicker: i.kicker, title: i.title, credits: `${i.year} · ${i.genre} · ${i.note}`, over: i.over, filmkick: `${i.type === 'show' ? 'Series' : 'Film'} · ${i.year} · ${i.note}`, versionsTitle: `Every copy of ${i.title}, ranked`, color: i.color }[key];
+  return { editionDate: new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }), playerKick: `${i.type === 'show' ? 'Season 2, Episode 4' : i.year} · ${i.genre}`, kicker: i.kicker, title: i.title, credits: `${i.year} · ${i.genre} · ${i.note}`, over: i.over, filmkick: `${i.type === 'show' ? 'Series' : 'Film'} · ${i.year} · ${i.note}`, versionsTitle: `Every copy of ${i.title}, ranked`, color: i.color }[key];
 }
 function listFor(name) {
   return { all: TITLES, prog: TITLES.filter((t) => t.prog), fresh: TITLES.filter((t) => t.fresh), films: TITLES.filter((t) => t.type === 'film'), shows: TITLES.filter((t) => t.type === 'show') }[name] || TITLES;
@@ -451,6 +471,8 @@ function widget(e) {
       requestAnimationFrame(arrows);
       return wrap;
     }
+    case 'editionnext': return h('div', {}, h('div', { class: 'head' }, "What's next"), EDITION_NEXT.map(([t, n]) => { const r = h('div', { class: 'line', tabindex: 0, onmouseenter: () => pencil(r), onclick: () => { if (!editing) openTitle(TITLES.find((x) => x.title === t)); } }, h('span', {}, t), h('em', {}, n)); return r; }));
+    case 'editionbrief': return h('div', {}, h('div', { class: 'head' }, 'In brief'), EDITION_BRIEF.map((t) => h('p', { class: 'brief' }, t)));
     case 'rowtabs': return h('div', { class: 'chipbar' }, h('div', { class: 'chips' }, prefs.rows.filter((r) => !r.hidden).map((r) => h('div', { class: 'chip' + (r.id === currentRow ? ' on' : ''), tabindex: 0, 'data-row': r.id, onclick: () => switchRow(r.id) }, r.title))), h('div', { class: 'chip add', tabindex: 0, onclick: () => go('lists') }, '+ Lists'));
     case 'rowsmanager': return h('div', { class: 'scrolly' }, h('div', { class: 'head' }, 'Rows on Home, in order'), prefs.rows.map((r, i) => h('div', { class: 'mrow' + (r.hidden ? ' off' : '') }, h('span', {}, r.title, r.custom ? h('em', {}, r.custom === 'smart' ? 'by rules' : 'your list') : null),
       h('button', { onclick: () => moveRow(i, -1) }, 'Up'), h('button', { onclick: () => moveRow(i, 1) }, 'Down'),
@@ -669,7 +691,7 @@ function draw() {
   s.textContent = '';
   s.classList.toggle('editing', editing);
   s.append(h('div', { id: 'gridlines' }));
-  if (page !== 'setup' && page !== 'player') for (const e of els('masthead')) s.append(render(e, 'masthead'));
+  if (page !== 'setup' && page !== 'player' && page !== 'edition') for (const e of els('masthead')) s.append(render(e, 'masthead'));
   for (const e of els(page)) { const n = render(e, page); if (!editing) n.classList.add('fade'); s.append(n); }
   s.append(h('div', { id: 'lights', onclick: comeBack }));
   $('#where').textContent = PAGE_NAMES[page];
@@ -722,6 +744,7 @@ function act(to) {
   }
   if (to === 'title') return openTitle(item);
   if (to === 'addlist') return addToList();
+  if (to === 'leadtitle') return openTitle(TITLES.find((t) => t.id === 'glass'));
   go(to);
 }
 function doPlay() {
@@ -871,6 +894,13 @@ addEventListener('keydown', (ev) => {
   syncNumbers(e); touch(sel.owner);
 });
 new ResizeObserver(fit).observe($('#view'));
+// Once a day: the day turns over at 4 AM, so a late film doesn't use up tomorrow's paper.
+function editionDue() {
+  const day = new Date(Date.now() - 4 * 3600e3).toDateString();
+  try { if (localStorage.getItem('edition') === day) return false; localStorage.setItem('edition', day); } catch {}
+  return true;
+}
+if (editionDue()) page = 'edition';
 draw();
 loadSaved();
 </script>

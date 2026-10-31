@@ -45,6 +45,35 @@ class Copies(unittest.TestCase):
         self.assertNotIn('all=1', shell.prefs_query())
 
 
+class Rehearsal(unittest.TestCase):
+    def test_waits_for_length_position_and_picture(self):
+        self.assertEqual(shell.rehearsal_verdict(None, None, None, None, False), 'wait')
+        self.assertEqual(shell.rehearsal_verdict(6000, 0, 2, False, False), 'wait')
+        self.assertEqual(shell.rehearsal_verdict(6000, 0, 5, False, False), 'go')
+        self.assertEqual(shell.rehearsal_verdict(6000, 0, 1, True, False), 'go')
+
+    def test_when_time_runs_out(self):
+        self.assertEqual(shell.rehearsal_verdict(6000, 0, 1, False, True), 'go')
+        self.assertEqual(shell.rehearsal_verdict(None, None, None, None, True), 'fail')
+
+
+class Opening(unittest.TestCase):
+    def test_rule_fills_with_real_progress(self):
+        self.assertEqual(shell.rehearsal_progress(None, None, None, None), 0.25)
+        self.assertEqual(shell.rehearsal_progress(6000, 0, 0, False), 0.5)
+        self.assertEqual(shell.rehearsal_progress(6000, 0, 50, False), 1)
+        self.assertEqual(shell.rehearsal_progress(6000, 0, 1, True), 1)
+
+    def test_back_only_cancels_while_opening(self):
+        player = shell.Player()
+        self.assertFalse(player.cancel_opening())
+        player.stage = 'preparing'
+        self.assertTrue(player.cancel_opening())
+        self.assertTrue(player.cancelled.is_set())
+        player.stage = 'ready'
+        self.assertFalse(player.cancel_opening())
+
+
 class Subtitles(unittest.TestCase):
     def test_short_named_menu(self):
         subs = [{'url': f'https://s/{i}', 'lang': 'eng'} for i in range(5)] + [{'url': 'https://s/fr', 'lang': 'fre'}]
