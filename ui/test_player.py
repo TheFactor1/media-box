@@ -1,0 +1,140 @@
+"""Runs player.lua against a stand-in for mpv. Needs lupa (pip install lupa); skipped without it."""
+import os
+import unittest
+
+try:
+    import lupa
+except ImportError:
+    lupa = None
+
+STUB = r"""
+props = { pause = false, ['time-pos'] = 100, duration = 1000, ['user-data/mediabox/look'] = 'auto', ['user-data/mediabox/title'] = 'A {bad} title' }
+bindings, commands, timers, clock, grab = {}, {}, {}, 0, nil
+overlay = { update = function() end, data = '' }
+mp = {
+  create_osd_overlay = function() return overlay end,
+  get_property = function(n, d) local v = props[n]; if v == nil then return d end; return v end,
+  get_property_number = function(n, d) return props[n] or d end,
+  get_property_bool = function(n) return props[n] end,
+  get_property_native = function(n) return props[n] end,
+  set_property_native = function(n, v) props[n] = v end,
+  get_time = function() return clock end,
+  commandv = function(...) commands[#commands + 1] = table.concat({...}, ' ') end,
+  add_forced_key_binding = function(k, _, f) bindings[k] = f end,
+  add_timeout = function(_, f) timers[#timers + 1] = f end,
+  add_periodic_timer = function(_, f) tick = f end,
+  command_native_async = function(_, f) grab = f end,
+}
+function frame(level, format)
+  return { w = 96, h = 54, stride = 384, format = format or 'bgr0', data = string.rep(string.char(level, level, level, 0), 96 * 54) }
+end
+"""
+HERE = os.path.dirname(os.path.abspath(__file__))
+NIGHT, PAPER = '0E1114', 'E4EFF4'  # sheet colours as ASS writes them
+
+
+@unittest.skipIf(lupa is None, 'lupa is not installed')
+class Controls(unittest.TestCase):
+    def setUp(self):
+        self.lua = lupa.LuaRuntime(unpack_returned_tuples=True)
+        self.lua.execute(STUB)
+        with open(os.path.join(HERE, 'player.lua'), encoding='utf-8') as f:
+            self.lua.execute(f.read())
+        self.g = self.lua.globals()
+
+    def press(self, name):
+        self.g.bindings[name]()
+
+    def screen(self):
+        return self.g.overlay.data
+
+    def commands(self):
+        return list(self.g.commands.values())
+
+    def rise_over(self, level, fmt='bgr0'):
+        self.press('ENTER')
+        self.g.grab(True, self.g.frame(level, fmt))
+
+    def test_dark_scene_gets_night_and_bright_gets_paper(self):
+        self.rise_over(20)
+        self.assertIn(NIGHT, self.screen())
+        self.press('BS')
+        self.rise_over(230)
+        self.assertIn(PAPER, self.screen())
+
+    def test_look_holds_while_showing(self):
+        self.rise_over(20)
+        self.g.grab = None
+        self.press('LEFT')
+        self.assertIsNone(self.g.grab)  # no second frame grab
+        self.assertIn(NIGHT, self.screen())
+
+    def test_unreadable_failed_or_slow_frames_fall_back_to_night(self):
+        self.rise_over(230, 'rgba64')
+        self.assertIn(NIGHT, self.screen())
+        self.press('BS')
+        self.press('ENTER')
+        self.g.grab(False, None)
+        self.assertIn(NIGHT, self.screen())
+        self.press('BS')
+        self.press('ENTER')
+        self.g.timers[len(self.g.timers)]()
+        self.assertIn(NIGHT, self.screen())
+        self.g.grab(True, self.g.frame(230))  # too late to change it
+        self.assertIn(NIGHT, self.screen())
+
+    def test_setting_skips_the_frame_grab(self):
+        self.g.props['user-data/mediabox/look'] = 'paper'
+        self.press('ENTER')
+        self.assertIsNone(self.g.grab)
+        self.assertIn(PAPER, self.screen())
+
+    def test_hidden_keys(self):
+        self.press('RIGHT')
+        self.assertEqual(self.commands(), ['seek 30'])
+        self.g.grab(True, self.g.frame(20))
+        self.press('BS')
+        self.assertEqual(self.screen(), '')
+        self.press('BS')
+        self.assertEqual(self.commands()[-1], 'quit')
+
+    def test_hides_when_idle_but_not_when_paused(self):
+        self.rise_over(20)
+        self.g.clock = 3
+        self.g.tick()
+        self.assertNotEqual(self.screen(), '')
+        self.g.props.pause = True
+        self.g.clock = 10
+        self.g.tick()
+        self.assertNotEqual(self.screen(), '')
+        self.g.props.pause = False
+        self.g.tick()
+        self.assertEqual(self.screen(), '')
+
+    def test_other_versions_tells_the_bridge_then_quits(self):
+        self.rise_over(20)
+        for _ in range(5):
+            self.press('RIGHT')
+        self.press('ENTER')
+        self.assertEqual(self.commands(), ['script-message mediabox-versions', 'quit'])
+
+    def test_subtitle_menu_picks_off(self):
+        self.g.props['track-list'] = self.lua.eval("{ { type = 'sub', id = 2, lang = 'eng', selected = true }, { type = 'audio', id = 1, title = 'Main' } }")
+        self.g.props.sid = 2
+        self.rise_over(20)
+        for _ in range(4):
+            self.press('RIGHT')
+        self.press('ENTER')
+        self.assertIn('SUBTITLES', self.screen())
+        self.press('UP')
+        self.press('ENTER')
+        self.assertEqual(self.g.props.sid, 'no')
+        self.assertNotIn('SUBTITLES', self.screen())
+
+    def test_title_cannot_inject_drawing_codes(self):
+        self.rise_over(20)
+        self.assertIn('A \\{bad\\} title', self.screen())
+
+
+if __name__ == '__main__':
+    unittest.main()

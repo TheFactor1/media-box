@@ -126,6 +126,7 @@ button, input, select, textarea { font: inherit; }
 .seek-track { position: absolute; left: 0; right: 0; top: 13px; height: 8px; background: var(--rule); }
 .seek-fill { position: absolute; left: 0; top: 13px; height: 8px; background: var(--red); display: block; }
 .seek-tick { position: absolute; top: 9px; width: 2px; height: 16px; background: var(--ink); }
+.el[data-owner="player"] { transition: background-color .25s ease, color .25s ease, opacity .25s ease; }
 .pmenu { height: 100%; padding: 28px; box-sizing: border-box; background: var(--paper); border-top: 4px double var(--ink); overflow: hidden; }
 .pmenu .line { white-space: nowrap; }
 .tucked { opacity: 0; pointer-events: none; transition: opacity .35s ease; }
@@ -205,7 +206,7 @@ const TITLES = [
 ];
 const EPISODES = ['Baseline', 'Contour', 'Benchmark', 'Triangulation', 'Datum', 'Fault Line', 'Tidewater', 'Meridian'];
 const COPIES = [['4K · Dolby Vision · Atmos', '36.4 GB', '38 Mb/s', 'Best match'], ['4K · HDR10 · Atmos', '58.1 GB', '61 Mb/s', 'Above your speed'], ['4K · HDR10 · 5.1', '19.8 GB', '21 Mb/s', ''], ['1080p · Atmos', '14.2 GB', '15 Mb/s', ''], ['1080p · 5.1', '8.1 GB', '8.5 Mb/s', ''], ['720p · Stereo', '2.0 GB', '2.1 Mb/s', '']];
-const SETTINGS = [['Connection speed', 'Fast'], ['Audio', 'Send to my receiver'], ['Subtitles', "Film's default"], ['Spoken language', 'Original'], ['Home rows', 'Choose and order'], ['Set up again', ''], ['Privacy', 'Nothing leaves this box']];
+const SETTINGS = [['Player controls', 'Match the scene'], ['Connection speed', 'Fast'],['Audio', 'Send to my receiver'], ['Subtitles', "Film's default"], ['Spoken language', 'Original'], ['Home rows', 'Choose and order'], ['Set up again', ''], ['Privacy', 'Nothing leaves this box']];
 const PAGE_NAMES = { home: 'Home', continue: 'Continue', next: 'Next up', new: 'New', movies: 'Movies', shows: 'Shows', browse: 'Browse', search: 'Search', settings: 'Settings', lists: 'Lists', film: 'Film page', show: 'Show page', versions: 'Other versions', setup: 'First run', player: 'Player', masthead: 'Masthead' };
 
 const caps = { spacing: '.1em', transform: 'uppercase' };
@@ -273,8 +274,9 @@ const DEFAULTS = {
   // The film fills the screen; the controls are a sheet of paper that rises from the bottom when wanted.
   player: [
     P('film', 'Film (example frame)', 0, 0, 1920, 1080, '#20303c', { bind: 'color' }),
+    B('scene', 'Example scene switch (prototype only)', 96, 60, 400, 64, 'Example: dark scene', 'scene', false, { size: 24 }),
     B('skip', 'Skip intro button', 1560, 720, 264, 74, 'Skip intro', 'skip', true),
-    R('sheet', 'Controls sheet', 0, 816, 1920, 264, '#f4efe4'),
+    R('sheet', 'Controls sheet', 0, 816, 1920, 264, '#f4efe4d1'),
     R('sheetrule1', 'Sheet rule (top)', 96, 836, 1728, 2, '#1a1714'),
     R('sheetrule2', 'Sheet rule (bottom)', 96, 842, 1728, 2, '#1a1714'),
     T('title', 'Title', 96, 856, 1100, 56, 44, '', { font: 'display', weight: 900, bind: 'title', nowrap: true }),
@@ -586,8 +588,33 @@ function addToList() {
   $('#stage').append(box);
 }
 // The prototype's pretend film: enough to feel the controls, with no video.
-const player = { t: 1311, d: 6425, on: true, menu: null, audio: 0, subs: 1, skipped: false, idle: 0 };
+const player = { scene: 'dark', t: 1311, d: 6425, on: true, menu: null, audio: 0, subs: 1, skipped: false, idle: 0 };
 const clockOf = (x) => { const h_ = Math.floor(x / 3600), m = Math.floor(x / 60) % 60, s_ = x % 60; return (h_ ? `${h_}:${String(m).padStart(2, '0')}` : m) + ':' + String(s_).padStart(2, '0'); };
+// Controls follow the picture: a night sheet over dark scenes, the paper sheet over bright ones.
+function sceneTheme() {
+  const night = player.scene === 'dark';
+  const ink = night ? '#f4efe4' : '#1a1714', quiet = night ? '#cfc7b8' : '#4f4840', soft = night ? '#39332c' : '#ddd6c7';
+  const film = document.querySelector('#stage [data-id="film"][data-owner="player"]');
+  if (film) film.style.background = night ? '#10171d' : '#d8cfb8';
+  const by = (id) => document.querySelector(`#stage [data-id="${id}"][data-owner="player"]`);
+  const sheet = by('sheet');
+  if (sheet) sheet.style.background = night ? '#14110ed1' : '#f4efe4d1';
+  ['sheetrule1', 'sheetrule2'].forEach((id) => { const n = by(id); if (n) n.style.background = ink; });
+  ['title', 'now', 'left'].forEach((id) => { const n = by(id); if (n) n.style.color = ink; });
+  const k = by('kicker'); if (k) k.style.color = quiet;
+  ['back10', 'fwd30', 'audio', 'subs', 'copy', 'stop'].forEach((id) => { const n = by(id); if (n) { n.style.background = soft; n.style.color = ink; } });
+  const pp = by('pp'); if (pp) { pp.style.background = ink; pp.style.color = night ? '#14110e' : '#f4efe4'; }
+  const sc = by('scene'); if (sc) sc.firstChild.textContent = night ? 'Example: dark scene' : 'Example: bright scene';
+  const t = document.querySelector('#stage .seek-track'); if (t) t.style.background = night ? '#6b645a' : '#b8ae9c';
+  document.querySelectorAll('#stage .seek-tick').forEach((n) => { n.style.background = ink; });
+  // The paper's dark red is too dim on the night sheet, so it lifts there.
+  const red = night ? '#e8695a' : '#a3271c';
+  const fill = document.querySelector('#stage .seek-fill'); if (fill) fill.style.background = red;
+  document.querySelectorAll('#stage .pmenu .head').forEach((n) => { n.style.color = red; });
+  document.querySelectorAll('#stage .pmenu .line').forEach((n) => { n.style.borderColor = night ? '#6b645a' : ''; if (n.classList.contains('best')) { n.style.background = 'transparent'; n.style.outlineColor = red; } });
+  const m = document.querySelector('#stage .pmenu');
+  if (m) { m.style.background = night ? '#14110ef2' : '#f4efe4'; m.style.color = ink; m.style.borderColor = ink; }
+}
 function paintPlayer() {
   if (page !== 'player') return;
   const set = (id, text) => { const n = document.querySelector(`#stage [data-id="${id}"][data-owner="player"]`); if (n) n.textContent = text; };
@@ -596,6 +623,7 @@ function paintPlayer() {
   if (!editing) { const pp = document.querySelector('#stage [data-id="pp"][data-owner="player"]'); if (pp) { pp.firstChild.textContent = player.on ? 'Pause' : 'Play'; } }
   const f = document.querySelector('#stage .seek-fill');
   if (f) f.style.width = player.t / player.d * 100 + '%';
+  sceneTheme();
   const showing = editing || !player.on || !!player.menu || Date.now() - player.idle < 4000;
   document.querySelectorAll('#stage .el[data-owner="player"]').forEach((n) => {
     if (n.dataset.id === 'film') return;
@@ -682,6 +710,7 @@ function act(to) {
   if (to === 'play') return doPlay();
   if (page === 'player') {
     player.idle = Date.now();
+    if (to === 'scene') { player.scene = player.scene === 'dark' ? 'bright' : 'dark'; return draw(); }
     if (to === 'pp') player.on = !player.on;
     else if (to === 'back10') player.t = Math.max(0, player.t - 10);
     else if (to === 'fwd30') player.t = Math.min(player.d, player.t + 30);

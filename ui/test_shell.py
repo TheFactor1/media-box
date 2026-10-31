@@ -39,5 +39,20 @@ class Choose(unittest.TestCase):
             shell.episode('1/../..', 3)
 
 
+class Controls(unittest.TestCase):
+    def test_info_for_the_sheet(self):
+        info = shell.player_info({'item': {'title': 'Heat'}, 'ep': {'s': 2, 'e': 3}}, {'playerLook': 'paper'})
+        self.assertEqual(info, {'title': 'Heat', 'kicker': 'Season 2, episode 3', 'look': 'paper'})
+
+    def test_unknown_look_is_automatic(self):
+        self.assertEqual(shell.player_info({}, {'playerLook': 'x'}), {'title': '', 'kicker': '', 'look': 'auto'})
+
+    def test_other_versions_keeps_the_way_back(self):
+        out = shell.to_versions({'page': 'film', 'item': {'id': 'tt1'}, 'history': [{'page': 'home'}]})
+        self.assertEqual(out['page'], 'versions')
+        self.assertEqual([h['page'] for h in out['history']], ['home', 'film'])
+        self.assertEqual(shell.to_versions(out), out)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -146,6 +146,8 @@ class Player:
         with sock:
             for name, value in (stream.get('headers') or {}).items():
                 send(sock, ['change-list', 'http-header-fields', 'append', f'{name}: {value}'])
+            for name, value in player_info(self.state, load_prefs()).items():
+                send(sock, ['set_property', 'user-data/mediabox/' + name, value])
             if start > 0:
                 send(sock, ['set_property', 'start', str(start)])
             send(sock, ['loadfile', stream['url']])
@@ -161,6 +163,8 @@ class Player:
                         if not line:
                             raise EOFError
                         msg = json.loads(line)
+                        if msg.get('event') == 'client-message' and msg.get('args') == ['mediabox-versions']:
+                            self.state = to_versions(self.state)
                         if msg.get('request_id') in pending:
                             pending.discard(msg['request_id'])
                             if isinstance(msg.get('data'), (int, float)):
@@ -198,6 +202,23 @@ def send(sock, command, request_id=0):
 
 def save(id_, ep, position, duration):
     hub('PUT', f'/resume/{id_}{ep}', json.dumps({'positionMs': int(position * 1000), 'durationMs': int(duration * 1000)}).encode(), timeout=10)
+
+
+def player_info(state, prefs):
+    """What the film's controls show, and which look they use."""
+    ep = state.get('ep') or {}
+    look = prefs.get('playerLook')
+    return {'title': str((state.get('item') or {}).get('title') or ''),
+            'kicker': f"Season {ep['s']}, episode {ep['e']}" if ep.get('s') and ep.get('e') else '',
+            'look': look if look in ('night', 'paper') else 'auto'}
+
+
+def to_versions(state):
+    """Other versions, pressed during the film: the interface comes back on the copies, with Back leading where it was."""
+    if state.get('page') == 'versions':
+        return state
+    back = {'page': state.get('page'), 'item': state.get('item'), 'ep': state.get('ep'), 'key': state.get('key')}
+    return {**state, 'page': 'versions', 'key': None, 'history': [*(state.get('history') or []), back]}
 
 
 def strip_urls(raw):

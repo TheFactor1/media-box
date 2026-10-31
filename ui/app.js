@@ -284,12 +284,14 @@ function keyboard(key, set, get, small) {
   return h('div', { class: 'keys' + (small ? ' small' : '') }, [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ0'].map((c) => focusable(h('div', { class: 'key' }, c), `${key}:${c}`, () => add(c.toLowerCase()))),
     focusable(h('div', { class: 'key wide' }, 'Space'), key + ':space', () => add(' ')), focusable(h('div', { class: 'key wide' }, 'Delete'), key + ':del', () => set(get().slice(0, -1))));
 }
+const LOOKS = { auto: 'Match the scene', night: 'Always night', paper: 'Always paper' };
 function settingsBody() {
   const speed = S.prefs.preset || S.presets.default || '';
   return h('div', { class: 'scrolly' },
     line('set:source', () => go('source'), h('span', {}, 'Stream source'), h('em', {}, S.sources?.length ? S.sources.map((a) => hostName(a.host) + (a.reachable ? '' : ' (not answering)')).join(', ') : 'Add AIOStreams')),
     line('set:ready', () => setPref('readyOnly', S.prefs.readyOnly === false), h('span', {}, 'Only play copies ready to stream'), h('em', {}, S.prefs.readyOnly === false ? 'Off' : 'On')),
     line('set:choose', () => setPref('choose', !S.prefs.choose), h('span', {}, 'When I press Play'), h('em', {}, S.prefs.choose ? 'Let me choose the copy' : 'Play the best copy')),
+    line('set:look', () => { const names = Object.keys(LOOKS); setPref('playerLook', names[(names.indexOf(S.prefs.playerLook || 'auto') + 1) % names.length]); }, h('span', {}, 'Player controls'), h('em', {}, LOOKS[S.prefs.playerLook] || LOOKS.auto)),
     line('set:speed', () => { const names = Object.keys(S.presets.presets || {}); if (!names.length) return; const i = names.indexOf(speed); S.prefs.preset = names[(i + 1) % names.length]; api('/prefs', { method: 'POST', body: { preset: S.prefs.preset } }).catch(() => notice("Couldn't save that.")); draw(); }, h('span', {}, 'Connection speed'), h('em', {}, speedName(speed))),
     line('set:privacy', () => {}, h('span', {}, 'Privacy'), h('em', {}, 'Nothing leaves this box')));
 }

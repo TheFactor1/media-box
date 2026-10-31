@@ -53,7 +53,7 @@ mpv --version
 (cd /ctx/ui && PYTHONDONTWRITEBYTECODE=1 python3 -E -s -m unittest test_shell)
 mkdir -p /usr/lib/mediabox/ui
 cp -r /ctx/ui/. /usr/lib/mediabox/ui/
-rm -f /usr/lib/mediabox/ui/test_shell.py
+rm -f /usr/lib/mediabox/ui/test_shell.py /usr/lib/mediabox/ui/test_player.py
 rm -rf /usr/lib/mediabox/ui/__pycache__
 chmod +x /usr/libexec/mediabox/ui-session /usr/libexec/mediabox/ui-browser
 
