@@ -21,6 +21,27 @@ SORTS = {'newest': (lambda i: i['year'] or 0, True), 'az': (lambda i: (i['title'
          'shortest': (lambda i: i['runtimeMin'] or 10**6, False)}
 
 
+# One press and no keys: all of these are lists the free catalogue (Cinemeta) already offers. id: (title, type, catalog, genre).
+QUICK_LISTS = {
+    'rated-films': ('Featured films', 'movie', 'imdbRating', None),
+    'rated-shows': ('Featured shows', 'series', 'imdbRating', None),
+    'rated-scifi': ('Featured sci-fi', 'movie', 'imdbRating', 'Sci-Fi'),
+    'rated-crime': ('Featured crime shows', 'series', 'imdbRating', 'Crime'),
+    'rated-animation': ('Featured animation', 'movie', 'imdbRating', 'Animation'),
+    'popular-action': ('Popular action', 'movie', 'top', 'Action'),
+    'popular-comedy': ('Popular comedies', 'movie', 'top', 'Comedy'),
+    'popular-horror': ('Popular horror', 'movie', 'top', 'Horror'),
+    'popular-thriller': ('Popular thrillers', 'movie', 'top', 'Thriller'),
+    'popular-family': ('Family night', 'movie', 'top', 'Family'),
+    'popular-documentary': ('Documentaries', 'movie', 'top', 'Documentary'),
+    'popular-drama-shows': ('Popular drama shows', 'series', 'top', 'Drama'),
+}
+
+
+def quick_lists():
+    return [{'id': k, 'title': v[0]} for k, v in QUICK_LISTS.items()]
+
+
 def _core(hub):
     # The module the running Hub came from (hub.hub, or __main__ under `python -m hub.hub`), so its
     # error classes are the ones the request handler catches. Importing hub.hub here would be circular.
@@ -43,7 +64,7 @@ def text(value, limit=80):
 
 def shelf_entry(kind, ref, title, hidden=False):
     sid = {'builtin': lambda: ref, 'catalog': lambda: f"catalog:{ref['addon']}:{ref['type']}:{ref['id']}",
-           'collection': lambda: f'collection:{ref}', 'franchise': lambda: f'franchise:{ref}'}[kind]()
+           'collection': lambda: f'collection:{ref}', 'franchise': lambda: f'franchise:{ref}', 'quick': lambda: f'quick:{ref}'}[kind]()
     return {'id': sid, 'kind': kind, 'ref': ref, 'title': title, 'hidden': hidden}
 
 
@@ -119,6 +140,8 @@ def put_shelves(hub, body):
             ref, default = {k: ref[k] for k in ('addon', 'type', 'id')}, ref['id']
         elif kind == 'collection' and ref in collections:
             default = collections[ref]
+        elif kind == 'quick' and ref in QUICK_LISTS:
+            default = QUICK_LISTS[ref][0]
         elif kind == 'franchise' and str(ref).isdigit():
             ref, default = int(ref), 'Collection'
         else:
@@ -146,6 +169,9 @@ def shelf(hub, sid, skip):
             raise core.HttpError(404, 'that addon is no longer configured')
         # Only titles with an IMDb id can be looked up and played; some list addons mix in their own ids.
         items = hub.annotate([i for i in map(core.to_item, hub.catalog_metas(addon, ref['type'], ref['id'], skip)) if core.IMDB.fullmatch(str(i['id']))])
+    elif kind == 'quick':
+        _, type_, cid, genre = QUICK_LISTS[ref]
+        items = hub.annotate([i for i in map(core.to_item, hub.catalog_metas(hub.meta_addons[0], type_, cid, skip, genre)) if core.IMDB.fullmatch(str(i['id']))])
     elif kind == 'collection':
         c = collection(hub, ref)
         items = manual_items(hub, ref, skip) if c['kind'] == 'manual' else smart_items(hub, c['filter'])[skip:skip + PAGE]

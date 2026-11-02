@@ -733,13 +733,14 @@ class Hub:
                 pass
         return out
 
-    def catalog_metas(self, addon, type_, cid, skip):
+    def catalog_metas(self, addon, type_, cid, skip, genre=None):
         """One catalog page, cached 10 min: Home rows and smart collections read the same pages over and over."""
-        key = (addon.host, type_, cid, skip)
+        key = (addon.host, type_, cid, skip, genre)
         hit = self.catalog_cache.get(key)
         if hit and time.time() - hit[0] < STREAM_TTL:
             return hit[1]
-        metas = [m for m in lst(addon.get('catalog', type_, cid, {'skip': skip} if skip else None).get('metas')) if isinstance(m, dict)]
+        extra = {**({'genre': genre} if genre else {}), **({'skip': skip} if skip else {})}
+        metas = [m for m in lst(addon.get('catalog', type_, cid, extra or None).get('metas')) if isinstance(m, dict)]
         self.catalog_cache[key] = (time.time(), metas)
         return metas
 
@@ -1042,6 +1043,8 @@ class Handler(BaseHTTPRequestHandler):
                 return ok({'default': hub.preset, 'presets': hub.presets, 'aliases': ranking.ALIASES})
             case ['GET', 'shelves']:
                 return ok({'shelves': shelves.get_shelves(hub)})
+            case ['GET', 'quick-lists']:
+                return ok({'lists': shelves.quick_lists()})
             case ['PUT', 'shelves']:
                 return ok({'shelves': shelves.put_shelves(hub, self.body())})
             case ['GET', 'shelf', sid]:

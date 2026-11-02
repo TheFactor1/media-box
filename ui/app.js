@@ -353,17 +353,48 @@ function setPref(name, value) {
 }
 function speedName(s) { return { slow: 'Slow', standard: 'Standard', fast: 'Fast', max: 'Fastest' }[s] || s || ''; }
 function managerBody() {
-  return h('div', { class: 'scrolly' }, h('div', { class: 'head' }, 'Rows on Home, in order'), focusable(h('div', { class: 'chip', style: { marginBottom: '14px', display: 'inline-block' } }, 'Add more lists from your phone'), 'm:addlists', () => go('listsource')), S.shelves.map((s, i) => {
+  return h('div', { class: 'scrolly' }, h('div', { class: 'head' }, 'Rows on Home, in order'), S.shelves.map((s, i) => {
     const r = h('div', { class: 'mrow' + (s.hidden ? ' off' : '') }, h('span', {}, s.title, s.kind === 'collection' ? h('em', {}, 'your list') : null),
       mini('Up', `m:${s.id}:up`, () => moveShelf(i, -1)), mini('Down', `m:${s.id}:down`, () => moveShelf(i, 1)),
       mini(s.hidden ? 'Show' : 'Hide', `m:${s.id}:hide`, () => { s.hidden = !s.hidden; saveShelves(); }),
-      s.kind === 'collection' ? mini('Delete', `m:${s.id}:del`, () => deleteList(s)) : null);
+      s.kind === 'collection' ? mini('Delete', `m:${s.id}:del`, () => deleteList(s)) : null,
+      s.kind === 'quick' ? mini('Remove', `m:${s.id}:del`, () => { S.shelves.splice(i, 1); saveShelves(); }) : null);
     return r;
   }));
 }
+// The right side of Lists: three ways to get a list, easiest first.
+const LIST_TABS = { quick: 'Quick add', yours: 'Add your list', build: 'Build one' };
+function listTabs() {
+  return h('div', { class: 'two' }, Object.entries(LIST_TABS).map(([k, label]) => focusable(h('div', { class: 'chip' + ((S.listTab || 'quick') === k ? ' on' : '') }, label), 'lt:' + k, () => { S.listTab = k; draw('lt:' + k); })));
+}
+function quickBody() {
+  const onHome = new Set(S.shelves.map((s) => s.id));
+  return h('div', { class: 'newlist' }, listTabs(), h('div', { class: 'head', style: { marginBottom: 0 } }, 'One press, nothing to set up'),
+    h('div', { class: 'scrolly', style: { flex: '1', minHeight: '0' } }, (S.quick || []).map((l) => {
+      const added = onHome.has('quick:' + l.id);
+      return line('q:' + l.id, () => {
+        if (added) return;
+        S.shelves.push({ id: 'quick:' + l.id, kind: 'quick', ref: l.id, title: l.title, hidden: false });
+        notice(l.title + ' is now on Home');
+        saveShelves();
+      }, h('span', {}, l.title), h('em', {}, added ? 'On Home' : 'Add'));
+    })));
+}
+function yourListBody() {
+  return h('div', { class: 'newlist' }, listTabs(), h('div', { class: 'head', style: { marginBottom: 0 } }, 'Bring your own'),
+    h('p', { class: 'listnote' }, 'Scan a code with your phone and paste a link. Each list in it becomes a row.'),
+    focusable(h('div', { class: 'cta' }, 'Scan to add a list'), 'ly:scan', () => go('listsource')),
+    h('div', { class: 'head', style: { marginBottom: 0 } }, 'Links that work'),
+    h('p', { class: 'listnote' }, 'MDBList, which can carry your Trakt and IMDb lists as an addon.'),
+    h('p', { class: 'listnote' }, 'Any Stremio addon with catalogs. The link ends in manifest.json.'),
+    h('p', { class: 'listnote' }, 'Lists inside your AIOStreams are already on the left: press Show.'));
+}
 function newListBody() {
+  const tab = S.listTab || 'quick';
+  if (tab === 'quick') return quickBody();
+  if (tab === 'yours') return yourListBody();
   const d = S.draft;
-  return h('div', { class: 'newlist' }, h('div', { class: 'head', style: { marginBottom: 0 } }, 'Start a new list'),
+  return h('div', { class: 'newlist' }, listTabs(),
     h('div', { class: 'field' + (d.name ? '' : ' none'), id: 'nl-name' }, d.name || 'Type a name below'),
     keyboard('nl', (t) => { d.name = t; const f = $('#nl-name'); f.textContent = t || 'Type a name below'; f.classList.toggle('none', !t); }, () => d.name, true),
     h('div', { class: 'two' }, focusable(h('div', { class: 'chip' + (d.kind === 'manual' ? ' on' : '') }, 'I pick the titles'), 'nl:manual', () => { d.kind = 'manual'; draw(); }), focusable(h('div', { class: 'chip' + (d.kind === 'smart' ? ' on' : '') }, 'Fill it by genre'), 'nl:smart', () => { d.kind = 'smart'; draw(); }),
@@ -478,7 +509,7 @@ async function loadPage(page) {
     const load = async (c) => (c ? pickItems(await api(`browse/catalog/${q(c.type)}/${q(c.id)}`).catch(() => ({ items: [] }))) : []);
     const [films, shows] = await Promise.all([load(first('movie')), load(first('series'))]);
     S.sections = { r1: films, r2: shows };
-  } else if (page === 'lists') { S.shelves = (await api('shelves')).shelves; S.lists = (await api('collections')).collections; }
+  } else if (page === 'lists') { S.shelves = (await api('shelves')).shelves; S.lists = (await api('collections')).collections; S.quick = (await api('quick-lists').catch(() => ({ lists: [] }))).lists; }
   else if (page === 'settings') { S.presets = await api('presets'); S.prefs = await api('/prefs'); S.sources = streamSources(await api('health')); }
   else if (page === 'listsource') { S.sourceQr = await api('/source-qr', { method: 'POST', body: { kind: 'lists' } }); }
   else if (page === 'source') { S.sourceQr = await api('/source-qr', { method: 'POST' }); S.sources = streamSources(await api('health')); watchSource(S.sources.map((a) => a.host).join()); }

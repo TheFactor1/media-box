@@ -46,7 +46,7 @@ STATIC = {
 CSP = "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; connect-src 'self'; img-src https: data:; base-uri 'none'; form-action 'none'"
 
 # Only what browsing needs: pairing, setup and device management stay off this path.
-ALLOWED = re.compile(r'^(health|shelves|shelf/[^/]+|library(/[^/]+)?|new|keep|presets|search|collections(/.*)?|franchise/[^/]+'
+ALLOWED = re.compile(r'^(health|shelves|quick-lists|shelf/[^/]+|library(/[^/]+)?|new|keep|presets|search|collections(/.*)?|franchise/[^/]+'
                      r'|resume/[^/]+(/\d+/\d+)?|browse/(catalogs|catalog/[^/]+/[^/]+|meta/[^/]+/[^/]+|cast/[^/]+/[^/]+|streams/[^/]+/[^/]+(/\d+/\d+)?))$')
 IMDB = re.compile(r'^tt\d+$')
 LANGUAGES = {'en': 'English', 'eng': 'English', 'es': 'Spanish', 'spa': 'Spanish', 'fr': 'French', 'fre': 'French', 'fra': 'French', 'de': 'German',

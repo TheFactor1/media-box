@@ -8,7 +8,7 @@ import shell
 
 class Allowed(unittest.TestCase):
     def test_browsing_calls_pass(self):
-        for path in ('/api/shelves', '/api/shelf/new?skip=20', '/api/browse/meta/movie/tt1', '/api/resume/tt1/2/3', '/api/search?q=salt'):
+        for path in ('/api/shelves', '/api/shelf/new?skip=20', '/api/browse/meta/movie/tt1', '/api/resume/tt1/2/3', '/api/search?q=salt', '/api/quick-lists'):
             self.assertIsNotNone(shell.allowed(path), path)
 
     def test_query_is_kept(self):

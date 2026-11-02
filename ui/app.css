@@ -76,7 +76,8 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor
 .newlist { display: flex; flex-direction: column; gap: 16px; height: 100%; font-size: 26px; }
 .field { min-height: 66px; padding: 12px 14px; border: 2px solid var(--ink); background: #fbf8f1; font-size: 30px; white-space: nowrap; overflow: hidden; }
 .field.none { color: var(--quiet); font-style: italic; }
-.two { display: flex; gap: 10px; }
+.two { display: flex; gap: 10px; flex: none; }
+.listnote { margin: 0; font-size: 28px; line-height: 1.3; color: #3a342d; }
 .cta { position: relative; align-self: flex-start; padding: 18px 36px; background: var(--ink); color: var(--paper); font-weight: 600; font-size: 28px; }
 
 .qr { display: block; width: 100%; height: 100%; }

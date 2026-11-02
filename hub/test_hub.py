@@ -177,6 +177,8 @@ class FakeAddon(BaseHTTPRequestHandler):
             body = {'metas': []}
         elif p == '/catalog/movie/fresh.json':
             body = {'metas': [METAS['tt6'], METAS['tt5'], METAS['tt1'], METAS['tt5']]}
+        elif p == '/catalog/movie/top/genre=Horror.json':
+            body = {'metas': [METAS['tt5'], {'id': 'other:1', 'name': 'No IMDb id', 'type': 'movie'}]}
         elif p == '/catalog/movie/top/search=drama.json':
             body = {'metas': [METAS['tt5'], METAS['tt1']]}  # tt1 is in the library, so it must not repeat
         elif p.startswith('/meta/'):
@@ -972,6 +974,19 @@ class ShelfTest(Fixture):
                          [('catalog:127.0.0.1:movie:top', 'Popular', False), ('new', 'New', True),
                           ('next', 'Next up', False), ('continue', 'Continue watching', False)])
         self.assertEqual(self.call('PUT', '/shelves', [{'kind': 'builtin', 'ref': 'nope'}])[0], 400)
+
+    def test_2z_quick_lists(self):
+        lists = self.get('/quick-lists')['lists']
+        self.assertIn({'id': 'popular-horror', 'title': 'Popular horror'}, lists)
+        before = self.shelves()
+        rows = before + [{'kind': 'quick', 'ref': 'popular-horror'}]
+        self.assertEqual(self.call('PUT', '/shelves', {'shelves': rows})[0], 200)
+        self.assertEqual(self.shelves()[-1]['id'], 'quick:popular-horror')
+        self.assertEqual(self.shelves()[-1]['title'], 'Popular horror')
+        self.assertEqual([i['id'] for i in self.get('/shelf/quick:popular-horror')['items']], ['tt5'])  # only titles it can play
+        self.assertEqual(self.call('PUT', '/shelves', {'shelves': before + [{'kind': 'quick', 'ref': 'made-up'}]})[0], 400)
+        self.assertEqual(self.call('PUT', '/shelves', {'shelves': before})[0], 200)
+        self.assertNotIn('quick:popular-horror', [s['id'] for s in self.shelves()])  # removed stays removed
 
     def test_3_manual_collection(self):
         status, col = self.call('POST', '/collections', {'title': 'Faves', 'kind': 'manual'})
