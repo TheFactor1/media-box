@@ -197,7 +197,7 @@ class Controls(unittest.TestCase):
             self.press('RIGHT')
         self.press('ENTER')
         self.screen()
-        self.assertEqual(self.commands(), ['script-message mediabox-versions', 'quit'])
+        self.assertEqual(self.commands(), ['script-message mediabox-versions', 'script-message mediabox-left', 'quit'])
 
     def test_subtitle_menu_picks_off(self):
         self.g.props['track-list'] = self.lua.eval("{ { type = 'sub', id = 2, lang = 'eng', selected = true }, { type = 'audio', id = 1, title = 'Main' } }")

@@ -127,6 +127,15 @@ class Remote(unittest.TestCase):
         self.assertIsNone(shell.remote_key(shell.EV_KEY, 158, 0))
         self.assertIsNone(shell.remote_key(4, 158, 1))
 
+    def test_page_gets_keys_by_their_browser_names(self):
+        self.assertEqual(shell.page_key(shell.EV_KEY, 106, 1), 'ArrowRight')
+        self.assertEqual(shell.page_key(shell.EV_KEY, 158, 1), 'GoBack')
+        self.assertEqual(shell.page_key(shell.EV_KEY, 30, 1), 'a')
+        self.assertEqual(shell.page_key(shell.EV_KEY, 11, 1), '0')
+        self.assertEqual(shell.page_key(shell.EV_KEY, 2, 1), '1')
+        self.assertIsNone(shell.page_key(shell.EV_KEY, 106, 0))
+        self.assertIsNone(shell.page_key(4, 106, 1))
+
     def test_typing_on_a_keyboard_is_not_looked_at(self):
         for code in (28, 30, 103, 105, 106, 108, 1):  # Enter, A, the arrows, Esc
             self.assertIsNone(shell.remote_key(shell.EV_KEY, code, 1))

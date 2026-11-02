@@ -812,3 +812,5 @@ async function start() {
 }
 // Fonts load only when asked for, so ask first: text measured in a fallback font looks like it fits, then gets cut off.
 Promise.all(['900 150px Playfair', '700 32px Playfair', '400 26px "Source Serif"', 'italic 400 40px "Source Serif"', '600 22px "Source Serif"'].map((f) => document.fonts.load(f))).then(start, start);
+// After a film this page has no keyboard focus: the compositor doesn't give it back, so the bridge passes keys along instead.
+new EventSource('/keys').onmessage = (e) => { if (!document.hasFocus()) dispatchEvent(new KeyboardEvent('keydown', { key: e.data, bubbles: true, cancelable: true })); };

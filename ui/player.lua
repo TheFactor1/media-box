@@ -190,7 +190,10 @@ anim_timer = mp.add_periodic_timer(1 / 30, function()
     if leaving then
         curtain = math.min(1, curtain + dt / LEAVE_TIME)
         mp.set_property_number('volume', 100 * (1 - curtain))
-        if curtain == 1 then mp.commandv('quit') end
+        if curtain == 1 then
+            mp.commandv('script-message', 'mediabox-left')  -- the bridge moves on now: mpv's own shutdown can take a second
+            mp.commandv('quit')
+        end
     elseif not loading and curtain > 0 then
         curtain = math.max(0, curtain - dt / FADE_TIME)
         mp.set_property_number('volume', 100 * (1 - curtain))  -- picture and sound arrive together

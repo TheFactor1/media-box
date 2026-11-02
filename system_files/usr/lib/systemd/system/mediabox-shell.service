@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 User=media
 Group=media
-# Reads media remote buttons while a film plays; see remote_buttons in shell.py.
+# Reads the remote and keyboard: remote_buttons during a film, forward_keys for the page. See shell.py.
 SupplementaryGroups=input
 Environment=HOME=/var/lib/media
 StateDirectory=media
@@ -19,7 +19,6 @@ RestartSec=2
 NoNewPrivileges=yes
 ProtectSystem=strict
 ReadWritePaths=/var/lib/media
-# Read-only, not hidden: the bridge reaches the compositor socket in /run/user to hand keyboard focus back after a film.
-ProtectHome=read-only
+ProtectHome=yes
 PrivateTmp=yes
 RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6

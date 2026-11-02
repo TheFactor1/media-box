@@ -7,6 +7,7 @@ import base64
 import glob
 import json
 import os
+import queue
 import re
 import select
 import signal
@@ -155,10 +156,9 @@ class Player:
         """The film's unit switches back to the interface's screen as it stops. If the page doesn't wake, it's restarted: never a black screen."""
         subprocess.run(['systemctl', 'stop', MPV_UNIT], check=False, timeout=30)
         subprocess.run(['systemctl', 'stop', SCREEN_UNIT], check=False, timeout=30)
-        time.sleep(0.3)  # the compositor takes the display back first
+        time.sleep(0.3)  # the compositor takes the display back first: at 0.1 Chromium woke too soon and crashed
         self.page_seen.clear()
         signal_browser(signal.SIGCONT)
-        refocus_interface()
         self.stage = 'done'
         subprocess.run(['systemctl', 'start', '--no-block', UI_UNIT], check=False, timeout=30)  # in case it died
         if not self.page_seen.wait(5) and browser_pids():
@@ -212,7 +212,7 @@ class Player:
                 # Chromium crashes if it draws while the screen is switched away, so it sleeps through the film. It keeps its place and uses no CPU.
                 signal_browser(signal.SIGSTOP)
                 subprocess.run(['systemctl', 'start', SCREEN_UNIT], check=False, timeout=30)
-                for name, value in (('hwdec', 'auto-safe'), ('vo', 'gpu-next'), ('user-data/mediabox/show', True)):
+                for name, value in (('vo', 'gpu-next'), ('user-data/mediabox/show', True)):
                     send(sock, ['set_property', name, value])
                 if self.watch(_type, id_, ep, sock, reader):
                     self.state = after_film(self.state, *self.reached, self.chose_versions)
@@ -251,6 +251,8 @@ class Player:
                         msg = json.loads(line)
                         if msg.get('event') == 'client-message' and msg.get('args') == ['mediabox-versions']:
                             self.chose_versions = True
+                        if msg.get('event') == 'client-message' and msg.get('args') == ['mediabox-left']:
+                            raise EOFError
                         if msg.get('request_id') in pending:
                             pending.discard(msg['request_id'])
                             if isinstance(msg.get('data'), (int, float)):
@@ -263,7 +265,7 @@ class Player:
                 if played and duration and time.monotonic() - saved >= SAVE_EVERY:
                     save(id_, ep, position, duration)
                     saved = time.monotonic()
-                time.sleep(2)
+                select.select([sock], [], [], 2)  # wakes the moment mpv says something, so nobody waits on black for this
         finally:
             finished.set()
         self.reached = (position, duration)
@@ -289,22 +291,6 @@ def browser_pids(proc='/proc'):
     return pids
 
 
-def refocus_interface():
-    """The compositor gives the keyboard back to no one after a screen switch. Closing a window hands it to the page, so a black one
-    opens and closes while the lights are still down."""
-    run_dir = f'/run/user/{os.getuid()}'
-    sockets = [s for s in glob.glob(run_dir + '/wayland-*') if not s.endswith('.lock')]
-    if not sockets:
-        return
-    env = {**os.environ, 'XDG_RUNTIME_DIR': run_dir, 'WAYLAND_DISPLAY': os.path.basename(sockets[0])}
-    try:
-        subprocess.run(['mpv', '--no-config', '--vo=wlshm', '--force-window=immediate', '--geometry=1280x720', '--no-keepaspect-window', '--no-audio', '--really-quiet',
-                        '--no-terminal', '--length=0.3', 'av://lavfi:color=c=black:s=1280x720:r=10'], env=env, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                       stderr=subprocess.DEVNULL, timeout=5, check=False)
-    except (OSError, subprocess.TimeoutExpired):
-        pass
-
-
 def signal_browser(signum):
     for pid in browser_pids():
         try:
@@ -322,6 +308,52 @@ def backups(streams, failed_url, count=2):
             seen.add(url)
             out.append(stream)
     return out[:count]
+
+
+# After a film the compositor gives the keyboard to no window, and giving it back reliably crashes Chromium. So the page takes its keys from here
+# whenever it has lost focus, as the names a browser uses. Remote buttons work the same way.
+PAGE_KEYS = {103: 'ArrowUp', 108: 'ArrowDown', 105: 'ArrowLeft', 106: 'ArrowRight', 28: 'Enter', 96: 'Enter', 352: 'Enter', 353: 'Enter', 57: ' ', 1: 'Escape', 158: 'GoBack', 14: 'Backspace',
+             **{code: letter for code, letter in zip((16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 30, 31, 32, 33, 34, 35, 36, 37, 38, 44, 45, 46, 47, 48, 49, 50), 'qwertyuiopasdfghjklzxcvbnm')},
+             **{code: str((code - 1) % 10) for code in range(2, 12)}}
+page_keys = queue.Queue(maxsize=32)
+
+
+def page_key(kind, code, value):
+    """The browser's name for one input event, or None. Presses and held repeats count, releases don't."""
+    return PAGE_KEYS.get(code) if kind == EV_KEY and value in (1, 2) else None
+
+
+def forward_keys():
+    """Runs for the life of the bridge. Keys go only to the page on this box, and are never stored or logged. New devices are picked up as they appear; nothing is passed on during a film."""
+    files, seen = {}, 0
+    while True:
+        if time.monotonic() - seen > 2:
+            seen = time.monotonic()
+            for path in glob.glob('/dev/input/event*'):
+                if path not in files:
+                    try:
+                        files[path] = os.open(path, os.O_RDONLY | os.O_NONBLOCK)
+                    except OSError:
+                        pass
+        ready = select.select(list(files.values()), [], [], 1)[0] if files else time.sleep(1) or []
+        for path, fd in list(files.items()):
+            if fd not in ready:
+                continue
+            try:
+                raw = os.read(fd, INPUT_EVENT.size * 32)
+            except BlockingIOError:
+                continue
+            except OSError:  # unplugged
+                os.close(fd)
+                del files[path]
+                continue
+            for _, _, kind, code, value in INPUT_EVENT.iter_unpack(raw[:len(raw) - len(raw) % INPUT_EVENT.size]):
+                key = page_key(kind, code, value)
+                if key and not PLAYER.lock.locked():
+                    try:
+                        page_keys.put_nowait(key)
+                    except queue.Full:
+                        pass
 
 
 # Remote buttons the terminal can't see, as Linux numbers them, with the mpv key each one becomes. Arrows, Enter and Esc stay with the terminal.
@@ -625,6 +657,19 @@ class Handler(BaseHTTPRequestHandler):
             return False
         return True
 
+    def stream_keys(self):
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/event-stream')
+        self.send_header('Cache-Control', 'no-store')
+        self.end_headers()
+        while True:
+            try:
+                line = 'data: ' + page_keys.get(timeout=15)
+            except queue.Empty:
+                line = ': still here'
+            self.wfile.write((line + chr(10) * 2).encode())
+            self.wfile.flush()
+
     def handle_any(self, method):
         if not self.guarded():
             return
@@ -659,6 +704,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply_json(200, {'url': url, 'svg': qr_svg(url)})
             if path == '/setup-qr' and method == 'GET':
                 return self.reply_json(200, setup_qr())
+            if path == '/keys' and method == 'GET':
+                return self.stream_keys()
             if path == '/play/status' and method == 'GET':
                 PLAYER.page_seen.set()
                 out = {'stage': PLAYER.stage, 'progress': PLAYER.progress, 'note': PLAYER.note, 'error': PLAYER.error if PLAYER.stage == 'failed' else None}
@@ -702,4 +749,5 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == '__main__':
+    threading.Thread(target=forward_keys, daemon=True).start()
     ThreadingHTTPServer(('127.0.0.1', PORT), Handler).serve_forever()
