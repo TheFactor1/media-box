@@ -83,6 +83,13 @@ function badgeLine(b) {
   return (b.res ? '' : 'Resolution not stated · ') + known.join(' · ');
 }
 
+const HDR_NAMES = { DV: 'Dolby Vision' };
+// Every format the copies on offer come in, as "Label: A, B, C". Best first where the copies are ranked: resolutions lead because that's how they sort.
+function formatLine(label, pick) {
+  if (S.streams === null) return '';
+  const found = playable().map((x) => x.c.badges || {}).sort((a, b) => (RES_RANK[b.res] || 0) - (RES_RANK[a.res] || 0)).flatMap(pick).filter(Boolean);
+  return found.length ? `${label}: ${[...new Set(found)].join(', ')}` : '';
+}
 function bound(key) {
   const it = S.full || S.item || {};
   const top = S.streams?.[0];
@@ -95,8 +102,14 @@ function bound(key) {
     case 'filmkick': return [it.type === 'series' ? 'Series' : 'Film', it.year, lengthOf(it)].filter(Boolean).join(' · ');
     case 'versionsTitle': return `Every copy of ${it.title || 'this title'}, ranked`;
     case 'marketKick': return S.streams ? `Market report · ${S.streams.length} ${S.streams.length === 1 ? 'copy' : 'copies'} found` : 'Market report';
-    case 'facts': return (it.genres || []).join(', ');
-    case 'cast': return S.cast?.length ? 'Featuring ' + S.cast.slice(0, 5).map((c) => c.name).join(', ') : '';
+    case 'facts': return [(it.genres || []).join(', '), it.country, it.awards].filter(Boolean).map((x) => x + '.').join(' ');
+    case 'cast': {
+      const people = S.cast?.length ? S.cast.slice(0, 5).map((c) => c.name) : it.starring || [];
+      return [it.director?.length && 'Directed by ' + it.director.join(', '), it.writer?.length && 'Written by ' + it.writer.join(', '), people.length && 'Featuring ' + people.join(', ')].filter(Boolean).map((x) => x + '.').join(' ');
+    }
+    case 'fmtPicture': return formatLine('Picture', (b) => [RES_NAMES[b.res], ...(b.hdr || []).map((x) => HDR_NAMES[x] || x)]);
+    case 'fmtSound': return formatLine('Sound', (b) => b.audio || []);
+    case 'fmtSource': return formatLine('Source', (b) => [SOURCE_NAMES[b.source]]);
     case 'sourceNow': return S.sources?.length ? 'Now using: ' + S.sources.map((a) => hostName(a.host)).join(', ') : 'No source set yet';
     case 'copy': return S.streams === null ? 'Looking…' : top ? badgeLine(top.badges) || (top.source?.name ?? 'Available') : 'No copy found right now';
     case 'copyNote': return top?.badges?.mbps ? `${Math.round(top.badges.mbps)} Mb/s, best match for your speed` : '';
@@ -349,7 +362,19 @@ function fitText() {
     if (e.nowrap) {
       const min = Math.round(e.size * .45);
       let size = e.size;
-      while (n.scrollWidth > n.clientWidth + 1 && size > min) { size -= 2; n.style.fontSize = size + 'px'; }
+      n.style.whiteSpace = 'nowrap';
+      // The text's own width: scrollWidth is rounded and never less than the box, so text a fraction over still got an ellipsis.
+      const range = document.createRange();
+      range.selectNodeContents(n);
+      const tooWide = () => range.getBoundingClientRect().width / scale() > n.clientWidth - 2;
+      while (tooWide() && size > min) { size -= 2; n.style.fontSize = size + 'px'; }
+      // Still too long, and the box has room for two lines: wrap rather than cut the name off.
+      if (tooWide() && e.h >= min * 2.3) {
+        n.style.whiteSpace = 'normal';
+        size = Math.floor(e.h / 2.3);
+        n.style.fontSize = size + 'px';
+        while (n.scrollHeight > n.clientHeight && size > 24) { size -= 2; n.style.fontSize = size + 'px'; }
+      }
       n.style.textOverflow = 'ellipsis';
     } else if (!e.spacing) {
       n.style.display = '-webkit-box'; n.style.webkitBoxOrient = 'vertical'; n.style.overflow = 'hidden';
@@ -785,4 +810,5 @@ async function start() {
   if (error) notice(error);
   setTimeout(() => Object.values(GRIDS).forEach((path) => api(path).catch(() => {})), 1500);  // so the first visit to each tab is instant too
 }
-document.fonts?.ready.then(start, start);
+// Fonts load only when asked for, so ask first: text measured in a fallback font looks like it fits, then gets cut off.
+Promise.all(['900 150px Playfair', '700 32px Playfair', '400 26px "Source Serif"', 'italic 400 40px "Source Serif"', '600 22px "Source Serif"'].map((f) => document.fonts.load(f))).then(start, start);

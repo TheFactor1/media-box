@@ -4,6 +4,7 @@ Contract: DATAFLOW.md, "Hub API". Python 3.12 standard library only.
 Run: HUB_CONFIG=/var/lib/hub/hub.toml HUB_DATA=/var/lib/hub python -m hub.hub
 """
 import hashlib
+import html
 import hmac
 import ipaddress
 import json
@@ -169,6 +170,11 @@ class Addon:
 
 # ---- metadata ----
 
+def names(value):
+    """People from a catalogue, which sends some names with HTML entities (O&apos;Connor)."""
+    return [html.unescape(x) for x in lst(value) if isinstance(x, str)]
+
+
 def to_item(meta):
     if not isinstance(meta, dict):
         raise AddonError('meta response has no meta object')
@@ -177,6 +183,8 @@ def to_item(meta):
             'year': int(year[0]) if year else None, 'runtimeMin': ranking.minutes(meta.get('runtime')),
             'genres': lst(meta.get('genres') or meta.get('genre')), 'poster': meta.get('poster'),
             'backdrop': meta.get('background'), 'logo': meta.get('logo'), 'overview': meta.get('description'),
+            'director': names(meta.get('director')), 'writer': names(meta.get('writer')), 'starring': names(meta.get('cast')),
+            'country': meta.get('country') if isinstance(meta.get('country'), str) else None, 'awards': meta.get('awards') if isinstance(meta.get('awards'), str) else None,
             'badges': None, 'inLibrary': False, 'keptAt': None, 'resume': None, 'nextEpisode': None}
 
 
