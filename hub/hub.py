@@ -40,6 +40,7 @@ NEW_PAGE, NEW_MAX = 50, 300  # /new page size; titles read per catalog
 MAX_ADDON = 8 * 2**20    # an addon answer over 8 MB is refused, so a hostile addon can't exhaust memory
 OWN_PORTS = set()        # this process's hub ports: an addon URL (or its redirect) must never point back at the hub
 DONE = 0.92              # contract: "continue" = resume point under 92 %
+STARTED_MAX = 40         # titles watched but not kept that Continue and Next up will look up
 IMDB = re.compile(r'tt\d+')
 
 
@@ -614,8 +615,33 @@ class Hub:
                 it['nextEpisode'] = {'s': nxt[0], 'e': nxt[1], 'title': nxt[2]} if nxt else None
         return items
 
+    def watched_not_kept(self):
+        """Titles watched but never kept, newest first, with their episodes: watching one is enough to continue it. A finished film has nothing left to continue."""
+        kept = {r[0] for r in self.sql('SELECT id FROM library')}
+        latest = {}
+        for id_, s, e, p, d in self.sql('SELECT id, s, e, position_ms, duration_ms FROM resume ORDER BY updated_at DESC'):
+            if id_ not in kept and id_ not in latest:
+                latest[id_] = (s, e, p, d)
+        items, videos = [], {}
+        for id_, (s, e, p, d) in list(latest.items())[:STARTED_MAX]:
+            type_ = 'series' if s or e else 'movie'
+            if type_ == 'movie' and done({'positionMs': p, 'durationMs': d}):
+                continue
+            try:
+                meta = self.meta(type_, id_)
+            except AddonError:  # an addon being down hides the title for now, and takes nothing else with it
+                continue
+            items.append({**to_item(meta), 'id': id_, 'type': type_})
+            videos[id_] = episodes(meta)
+        return items, videos
+
     def library(self, collection):
-        items = self.annotate([json.loads(r[0]) for r in self.sql('SELECT item FROM library ORDER BY kept_at DESC, rowid DESC')])
+        items = [json.loads(r[0]) for r in self.sql('SELECT item FROM library ORDER BY kept_at DESC, rowid DESC')]
+        videos = None
+        if collection in ('continue', 'next'):
+            extra, videos = self.watched_not_kept()
+            items += extra
+        items = self.annotate(items, videos)
         resuming = lambda i: i['resume'] and i['resume']['positionMs'] > 0 and not done(i['resume'])
         match collection:
             case None:

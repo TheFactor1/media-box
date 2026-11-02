@@ -311,6 +311,16 @@ class HubTest(Fixture):
         nxt = self.get('/library?collection=next')['items']
         self.assertEqual(nxt[0]['nextEpisode'], {'s': 1, 'e': 2, 'title': 'Two'})
 
+    def test_4b_watching_is_enough_to_continue(self):
+        self.call('PUT', '/resume/tt5', {'positionMs': 60000, 'durationMs': 6000000})
+        ahead = self.get('/library?collection=continue')['items']
+        self.assertEqual(ahead[0]['id'], 'tt5')  # never kept
+        self.assertFalse(ahead[0]['inLibrary'])
+        self.assertNotIn('tt5', [i['id'] for i in self.get('/library?collection=movies')['items']])  # Movies stays what was kept
+        self.call('PUT', '/resume/tt5', {'positionMs': 5900000, 'durationMs': 6000000})
+        self.assertNotIn('tt5', [i['id'] for i in self.get('/library?collection=continue')['items']])  # finished
+        self.call('DELETE', '/resume/tt5')
+
     def test_5_search(self):
         # title start, then any word, then genre (tt9 genre Drama, tt4 genre Drama: kept order), then the addon's search
         self.assertEqual([i['id'] for i in self.get('/search?q=Drama')['items']], ['tt1', 'tt3', 'tt9', 'tt4', 'tt5'])
