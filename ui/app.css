@@ -15,8 +15,8 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor
 .btn { display: flex; align-items: center; justify-content: center; font-weight: 600; white-space: nowrap; overflow: hidden; }
 .tab { display: flex; align-items: center; justify-content: center; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; white-space: nowrap; }
 .tab::after { content: ''; position: absolute; left: 6px; right: 6px; bottom: 0; height: 4px; background: var(--red); transform: scaleX(0); transform-origin: left; transition: transform .18s ease; }
-.tab.on::after, .tab:focus::after { transform: scaleX(1); }
-.tab.on, .tab:focus { color: var(--ink) !important; }
+.tab.on::after, .tab:focus::after, .tab.focused::after { transform: scaleX(1); }
+.tab.on, .tab:focus, .tab.focused { color: var(--ink) !important; }
 .focusable { outline: 0; }
 .focusable:focus { outline: 0; }
 

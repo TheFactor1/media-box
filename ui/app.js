@@ -124,6 +124,17 @@ function bound(key) {
 function artOf(it) { return it?.backdrop || it?.poster || null; }
 
 // ---- Elements --------------------------------------------------------------------------------
+// After a film the window has no keyboard focus, and the browser then moves focus without firing focus events or matching :focus.
+// Everything that shows where you are hangs off those, so this fires them itself.
+function moveFocus(n) {
+  const from = document.activeElement;
+  n.focus({ preventScroll: true });
+  if (document.hasFocus() || from === n) return;
+  from?.classList.remove('focused');
+  from?.dispatchEvent(new FocusEvent('blur'));
+  n.classList.add('focused');
+  n.dispatchEvent(new FocusEvent('focus'));
+}
 function clearPencil() { document.querySelectorAll('.pencil').forEach((n) => n.remove()); }
 function pencil(target) {
   clearPencil();
@@ -414,7 +425,7 @@ function draw(focusKey) {
 function focusOn(key) {
   const safe = key && document.querySelector(`#stage [data-key="${CSS.escape(key)}"]`);
   const target = safe || pageEl.querySelector('.card, .line, .btn, .key, .chip, .mini') || mastEl.querySelector('.tab');
-  target?.focus({ preventScroll: true });
+  if (target) { if (document.activeElement === target) target.blur(); moveFocus(target); }
 }
 function resetHero() {
   refreshBound();
@@ -698,7 +709,8 @@ async function addToList() {
     manual.map((l) => line('pick:' + l.id, async () => { try { await api(`collections/${q(l.id)}/items`, { method: 'POST', body: { id: it.id, type: it.type } }); notice(`Added to ${l.title}`); } catch (e) { notice(e.message); } close(); }, h('span', {}, l.title))),
     line('pick:new', () => { box.hidden = true; tabTo('lists'); }, h('span', {}, '+ New list')), line('pick:cancel', close, h('span', {}, 'Cancel')))));
   box.hidden = false;
-  box.querySelector('.line')?.focus({ preventScroll: true });
+  const first = box.querySelector('.line');
+  if (first) moveFocus(first);
 }
 function moveShelf(i, d) { const j = i + d; if (j < 0 || j >= S.shelves.length) return; [S.shelves[i], S.shelves[j]] = [S.shelves[j], S.shelves[i]]; saveShelves(); }
 async function saveShelves() { draw(); try { S.shelves = (await api('shelves', { method: 'PUT', body: { shelves: S.shelves } })).shelves; } catch (e) { notice(e.message); } }
@@ -756,7 +768,7 @@ addEventListener('keydown', (ev) => {
   if (dirs[ev.key]) {
     ev.preventDefault();
     const n = nextFocus(dirs[ev.key]);
-    if (n) { n.focus({ preventScroll: true }); saveState(); }
+    if (n) { moveFocus(n); saveState(); }
   } else if (ev.key === 'Enter' || ev.key === ' ') {
     ev.preventDefault();
     if (ev.repeat) return;
