@@ -54,10 +54,10 @@ class Controls(unittest.TestCase):
         self.start_film()
 
     def start_film(self):
-        self.g.events['playback-restart']()
-        self.g.props['user-data/mediabox/show'] = True
-        self.g.props['vo-configured'] = True
         self.g.clock = 3
+        self.g.props['user-data/mediabox/show'] = True
+        self.g.load_check()
+        self.g.events['playback-restart']()
         self.g.load_check()
         self.g.clock = 4
         self.g.anim()
@@ -246,34 +246,37 @@ class Loading(unittest.TestCase):
     def start_film(self):
         pass
 
-    def test_film_waits_for_the_screen(self):
+    def show_film(self):
+        self.g.props['user-data/mediabox/show'] = True
+        self.g.load_check()
         self.g.events['playback-restart']()
+        self.g.load_check()
+
+    def test_film_waits_for_a_frame_on_screen(self):
+        self.g.events['playback-restart']()  # opened while hidden
         self.g.clock = 30
-        self.g.load_check()  # open, but the interface still has the screen
+        self.g.load_check()
         self.assertTrue(self.g.props.pause)
         self.g.props['user-data/mediabox/show'] = True
+        self.g.props['vo-configured'] = True  # true before any display exists, so it can't be what starts the film
         self.g.clock = 31
-        self.g.load_check()  # given the screen, picture not up yet
+        self.g.load_check()
         self.assertTrue(self.g.props.pause)
-        self.g.props['vo-configured'] = True
+        self.g.events['playback-restart']()  # the frame is up
         self.g.load_check()
         self.assertFalse(self.g.props.pause)
 
     def test_end_of_film_quits_but_a_failed_copy_waits(self):
         self.g.events['end-file']()
         self.assertEqual(self.commands(), [])
-        self.g.props['user-data/mediabox/show'] = True
-        self.g.props['vo-configured'] = True
-        self.g.load_check()
+        self.show_film()
         self.g.events['end-file']()
         self.assertEqual(self.commands(), ['quit'])
 
     def test_sound_fades_in_with_the_picture(self):
         self.assertEqual(self.g.props.volume, 0)
-        self.g.props['user-data/mediabox/show'] = True
-        self.g.props['vo-configured'] = True
         self.g.clock = 26
-        self.g.load_check()
+        self.show_film()
         self.g.clock = 26.3
         self.g.anim()
         self.assertAlmostEqual(self.g.props.volume, 50)
@@ -284,7 +287,8 @@ class Loading(unittest.TestCase):
     def test_a_stuck_stream_still_starts(self):
         self.g.props['user-data/mediabox/show'] = True
         self.g.load_check()
-        self.g.clock = 26
+        self.assertTrue(self.g.props.pause)
+        self.g.clock = 13
         self.g.load_check()
         self.assertFalse(self.g.props.pause)
 

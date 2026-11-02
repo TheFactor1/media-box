@@ -363,6 +363,7 @@ class HubTest(Fixture):
         self.assertIn(b'Set up your box', page.read())
         conn.close()
         self.assertEqual(self.raw('GET', '/setup?n=wrong')[0], 403)
+        self.assertIn(b"show(adding ? 'sAdd'", hub.SETUP_HTML)  # the TV's code opens on the paste box even on a box already set up
 
     def test_6_unreachable(self):
         self.addon.shutdown()

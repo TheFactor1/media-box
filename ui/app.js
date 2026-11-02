@@ -610,6 +610,13 @@ function press(to) {
 }
 function playItem(it) { if (!it) return; const n = it.nextEpisode; return play(n ? { s: n.s, e: n.e } : {}); }
 // This page sleeps through the film. When it wakes, it finds its new place while the lights are still down, then they come up.
+// Waits for the fade to finish and a black frame to be drawn, then tells the bridge. That frame is what shows when this page wakes after the film.
+async function lightsOut() {
+  await new Promise((r) => setTimeout(r, 450));
+  $('#press').hidden = true;
+  await Promise.race([new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))), new Promise((r) => setTimeout(r, 300))]);
+  await api('/play/dark', { method: 'POST' }).catch(() => {});
+}
 async function filmOver() {
   for (;;) {
     const { stage } = await api('/play/status');
@@ -677,6 +684,7 @@ async function play(opts) {
     }
     S.opening = null;
     $('#lights').classList.add('down');
+    await lightsOut();
     await filmOver();
   } catch (e) {
     if (S.opening !== opening) return;

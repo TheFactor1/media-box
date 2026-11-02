@@ -107,6 +107,15 @@
     </details>
   </section>
 
+  <section id="sAdd" aria-labelledby="hAdd">
+    <h1 id="hAdd">Add your AIOStreams</h1>
+    <p class="lead">Paste your AIOStreams link. It ends in manifest.json. Your TV switches to it by itself.</p>
+    <p class="msg hidden" id="addReplaces">This replaces the source the box is using now.</p>
+    <input id="addLink" type="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…/manifest.json" aria-label="AIOStreams link">
+    <div class="row"><button class="go" id="addGo" type="button">Use this link</button></div>
+    <p class="msg" id="mAdd" role="status" aria-live="polite"></p>
+  </section>
+
   <section id="sDone" aria-labelledby="hDone">
     <h1 id="hDone">You're set up</h1>
     <p class="lead">Open the app on each TV and choose Pair. Type the code it shows here.</p>
@@ -156,7 +165,7 @@
 (() => {
   const n = new URLSearchParams(location.search).get('n');
   const $ = id => document.getElementById(id);
-  if (new URLSearchParams(location.search).get('add') === '1') { $('more').open = true; $('manifest').scrollIntoView(); $('manifest').focus(); }
+  const adding = new URLSearchParams(location.search).get('add') === '1';  // the TV's "Stream source" code: only this job, set up or not
   let info = null, current = 'sMain', from = 'sMain', provisioned = false;
 
   async function call(method, path, body) {
@@ -221,6 +230,22 @@
       if (!link && !provisioned) { $('more').open = true; $('manifest').focus(); }
     } finally { busy(btn, false); }
   }
+  async function addLink() {
+    const link = $('addLink').value.trim();
+    if (!link) { say('mAdd', 'Paste your link first.', 'warn'); $('addLink').focus(); return; }
+    busy($('addGo'), true);
+    say('mAdd', 'Checking your link…');
+    try {
+      const j = await call('POST', '/setup', { action: 'link', manifest: link });
+      $('addLink').value = '';  // the link holds your account details
+      say('mAdd', 'Done. The box is now using ' + j.host + '. You can put your phone away.', 'ok');
+    } catch (e) {
+      say('mAdd', e.message + ' Check you copied the whole link.', 'warn');
+      $('addLink').focus();
+    } finally { busy($('addGo'), false); }
+  }
+  $('addGo').onclick = addLink;
+  $('addLink').addEventListener('keydown', e => { if (e.key === 'Enter') addLink(); });
   $('go').onclick = () => go(false);
   $('goAnyway').onclick = () => go(true);
   $('key').addEventListener('keydown', e => { if (e.key === 'Enter') go(false); });
@@ -420,7 +445,8 @@
       s.append(sm); l.append(i, s); return l;
     }));
     if (info.tmdb) $('tmdbKey').placeholder = 'Key saved; enter a new one to replace it';
-    show(info.configured ? 'sDone' : 'sMain');  // already set up (e.g. opened to approve a TV): straight to pairing
+    $('addReplaces').classList.toggle('hidden', !info.configured);
+    show(adding ? 'sAdd' : info.configured ? 'sDone' : 'sMain');  // already set up (e.g. opened to approve a TV): straight to pairing
   })();
 })();
 </script>

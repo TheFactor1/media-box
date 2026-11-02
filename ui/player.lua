@@ -20,11 +20,11 @@ local BUTTONS = {
 local MENU_ROWS = 9
 -- mpv redraws the OSD only with a new film frame, about 24 a second: too few for a big move to look smooth, enough for a fade with a small rise.
 local RISE_TIME, RISE_BY, FADE_TIME, LEAVE_TIME = 0.3, 24, 0.6, 0.35
-local BLACK_AT_MOST = 25   -- seconds
+local BLACK_AT_MOST = 12   -- seconds
 
 local showing, rising, focus, on_seek, menu, last_key = false, false, 1, false, nil, 0
 local look = LOOKS.night
-local opacity, leaving, stats = 1, false, false
+local opacity, leaving, stats, on_screen = 1, false, false, false
 local shown, offset, curtain, loading, restarted, born, last_frame = 0, 0, 1, true, false, mp.get_time(), 0
 local anim_timer
 
@@ -373,11 +373,7 @@ mp.set_property_number('volume', 0)
 mp.register_event('end-file', function()
     if not loading then mp.commandv('quit') end
 end)
--- Resuming lands on the nearest keyframe, not the exact second: decoding up to the exact spot is what keeps big files on black.
-mp.register_event('playback-restart', function()
-    if not restarted then mp.set_property('hr-seek', 'default') end
-    restarted = true
-end)
+mp.register_event('playback-restart', function() restarted = true end)
 
 local load_timer
 load_timer = mp.add_periodic_timer(0.1, function()
@@ -387,10 +383,16 @@ load_timer = mp.add_periodic_timer(0.1, function()
         born = mp.get_time()
         return
     end
-    if mp.get_property_bool('vo-configured') or age >= BLACK_AT_MOST then
+    -- Taking the screen seeks again, and this fires once that frame is up. vo-configured is no use: it's already true with no display.
+    if not on_screen then
+        on_screen, restarted = true, false
+    end
+    if restarted or age >= BLACK_AT_MOST then
         load_timer:kill()
         loading = false
         mp.set_property_bool('pause', false)
+        -- Until now, seeks land on the nearest keyframe: taking the screen seeks again, and decoding to the exact second is what keeps big files on black.
+        mp.set_property('hr-seek', 'default')
         animate()
     end
 end)

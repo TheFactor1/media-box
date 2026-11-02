@@ -108,6 +108,7 @@ class Player:
         self.chose_versions = False
         self.reached = (0, 0)
         self.page_seen = threading.Event()
+        self.page_dark = threading.Event()
         self.cancelled = threading.Event()
 
     def choose(self, req):
@@ -140,6 +141,7 @@ class Player:
         self.stage, self.progress, self.note = 'preparing', 0, None
         self.automatic = req.get('version') is None
         self.chose_versions = False
+        self.page_dark.clear()
         self.cancelled.clear()
         threading.Thread(target=self.run, args=chosen, daemon=True).start()
 
@@ -208,12 +210,13 @@ class Player:
                     return
                 self.stage = 'ready'
                 handed_over = True
-                time.sleep(0.45)  # lets the page's lights-down finish
+                self.page_dark.wait(1.5)  # Chromium's last frame before it sleeps is shown again when it wakes, so that frame must be black
                 # Chromium crashes if it draws while the screen is switched away, so it sleeps through the film. It keeps its place and uses no CPU.
                 signal_browser(signal.SIGSTOP)
                 subprocess.run(['systemctl', 'start', SCREEN_UNIT], check=False, timeout=30)
-                for name, value in (('vo', 'gpu-next'), ('user-data/mediabox/show', True)):
-                    send(sock, ['set_property', name, value])
+                send(sock, ['set_property', 'user-data/mediabox/show', True])
+                time.sleep(0.15)  # so the player is watching for the first frame before it can arrive
+                send(sock, ['set_property', 'vo', 'gpu-next'])
                 if self.watch(_type, id_, ep, sock, reader):
                     self.state = after_film(self.state, *self.reached, self.chose_versions)
                 else:
@@ -712,6 +715,9 @@ class Handler(BaseHTTPRequestHandler):
                 if PLAYER.stage == 'failed':
                     PLAYER.error, PLAYER.stage = None, 'idle'
                 return self.reply_json(200, out)
+            if path == '/play/dark' and method == 'POST':
+                PLAYER.page_dark.set()
+                return self.reply_json(200, {'ok': True})
             if path == '/play/cancel' and method == 'POST':
                 return self.reply_json(200, {'cancelled': PLAYER.cancel_opening()})
             if path == '/play' and method == 'POST':
