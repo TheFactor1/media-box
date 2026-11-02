@@ -3,45 +3,55 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="color-scheme" content="dark">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#f4efe4">
 <meta name="referrer" content="no-referrer">
-<title>Set up your box</title>
+<title>The Media Box Times</title>
 <style>
-  /* Mercury: graphite, colourless glass, one chrome line, mercury-blue accent, amber only for attention. */
+  /* Broadsheet, as on the TV: newsprint, ink, ruled lines and one red. Phones bring their own serif, so the page loads nothing. */
   :root {
-    --bg: #0b0c0e; --fg: #eceef1; --muted: #a3a8b0; --line: rgba(236,238,241,.12);
-    --glass: rgba(255,255,255,.05); --chrome: rgba(242,245,250,.9); --blue: #9fb4ff; --amber: #e0a446;
-    --font: "Instrument Sans", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    --bg: #f4efe4; --fg: #1a1714; --muted: #4f4840; --line: #b8ae9c;
+    --glass: #fbf8f1; --chrome: #1a1714; --blue: #a3271c; --amber: #8a4b00;
+    --font: Georgia, "Noto Serif", "Times New Roman", serif;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.45 var(--font); }
-  main { max-width: 440px; margin: 0 auto; padding: 32px 18px 48px; }
-  h1 { font-size: 26px; font-weight: 600; letter-spacing: -.01em; margin: 0 0 6px; }
-  p.lead { color: var(--muted); margin: 0 0 22px; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.45 var(--font); }
+  main { max-width: 480px; margin: 0 auto; padding: 22px 18px 48px; }
+  .flag { font-weight: 900; font-size: 25px; line-height: 1.1; letter-spacing: -.01em; text-align: center; padding-bottom: 10px;
+          border-bottom: 2px solid var(--fg); position: relative; margin-bottom: 26px; }
+  .flag::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px; border-bottom: 1px solid var(--fg); }
+  h1 { font-size: 36px; font-weight: 900; line-height: 1.08; letter-spacing: -.015em; margin: 0 0 10px; }
+  h1:focus { outline: 0; }
+  p.lead { color: var(--muted); font-style: italic; font-size: 18px; margin: 0 0 22px; }
+  .kicker { color: var(--blue); font-size: 13px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin: 26px 0 8px; }
+  .pick { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 58px; border-bottom: 1px solid var(--line); }
+  .pick span { flex: 1; min-width: 0; font-size: 18px; }
+  .pick button { flex: none; min-width: 92px; padding: 9px 12px; font-size: 15px; }
+  .pick button.onhome { background: var(--fg); color: var(--bg); border-color: var(--fg); }
   section { display: none; }
   section.on { display: block; animation: in .28s ease-in; }
   @keyframes in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   .card { background: var(--glass); border: 1px solid var(--line); border-top-color: var(--chrome);
-          border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+          border-radius: 0; padding: 16px; margin-bottom: 14px; }
   .card b { display: block; margin-bottom: 4px; }
-  label.opt { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 10px; border: 1px solid var(--line);
+  label.opt { display: flex; gap: 12px; align-items: flex-start; padding: 12px; border-radius: 0; border: 1px solid var(--line);
               margin-bottom: 8px; cursor: pointer; }
-  label.opt:has(input:checked) { border-color: var(--blue); background: rgba(159,180,255,.08); }
+  label.opt:has(input:checked) { border-color: var(--blue); background: var(--glass); }
   label.opt input { accent-color: var(--blue); margin-top: 3px; }
   label.opt small { display: block; color: var(--muted); }
   .chips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 14px; }
   .chips.three { grid-template-columns: 1fr 1fr 1fr; }
-  .chips label { text-align: center; padding: 12px 6px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+  .chips label { text-align: center; padding: 12px 6px; border: 1px solid var(--fg); border-radius: 0; cursor: pointer; }
   .chips input { position: absolute; opacity: 0; }
-  .chips label:has(input:checked) { border-color: var(--blue); color: var(--blue); }
+  .chips label:has(input:checked) { background: var(--fg); color: var(--bg); }
   .chips label:has(input:focus-visible) { outline: 2px solid var(--blue); outline-offset: 2px; }
   input[type=text], input[type=password], input[type=url], input[type=number] {
-    width: 100%; padding: 13px 14px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0,0,0,.35);
+    width: 100%; padding: 13px 14px; border-radius: 0; border: 2px solid var(--fg); background: var(--glass);
     color: var(--fg); font: inherit; }
   input:focus-visible, button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
   .row { display: flex; gap: 8px; margin-top: 10px; }
-  button { font: inherit; font-weight: 600; border-radius: 10px; padding: 13px 16px; border: 1px solid var(--line);
-           background: var(--glass); color: var(--fg); cursor: pointer; }
+  button { font: inherit; font-weight: 700; border-radius: 0; padding: 13px 16px; border: 1px solid var(--fg);
+           background: transparent; color: var(--fg); cursor: pointer; }
   button.go { background: var(--fg); color: var(--bg); border-color: var(--fg); flex: 1; }
   button:disabled { opacity: .5; cursor: progress; }
   .msg { min-height: 1.4em; margin: 10px 0 0; color: var(--muted); font-size: 14px; }
@@ -51,7 +61,7 @@
   details { margin-top: 22px; }
   summary { cursor: pointer; color: var(--blue); padding: 6px 0; margin-bottom: 10px; }
   .words { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; counter-reset: w; }
-  .words span { padding: 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 18px; font-weight: 600; }
+  .words span { padding: 12px; border: 1px solid var(--line); border-radius: 0; font-size: 18px; font-weight: 600; }
   .words span::before { counter-increment: w; content: counter(w) "  "; color: var(--muted); font-weight: 400; }
   .req { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0;
          border-bottom: 1px solid var(--line); }
@@ -62,7 +72,7 @@
   .hidden { display: none; }
   .rows { list-style: none; margin: 0 0 12px; padding: 0; }
   .rows li { display: flex; gap: 6px; align-items: center; padding: 6px; margin-bottom: 6px; border: 1px solid var(--line);
-             border-radius: 10px; background: var(--glass); }
+             border-radius: 0; background: var(--glass); }
   .rows li.drag { border-color: var(--blue); }
   .rows li.off input { color: var(--muted); text-decoration: line-through; }
   .rows input[type=text] { flex: 1; min-width: 0; padding: 9px 10px; }
@@ -74,6 +84,7 @@
 </head>
 <body>
 <main>
+  <div class="flag">The Media Box Times</div>
   <section id="sMain" aria-labelledby="hMain">
     <h1 id="hMain">Set up your box</h1>
     <p class="lead">Pick your debrid service and paste its API key. The box does the rest; it never keeps the key.</p>
@@ -118,7 +129,12 @@
 
   <section id="sLists" aria-labelledby="hLists">
     <h1 id="hLists">Add more lists</h1>
-    <p class="lead">Paste the link of any Stremio addon that has catalogs. It ends in manifest.json. Each of its lists becomes a row you can show on Home.</p>
+    <p class="lead">Press Add and it's on your TV's Home page. No keys, nothing to set up.</p>
+    <div class="kicker">Quick add</div>
+    <div id="quickLists"></div>
+    <p class="msg" id="mQuick" role="status" aria-live="polite"></p>
+    <div class="kicker">Or add your own</div>
+    <p class="msg" style="margin:0 0 10px">Paste the link of any Stremio addon that has catalogs, such as one from MDBList. It ends in manifest.json.</p>
     <input id="listLink" type="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…/manifest.json" aria-label="Addon link">
     <div class="row"><button class="go" id="listGo" type="button">Add these lists</button></div>
     <p class="msg" id="mLists" role="status" aria-live="polite"></p>
@@ -255,6 +271,38 @@
       say('mAdd', e.message + ' Check you copied the whole link.', 'warn');
       $('addLink').focus();
     } finally { busy($('addGo'), false); }
+  }
+  // Quick adds: the same row list the TV uses, so a press here shows up there.
+  let shelfList = [];
+  function drawQuick() {
+    const on = new Set(shelfList.map(s => s.id));
+    $('quickLists').replaceChildren(...(info.quick || []).map(l => {
+      const line = document.createElement('div'); line.className = 'pick';
+      const name = document.createElement('span'); name.textContent = l.title;
+      const b = document.createElement('button'); b.type = 'button';
+      const added = on.has('quick:' + l.id);
+      b.textContent = added ? 'On Home' : 'Add';
+      b.classList.toggle('onhome', added);
+      b.setAttribute('aria-pressed', String(added));
+      b.onclick = () => toggleQuick(l, added);
+      line.append(name, b);
+      return line;
+    }));
+  }
+  let quickSaving = Promise.resolve();
+  function toggleQuick(l, added) {
+    const before = shelfList;
+    shelfList = added ? shelfList.filter(s => s.id !== 'quick:' + l.id)
+      : [...shelfList, { id: 'quick:' + l.id, kind: 'quick', ref: l.id, title: l.title, hidden: false }];
+    drawQuick();
+    const snapshot = JSON.parse(JSON.stringify(shelfList));
+    quickSaving = quickSaving.then(() => api('PUT', '/shelves', snapshot))
+      .then(() => say('mQuick', added ? l.title + ' removed from Home.' : l.title + ' is on Home.', 'ok'))
+      .catch(e => { shelfList = before; drawQuick(); say('mQuick', e.message, 'warn'); });
+  }
+  async function loadQuick() {
+    try { shelfList = (await api('GET', '/shelves')).shelves; drawQuick(); }
+    catch (e) { say('mQuick', e.message, 'warn'); }
   }
   function drawAdded(hosts) {
     $('listAdded').replaceChildren(...(hosts.length ? hosts.map(host => {
@@ -490,6 +538,7 @@
     if (info.tmdb) $('tmdbKey').placeholder = 'Key saved; enter a new one to replace it';
     $('addReplaces').classList.toggle('hidden', !info.configured);
     drawAdded(info.lists || (info.lists = []));
+    if (addingLists) loadQuick();
     show(addingLists ? 'sLists' : adding ? 'sAdd' : info.configured ? 'sDone' : 'sMain');  // already set up (e.g. opened to approve a TV): straight to pairing
   })();
 })();

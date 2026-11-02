@@ -1011,7 +1011,7 @@ class Handler(BaseHTTPRequestHandler):
                 hub.require_setup(qs.get('n'))
                 return ok({'presets': hub.presets, 'default': hub.preset, 'providers': onboarding.PROVIDERS,
                            'configured': bool(hub.stream_addons), 'aiostreams': host(hub.aiostreams_url),
-                           'tmdb': bool(hub.setting('tmdb_api_key')), 'lists': [a.host for a in hub.list_addons]})
+                           'tmdb': bool(hub.setting('tmdb_api_key')), 'lists': [a.host for a in hub.list_addons], 'quick': shelves.quick_lists()})
             case ['POST', 'setup']:
                 body = self.body()
                 hub.require_setup(body.get('n') if isinstance(body, dict) else None)
