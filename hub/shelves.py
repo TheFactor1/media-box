@@ -50,15 +50,33 @@ def shelf_entry(kind, ref, title, hidden=False):
 def live_catalogs(hub):
     """{host: [catalog shelves]} for meta addons that answered; an unreachable addon keeps its rows untouched."""
     core, out = _core(hub), {}
-    for a in hub.meta_addons:
+    for a in hub.row_addons():
+        # A stream source can carry dozens of lists nobody asked for, so they wait, hidden, in the row manager.
+        hidden = a in hub.stream_addons and a not in hub.meta_addons and a not in hub.list_addons
         try:
-            out[a.host] = [shelf_entry('catalog', {'addon': a.host, 'type': c['type'], 'id': c['id']},
-                                       f"{text(c.get('name') or c['id'])} · {TYPES.get(c['type'], c['type'])}")
-                           for c, _, required in a.catalogs()
-                           if not required - {'skip'} and isinstance(c.get('type'), str) and isinstance(c.get('id'), str)]
+            rows = out.setdefault(a.host, [])  # two addons can share a host, as on a self-hosted AIOStreams
+            ids = {r['id'] for r in rows}
+            rows += [r for r in (shelf_entry('catalog', {'addon': a.host, 'type': c['type'], 'id': c['id']},
+                                             f"{text(c.get('name') or c['id'])} · {TYPES.get(c['type'], c['type'])}", hidden)
+                                 for c, _, required in a.catalogs()
+                                 if not required - {'skip'} and isinstance(c.get('type'), str) and isinstance(c.get('id'), str))
+                     if r['id'] not in ids]
         except core.AddonError:
             pass
     return out
+
+
+def addon_for(hub, ref):
+    """The addon that holds a catalog row, among those on its host."""
+    core = _core(hub)
+    for a in hub.row_addons():
+        if a.host == ref['addon']:
+            try:
+                if any(c.get('type') == ref['type'] and c.get('id') == ref['id'] for c, _, _ in a.catalogs()):
+                    return a
+            except core.AddonError:
+                continue
+    return None
 
 
 def get_shelves(hub):
@@ -67,7 +85,7 @@ def get_shelves(hub):
     row = hub.sql('SELECT list FROM shelves WHERE id = 1')
     stored = json.loads(row[0][0]) if row else None
     shelves = stored if stored is not None else [shelf_entry('builtin', b, BUILTIN[b]) for b in ('continue', 'next', 'new')]
-    live, hosts = live_catalogs(hub), {a.host for a in hub.meta_addons}
+    live, hosts = live_catalogs(hub), {a.host for a in hub.row_addons()}
     collections = dict(hub.sql('SELECT id, title FROM collections ORDER BY created, rowid'))
     keep = [s for s in shelves if not (
         s['kind'] == 'catalog' and (s['ref']['addon'] not in hosts or
@@ -123,10 +141,11 @@ def shelf(hub, sid, skip):
         items = hub.new_releases(skip) if ref == 'new' else \
             hub.library(None if ref == 'recent' else ref)[skip:skip + PAGE]  # library() is newest kept first
     elif kind == 'catalog':
-        addon = next((a for a in hub.meta_addons if a.host == ref['addon']), None)
+        addon = addon_for(hub, ref)
         if not addon:
             raise core.HttpError(404, 'that addon is no longer configured')
-        items = hub.annotate([core.to_item(m) for m in hub.catalog_metas(addon, ref['type'], ref['id'], skip)])
+        # Only titles with an IMDb id can be looked up and played; some list addons mix in their own ids.
+        items = hub.annotate([i for i in map(core.to_item, hub.catalog_metas(addon, ref['type'], ref['id'], skip)) if core.IMDB.fullmatch(str(i['id']))])
     elif kind == 'collection':
         c = collection(hub, ref)
         items = manual_items(hub, ref, skip) if c['kind'] == 'manual' else smart_items(hub, c['filter'])[skip:skip + PAGE]

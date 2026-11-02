@@ -116,6 +116,16 @@
     <p class="msg" id="mAdd" role="status" aria-live="polite"></p>
   </section>
 
+  <section id="sLists" aria-labelledby="hLists">
+    <h1 id="hLists">Add more lists</h1>
+    <p class="lead">Paste the link of any Stremio addon that has catalogs. It ends in manifest.json. Each of its lists becomes a row you can show on Home.</p>
+    <input id="listLink" type="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://…/manifest.json" aria-label="Addon link">
+    <div class="row"><button class="go" id="listGo" type="button">Add these lists</button></div>
+    <p class="msg" id="mLists" role="status" aria-live="polite"></p>
+    <div class="card"><b>Added</b><div id="listAdded"></div></div>
+    <p class="msg">Lists inside your AIOStreams are already on your TV: find them under Lists, and press Show.</p>
+  </section>
+
   <section id="sDone" aria-labelledby="hDone">
     <h1 id="hDone">You're set up</h1>
     <p class="lead">Open the app on each TV and choose Pair. Type the code it shows here.</p>
@@ -165,7 +175,9 @@
 (() => {
   const n = new URLSearchParams(location.search).get('n');
   const $ = id => document.getElementById(id);
-  const adding = new URLSearchParams(location.search).get('add') === '1';  // the TV's "Stream source" code: only this job, set up or not
+  const addParam = new URLSearchParams(location.search).get('add');
+  const adding = addParam === '1';  // the TV's "Stream source" code: only this job, set up or not
+  const addingLists = addParam === 'lists';  // the TV's "Add more lists" code, likewise
   let info = null, current = 'sMain', from = 'sMain', provisioned = false;
 
   async function call(method, path, body) {
@@ -244,6 +256,37 @@
       $('addLink').focus();
     } finally { busy($('addGo'), false); }
   }
+  function drawAdded(hosts) {
+    $('listAdded').replaceChildren(...(hosts.length ? hosts.map(host => {
+      const line = document.createElement('div'); line.className = 'row';
+      const name = document.createElement('span'); name.textContent = host; name.style.flex = '1';
+      const b = document.createElement('button'); b.type = 'button'; b.textContent = 'Remove';
+      b.onclick = async () => {
+        try { await call('POST', '/setup', { action: 'lists-remove', host }); info.lists = info.lists.filter(x => x !== host); drawAdded(info.lists); }
+        catch (e) { say('mLists', e.message, 'warn'); }
+      };
+      line.append(name, b);
+      return line;
+    }) : [Object.assign(document.createElement('p'), { className: 'msg', textContent: 'Nothing yet.' })]));
+  }
+  async function addLists() {
+    const link = $('listLink').value.trim();
+    if (!link) { say('mLists', 'Paste your link first.', 'warn'); $('listLink').focus(); return; }
+    busy($('listGo'), true);
+    say('mLists', 'Checking your link…');
+    try {
+      const j = await call('POST', '/setup', { action: 'lists-add', manifest: link });
+      $('listLink').value = '';
+      if (!info.lists.includes(j.host)) info.lists.push(j.host);
+      drawAdded(info.lists);
+      say('mLists', 'Added ' + j.count + (j.count === 1 ? ' list' : ' lists') + ' from ' + j.host + '. Add another, or put your phone away.', 'ok');
+    } catch (e) {
+      say('mLists', e.message + '. Check you copied the whole link.', 'warn');
+      $('listLink').focus();
+    } finally { busy($('listGo'), false); }
+  }
+  $('listGo').onclick = addLists;
+  $('listLink').addEventListener('keydown', e => { if (e.key === 'Enter') addLists(); });
   $('addGo').onclick = addLink;
   $('addLink').addEventListener('keydown', e => { if (e.key === 'Enter') addLink(); });
   $('go').onclick = () => go(false);
@@ -446,7 +489,8 @@
     }));
     if (info.tmdb) $('tmdbKey').placeholder = 'Key saved; enter a new one to replace it';
     $('addReplaces').classList.toggle('hidden', !info.configured);
-    show(adding ? 'sAdd' : info.configured ? 'sDone' : 'sMain');  // already set up (e.g. opened to approve a TV): straight to pairing
+    drawAdded(info.lists || (info.lists = []));
+    show(addingLists ? 'sLists' : adding ? 'sAdd' : info.configured ? 'sDone' : 'sMain');  // already set up (e.g. opened to approve a TV): straight to pairing
   })();
 })();
 </script>

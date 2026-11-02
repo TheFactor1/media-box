@@ -31,7 +31,11 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; cursor
 .scrolly { height: 100%; overflow-y: auto; position: relative; scrollbar-width: none; scroll-behavior: smooth; }
 .card { position: relative; flex: none; width: 226px; }
 .card .poster { display: block; width: 226px; height: 300px; background: #e3dccd center / cover no-repeat; overflow: hidden; }
-.card img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.card img { display: block; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity .25s ease; }
+.card img.in { opacity: 1; }
+#page { transition: opacity .15s ease; }
+#page.waiting { opacity: .45; }
+.holding .strip, .holding .gridw, .holding .scrolly, .holding .chips { scroll-behavior: auto; }
 .card .t { margin-top: 10px; font-size: 25px; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bar-w { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: #1a171466; }
 .bar-w i { display: block; height: 100%; background: var(--red); }

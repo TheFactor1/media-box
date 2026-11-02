@@ -703,7 +703,8 @@ class Handler(BaseHTTPRequestHandler):
                 info = json.loads(raw or b'{}')
                 if status != 200 or not info.get('url'):
                     return self.reply_json(status or 502, {'reason': info.get('reason') or "couldn't open the setup page"})
-                url = info['url'] + '&add=1'
+                kind = json.loads(self.body() or b'{}').get('kind')
+                url = info['url'] + ('&add=lists' if kind == 'lists' else '&add=1')
                 return self.reply_json(200, {'url': url, 'svg': qr_svg(url)})
             if path == '/setup-qr' and method == 'GET':
                 return self.reply_json(200, setup_qr())

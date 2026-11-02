@@ -204,6 +204,10 @@ def handle(hub, body, public_host):
             delete_account(hub.aiostreams_url, old)
             hub.sql("DELETE FROM settings WHERE name = 'aiostreams'")
         return out
+    if action == 'lists-add':  # any Stremio addon with catalogs: each one becomes a Home row
+        return hub.add_list_addon(body.get('manifest'))
+    if action == 'lists-remove':
+        return hub.remove_list_addon(str(body.get('host') or ''))
     if action == 'internet':
         choice = body.get('preset')
         if choice != 'auto' and choice not in hub.presets:

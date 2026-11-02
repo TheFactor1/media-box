@@ -40,6 +40,7 @@ NEW_PAGE, NEW_MAX = 50, 300  # /new page size; titles read per catalog
 MAX_ADDON = 8 * 2**20    # an addon answer over 8 MB is refused, so a hostile addon can't exhaust memory
 OWN_PORTS = set()        # this process's hub ports: an addon URL (or its redirect) must never point back at the hub
 DONE = 0.92              # contract: "continue" = resume point under 92 %
+LIST_ADDONS_MAX = 20
 STARTED_MAX = 40         # titles watched but not kept that Continue and Next up will look up
 IMDB = re.compile(r'tt\d+')
 
@@ -256,6 +257,7 @@ class Hub:
                 print(f'imported {len(cfg["stream_addons"])} stream addon(s) from hub.toml into the encrypted store', flush=True)
             print('hub.toml still lists stream_addons (they embed tokens): delete that line; the hub keeps them encrypted', flush=True)
         self.stream_addons = [Addon(u) for u in self.setting('stream_addons') or []]
+        self.list_addons = [Addon(u) for u in self.setting('list_addons') or []]  # added for their lists alone
         known = {a.url: a for a in self.meta_addons + self.stream_addons}
         new = cfg.get('new_catalog')
         new = [new] if isinstance(new, dict) else new
@@ -426,6 +428,34 @@ class Hub:
         self.set_setting('stream_addons', [url])
         self.stream_addons, self.cache = [addon], {}
         return {'ok': True, 'host': addon.host}
+
+    def row_addons(self):
+        """Every addon whose lists can become Home rows. Your stream source counts, since AIOStreams can carry lists of its own."""
+        seen, out = set(), []
+        for a in self.meta_addons + self.list_addons + self.stream_addons:
+            if a.url not in seen:
+                seen.add(a.url)
+                out.append(a)
+        return out
+
+    def add_list_addon(self, url):
+        url = re.sub(r'^stremio://', 'https://', str(url or '').strip())
+        if not re.fullmatch(r'https?://[^\s/]+/\S*manifest\.json', url):
+            raise HttpError(400, 'paste the addon link that ends in manifest.json')
+        addon = Addon(url)
+        lists = [c for c, _, required in addon.catalogs() if not required - {'skip'}]
+        if not lists:
+            raise HttpError(400, 'that addon has no lists to add')
+        if len(self.list_addons) >= LIST_ADDONS_MAX and url not in [a.url for a in self.list_addons]:
+            raise HttpError(400, 'remove one of your list addons first')
+        self.list_addons = [a for a in self.list_addons if a.url != url] + [addon]
+        self.set_setting('list_addons', [a.url for a in self.list_addons])
+        return {'ok': True, 'host': addon.host, 'count': len(lists)}
+
+    def remove_list_addon(self, host):
+        self.list_addons = [a for a in self.list_addons if a.host != host]
+        self.set_setting('list_addons', [a.url for a in self.list_addons])
+        return {'ok': True}
 
     # TV-initiated pairing: the TV asks, shows a 6-digit code, and a phone (setup page) or paired client approves.
 
@@ -980,7 +1010,7 @@ class Handler(BaseHTTPRequestHandler):
                 hub.require_setup(qs.get('n'))
                 return ok({'presets': hub.presets, 'default': hub.preset, 'providers': onboarding.PROVIDERS,
                            'configured': bool(hub.stream_addons), 'aiostreams': host(hub.aiostreams_url),
-                           'tmdb': bool(hub.setting('tmdb_api_key'))})
+                           'tmdb': bool(hub.setting('tmdb_api_key')), 'lists': [a.host for a in hub.list_addons]})
             case ['POST', 'setup']:
                 body = self.body()
                 hub.require_setup(body.get('n') if isinstance(body, dict) else None)

@@ -164,9 +164,22 @@ function revealIn(el) {
   if (a.top < b.top) sc.scrollTop -= (b.top - a.top) / k;
   else if (a.bottom > b.bottom) sc.scrollTop += (a.bottom - b.bottom) / k;
 }
+// Posters fade up over their placeholder instead of popping in.
+function posterImg(src) {
+  const img = h('img', { src, alt: '', loading: 'lazy', decoding: 'async', draggable: 'false' });
+  if (img.complete) img.classList.add('in');
+  else img.addEventListener('load', () => img.classList.add('in'), { once: true });
+  return img;
+}
+// Quietly fetches the rows either side of this one, and their first posters, so moving between rows is instant.
+function warmRows() {
+  const shown = S.shelves.filter((s) => !s.hidden);
+  const at = shown.findIndex((s) => s.id === S.row);
+  [at + 1, at - 1, at + 2].map((i) => shown[i]).filter(Boolean).forEach((s) => api(`shelf/${q(s.id)}`).then((d) => pickItems(d).slice(0, 7).forEach((it) => { if (it.poster) new Image().src = it.poster; })).catch(() => {}));
+}
 function card(it, opts = {}) {
   const prog = it.resume?.durationMs > 0 ? Math.min(100, it.resume.positionMs / it.resume.durationMs * 100) : 0;
-  const poster = h('div', { class: 'poster' }, it.poster ? h('img', { src: it.poster, alt: '', loading: 'lazy', decoding: 'async', draggable: 'false' }) : null, prog ? h('div', { class: 'bar-w' }, h('i', { style: { width: prog + '%' } })) : null);
+  const poster = h('div', { class: 'poster' }, it.poster ? posterImg(it.poster) : null, prog ? h('div', { class: 'bar-w' }, h('i', { style: { width: prog + '%' } })) : null);
   const c = h('div', { class: 'card' }, poster, h('div', { class: 't' }, it.title));
   focusable(c, opts.key + ':' + it.id + (opts.i ?? ''), () => openTitle(it), poster);
   c.addEventListener('focus', () => {
@@ -242,7 +255,7 @@ function widget(e) {
     case 'settings': return settingsBody();
     case 'rowsmanager': return managerBody();
     case 'newlist': return newListBody();
-    case 'qr': return (S.page === 'source' ? S.sourceQr : S.setup)?.svg ? h('img', { class: 'qr', src: (S.page === 'source' ? S.sourceQr : S.setup).svg, alt: 'QR code for the setup page' }) : null;
+    case 'qr': return (S.sourceQr && (S.page === 'source' || S.page === 'listsource') ? S.sourceQr : S.setup)?.svg ? h('img', { class: 'qr', src: (S.sourceQr && (S.page === 'source' || S.page === 'listsource') ? S.sourceQr : S.setup).svg, alt: 'QR code for the setup page' }) : null;
     default: return null;
   }
 }
@@ -340,7 +353,7 @@ function setPref(name, value) {
 }
 function speedName(s) { return { slow: 'Slow', standard: 'Standard', fast: 'Fast', max: 'Fastest' }[s] || s || ''; }
 function managerBody() {
-  return h('div', { class: 'scrolly' }, h('div', { class: 'head' }, 'Rows on Home, in order'), S.shelves.map((s, i) => {
+  return h('div', { class: 'scrolly' }, h('div', { class: 'head' }, 'Rows on Home, in order'), focusable(h('div', { class: 'chip', style: { marginBottom: '14px', display: 'inline-block' } }, 'Add more lists from your phone'), 'm:addlists', () => go('listsource')), S.shelves.map((s, i) => {
     const r = h('div', { class: 'mrow' + (s.hidden ? ' off' : '') }, h('span', {}, s.title, s.kind === 'collection' ? h('em', {}, 'your list') : null),
       mini('Up', `m:${s.id}:up`, () => moveShelf(i, -1)), mini('Down', `m:${s.id}:down`, () => moveShelf(i, 1)),
       mini(s.hidden ? 'Show' : 'Hide', `m:${s.id}:hide`, () => { s.hidden = !s.hidden; saveShelves(); }),
@@ -467,6 +480,7 @@ async function loadPage(page) {
     S.sections = { r1: films, r2: shows };
   } else if (page === 'lists') { S.shelves = (await api('shelves')).shelves; S.lists = (await api('collections')).collections; }
   else if (page === 'settings') { S.presets = await api('presets'); S.prefs = await api('/prefs'); S.sources = streamSources(await api('health')); }
+  else if (page === 'listsource') { S.sourceQr = await api('/source-qr', { method: 'POST', body: { kind: 'lists' } }); }
   else if (page === 'source') { S.sourceQr = await api('/source-qr', { method: 'POST' }); S.sources = streamSources(await api('health')); watchSource(S.sources.map((a) => a.host).join()); }
   else if (page === 'film' || page === 'show') await loadTitle();
   else if (page === 'versions') { if (!S.streams) await loadStreams(); }
@@ -545,12 +559,23 @@ function firstEpisode(it) { const v = (it.videos || [])[0]; return v ? { s: v.s,
 function pageMove(dir) {
   pageEl.animate([{ opacity: 0, transform: `translateX(${dir * 28}px)` }, { opacity: 1, transform: 'none' }], { duration: 170, easing: 'ease-out' });
 }
+// A page that takes a moment dims, so the press is seen. Only the newest page asked for may draw.
+let navSeq = 0;
+async function loadInto(page) {
+  const me = ++navSeq;
+  const slow = setTimeout(() => pageEl.classList.add('waiting'), 120);
+  await withLoading(() => loadPage(page));
+  clearTimeout(slow);
+  if (me !== navSeq) return false;
+  pageEl.classList.remove('waiting');
+  return true;
+}
 async function go(page, opts = {}) {
   if (!opts.back) S.history.push({ page: S.page, item: S.item, ep: S.ep, key: document.activeElement?.dataset?.key });
   S.page = page;
   if (page !== 'film' && page !== 'show' && page !== 'versions') { S.full = page === 'home' ? null : S.full; }
   mastEl.dataset.page = '';
-  await withLoading(() => loadPage(page));
+  if (!await loadInto(page)) return;
   draw(opts.key);
   if (reduce()) return;
   if (opts.back || (page !== 'film' && page !== 'show')) return pageMove(opts.back ? -1 : 1);
@@ -572,7 +597,7 @@ async function tabTo(page) {
   S.history.push({ page: S.page, item: S.item, ep: S.ep, key: document.activeElement?.dataset?.key });
   S.page = page;
   if (page === 'home') S.full = null;
-  await withLoading(() => loadPage(page));
+  if (!await loadInto(page)) return;
   mastEl.dataset.page = '';
   draw('tab:' + page);
   if (!reduce()) pageMove(backwards ? -1 : 1);
@@ -589,6 +614,7 @@ async function switchRow(id) {
   await withLoading(() => loadRow(id));
   if (S.row !== id) return;
   if (S.rowItems[0]) { S.item = S.rowItems[0]; S.full = null; resetHero(); }
+  setTimeout(warmRows, 600);
   const host = document.querySelector('[data-w="row"]');
   if (!host) return;
   host.textContent = '';
@@ -766,6 +792,8 @@ function nextFocus(dir) {
   }
   return best;
 }
+let lastMove = 0;
+addEventListener('keyup', () => document.body.classList.remove('holding'));
 addEventListener('keydown', (ev) => {
   if (S.playing) {  // the loading page: Back cancels, and nothing else may move the page behind it
     ev.preventDefault();
@@ -775,6 +803,11 @@ addEventListener('keydown', (ev) => {
   const dirs = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
   if (dirs[ev.key]) {
     ev.preventDefault();
+    // Held keys arrive faster than the page can draw: pace them, and drop the smooth scroll so it keeps up instead of piling up.
+    const now = performance.now();
+    if (now - lastMove < 70) return;
+    lastMove = now;
+    document.body.classList.toggle('holding', ev.repeat);
     const n = nextFocus(dirs[ev.key]);
     if (n) { moveFocus(n); saveState(); }
   } else if (ev.key === 'Enter' || ev.key === ' ') {
@@ -828,6 +861,7 @@ async function start() {
   setTimeout(() => document.body.classList.remove('boot'), 900);
   if (state?.stopPress) notice(state.stopPress);
   if (error) notice(error);
+  setTimeout(warmRows, 2500);
   setTimeout(() => Object.values(GRIDS).forEach((path) => api(path).catch(() => {})), 1500);  // so the first visit to each tab is instant too
 }
 // Fonts load only when asked for, so ask first: text measured in a fallback font looks like it fits, then gets cut off.

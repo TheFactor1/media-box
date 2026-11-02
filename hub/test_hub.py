@@ -363,7 +363,7 @@ class HubTest(Fixture):
         self.assertIn(b'Set up your box', page.read())
         conn.close()
         self.assertEqual(self.raw('GET', '/setup?n=wrong')[0], 403)
-        self.assertIn(b"show(adding ? 'sAdd'", hub.SETUP_HTML)  # the TV's code opens on the paste box even on a box already set up
+        self.assertIn(b"adding ? 'sAdd'", hub.SETUP_HTML)  # the TV's code opens on the paste box even on a box already set up
 
     def test_6_unreachable(self):
         self.addon.shutdown()
@@ -775,6 +775,17 @@ class SetupTest(Fixture):
         self.assertEqual(self.setup({'action': 'link', 'manifest': manifest})[0], 200)
         self.assertEqual(FakeAddon.deleted, ['Basic ' + base64.b64encode(f"u-1:{acct['password']}".encode()).decode()])
         self.assertIsNone(self.hub.setting('aiostreams'))
+
+    def test_2d_list_addons(self):
+        manifest = f'http://127.0.0.1:{self.addon.server_port}/manifest.json'
+        self.assertEqual(self.setup({'action': 'lists-add', 'manifest': 'https://nope/x'})[0], 400)
+        status, out, _ = self.setup({'action': 'lists-add', 'manifest': manifest})
+        self.assertEqual(status, 200)
+        self.assertEqual([a.url for a in self.hub.list_addons], [manifest])
+        self.assertEqual(self.setup({'action': 'lists-add', 'manifest': manifest})[0], 200)  # again: no duplicate
+        self.assertEqual(len(self.hub.list_addons), 1)
+        self.assertEqual(self.setup({'action': 'lists-remove', 'host': self.hub.list_addons[0].host})[0], 200)
+        self.assertEqual(self.hub.list_addons, [])
 
     def test_3_speed_and_done(self):
         self.assertEqual(self.setup({'action': 'internet', 'preset': 'fast'})[0], 200)
